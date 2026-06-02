@@ -1,0 +1,17 @@
+# v4.0.4 Lazy Tab Render Performance
+
+Optimized:
+- Tab UI switches immediately before heavy render work.
+- renderAll is skipped during active tab switching.
+- Heavy page-specific work is delayed and limited to the opened tab.
+- Adds throttling for stabilization/coach run loops.
+- Keeps Unlock Override from v4.0.3.
+
+Preserved:
+- Save set.
+- Firestore paths.
+- Login.
+- Coach / Plateau / History / Alternative.
+- Calendar.
+- Log.
+- Program / Guide / Donate.

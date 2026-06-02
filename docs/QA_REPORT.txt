@@ -1,0 +1,29 @@
+# QA REPORT v4.1.0 Modular Source Refactor
+
+✅ Version v4.1.0
+✅ index references CSS
+✅ index references runtime
+✅ index references module
+✅ CSS extracted
+✅ Runtime extracted
+✅ Module extracted
+✅ Save preserved
+✅ Login preserved
+✅ Coach preserved
+✅ Log preserved
+✅ Calendar preserved
+✅ Program preserved
+✅ Guide preserved
+✅ Donate preserved
+✅ Runtime JS syntax
+✅ Module JS syntax
+✅ No duplicate functions
+
+Manual QA after GitHub deploy:
+1. Header shows v4.1.0.
+2. Login works.
+3. Tabs load correct pages.
+4. Log save works.
+5. Coach/Plateau load.
+6. Calendar active day works.
+7. Unlock/skip behavior preserved if present in base.

@@ -1,0 +1,4 @@
+App: Workout PRO
+Version: v4.1.0
+Build: Plateau Render Fix
+Updated: 2026-05-25

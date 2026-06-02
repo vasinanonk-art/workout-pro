@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Workout PRO v4.1.0</title>
+
+<script src="js/runtime.js"></script>
+
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<header><h1>Workout PRO</h1><div class="sub" id="userLine">Clean QA • Auto Week • Rest Rule • Double Progression • Quality • SFR • v4.1.0</div><div class="sub">Updated 2026-05-25 • Build 2026-05-09</div></header>
+<main>
+<section id="setup" class="page active"><div class="card"><h3>Login</h3><button id="loginBtn">Login with Google</button> <button class="secondary" id="logoutBtn">Logout</button><p class="small" id="authState">ยังไม่ได้ login</p></div><div class="card"><h3>Team ID</h3><input id="teamId" placeholder="เช่น Beer-Team"><br><br><button class="purple" id="saveTeamBtn">Save Team ID</button></div><div class="card"><h3>Status / Debug</h3><div class="msg" id="debug">รอ login</div><div class="msg ok">v2 Clean Build รวมฟังก์ชันหลักครบ: Video / Alternative / PR / Weekly / Dashboard / Calendar / Auto Week / Rest Rule</div></div></section>
+<section id="dash" class="page"><div class="card"><h3>Dashboard</h3><div class="kpis"><div class="kpi"><b id="kVol">0</b><span>Total Volume</span></div><div class="kpi"><b id="kSets">0</b><span>Sets</span></div><div class="kpi"><b id="kUsers">0</b><span>Users</span></div><div class="kpi"><b id="kWeek">1</b><span>Auto Week</span></div></div></div><div class="card"><h3>S-Curve by Auto Week</h3><canvas id="weekChart" width="760" height="260"></canvas><div class="small" id="chartStatus">Dashboard ready</div></div><div class="card"><h3>Top Exercise Volume</h3><canvas id="exChart" width="760" height="260"></canvas></div></section>
+
+<section id="coach" class="page">
+  <div class="card">
+    <h3>Coach Intelligence</h3>
+    <div class="coachGrid">
+      <div class="coachCard"><div class="small">Recovery Score</div><div class="score" id="coachRecovery">-</div><div class="small" id="coachRecoveryText">รอข้อมูล</div></div>
+      <div class="coachCard"><div class="small">Fatigue Risk</div><div class="score" id="coachFatigue">-</div><div class="small" id="coachFatigueText">รอข้อมูล</div></div>
+      <div class="coachCard"><div class="small">Progression</div><div class="score" id="coachProgress">-</div><div class="small" id="coachProgressText">รอข้อมูล</div></div>
+      <div class="coachCard"><div class="small">Deload Signal</div><div class="score" id="coachDeload">-</div><div class="small" id="coachDeloadText">รอข้อมูล</div></div>
+    </div>
+  </div>
+  <div class="card"><h3>Plateau Engine Fix</h3><div class="intelGrid"><div class="intelCard"><b id="effectiveRepsScore">-</b><span>Effective Reps 7d</span></div><div class="intelCard"><b id="sfrScore">-</b><span>SFR Score</span></div><div class="intelCard"><b id="volumeZone">-</b><span>Volume Zone</span></div></div></div>
+  
+<div class="card">
+<h3>Plateau Engine Fix</h3>
+<div class="small">สร้าง Prompt วิเคราะห์อัตโนมัติจากข้อมูลการเล่น</div>
+<div class="row2" style="margin-top:10px">
+<button id="aiCoachBtn" class="cyan">🤖 วิเคราะห์ด้วย AI Coach</button>
+<button id="copyAiPromptBtn" class="secondary">Copy Prompt</button>
+</div>
+<textarea id="aiCoachPrompt" style="min-height:220px;margin-top:10px"></textarea>
+</div>
+
+<div class="card">
+    <h3>Coach Recommendations</h3>
+    <div id="coachAdvice" class="msg info">ยังไม่มีข้อมูล</div>
+  </div>
+  <div class="card">
+    <h3>Muscle Volume Balance</h3>
+    <canvas id="muscleChart" width="760" height="260"></canvas>
+    <div class="small" id="muscleStatus">รอข้อมูล</div>
+  </div>
+  <div class="card">
+    <h3>Plateau Detection v2</h3>
+    <div id="plateauBox" class="msg">รอข้อมูล</div>
+  </div>
+</section>
+
+<section id="calendar" class="page"><div class="card"><div class="calTop"><button class="secondary" id="prevM">‹</button><div class="month" id="monthTitle">Month</div><button class="secondary" id="nextM">›</button></div><div class="calGrid" id="calGrid"></div></div><div class="card"><h3 id="dayTitle">Daily Summary</h3><div id="daySummary" class="small">เลือกวันที่</div></div></section>
+<section id="log" class="page"><div class="card"><h3>Log Workout</h3><div class="row"><div><label>วันที่</label><input id="date" type="date"><div id="dateStatus" class="msg ok">วันนี้</div></div><div><label>Auto Week</label><input id="week" type="number" readonly value="1"><div class="small">ระบบคำนวณให้อัตโนมัติ</div></div></div><div class="row3"><div><label>Sleep (hrs)</label><input id="sleepHours" type="number" min="0" max="12" step="0.5" value="7"></div><div><label>Soreness 1-5</label><input id="soreness" type="number" min="1" max="5" value="2"></div><div><label>Stress 1-5</label><input id="stress" type="number" min="1" max="5" value="2"></div></div><label>ท่าที่จะเล่น</label><select id="exercise"></select><div class="row3"><button id="imageBtn" class="purple">ดูรูปท่าที่ถูก</button><button id="videoBtn" class="cyan">ดูวิดีโอท่านี้</button><button id="altBtn" class="orange">ไม่มีเครื่อง / เลือกท่าทดแทน</button></div><div class="mediaPanel" id="mediaPanel"><div class="mediaTitle" id="mediaTitle">Media Reference</div><div class="mediaCue" id="mediaCue">เลือกท่าเพื่อดู cue / รูป / วิดีโอ</div></div><div class="msg" id="altStatus">ยังไม่ได้เลือกท่าทดแทน</div><div class="msg info" id="persistentSubStatus">Persistent Alternative: ไม่มี</div><div class="msg info" id="historyRemapBox">History Remap: กำลังตรวจสอบ...</div><div class="row"><button id="savePersistentAltBtn" class="purple">ใช้ท่านี้แทนทุกสัปดาห์</button><button id="clearPersistentAltBtn" class="secondary">ยกเลิกท่าแทนถาวร</button></div><button id="clearAltBtn" class="secondary" style="margin-bottom:10px">ยกเลิกท่าทดแทน</button><div class="msg" id="lockStatus">กำลังตรวจสอบ...</div><div class="msg info" id="calendarSyncStatus">Calendar Sync: กำลังตรวจสอบ...</div><div class="msg info" id="cycleDebug">Cycle: กำลังตรวจสอบ...</div><div class="msg info" id="dayDateLockDebug">Day Lock: กำลังตรวจสอบ...</div><div class="msg" id="setStatus">กำลังตรวจสอบเซต...</div><div class="msg info" id="orderStatus">กำลังตรวจสอบลำดับท่า...</div><div class="msg info" id="prStatus">กำลังตรวจสอบสถิติ...</div><div class="msg info" id="weekSuggest">กำลังตรวจสอบสัปดาห์ก่อน...</div><div class="msg info" id="nextWeekBox">กำลังคำนวณน้ำหนักครั้งถัดไป...</div><div class="msg info" id="doubleProgressionBox">Double Progression: รอข้อมูล</div><div class="msg info" id="sfrBox">SFR / Machine Bias: รอข้อมูล</div><div class="row3"><div><label>Target Sets</label><input id="targetSets" type="number"></div><div><label>Rest</label><select id="restMode"><option value="auto">Auto</option><option value="45">Quick 45s</option><option value="75">Standard 75s</option><option value="105">Heavy 105s</option><option value="custom">Custom</option></select></div><div><label>Rest Seconds</label><input id="restSec" type="number" value="75"></div></div><div class="timer" id="timer">00:00</div><div class="row3"><button class="orange" id="startRest">Start</button><button class="secondary" id="stopRest">Stop</button><button class="cyan" id="add30">+30s</button></div><h3>Set <span id="setNo">1</span> / <span id="targetShow">4</span></h3><div class="row3"><div><label>Weight</label><div style="display:flex;gap:6px"><input id="weight" type="number" step="0.5"><select id="unit"><option value="kg">kg</option><option value="lb">lb</option></select></div></div><div><label>Reps</label><input id="reps" type="number"></div><div><label>RIR</label><input id="rir" type="number" value="2" min="0" max="5"></div></div><div class="row3"><div><label>Tempo</label><select id="tempo"><option value="2-0-1">2-0-1 ปกติ</option><option value="3-1-1">3-1-1 คุมช้า</option><option value="2-1-2">2-1-2 คุมเต็มช่วง</option><option value="explosive">Explosive</option></select></div><div><label>Rep Quality</label><select id="repQuality"><option value="good">Good</option><option value="strict">Strict</option><option value="cheat">Cheat</option><option value="partial">Partial</option></select></div><div><label>Mode</label><select id="biasMode"><option value="auto">Auto</option><option value="machine">Machine Bias</option><option value="free">Free Weight</option></select></div></div><label>Note</label><textarea id="note"></textarea><div class="msg" id="saveDebug">พร้อมบันทึก</div><button class="green" id="saveBtn">+ บันทึกเซตนี้</button> <button class="secondary" id="resetBtn">Reset</button></div><div class="card"><h3>รายการล่าสุด</h3><div id="recent"></div></div></section>
+<section id="program" class="page"><div class="card"><h3>Program</h3><div class="msg ok">Day 1 Train / Day 2 Train / Day 3 Rest / Day 4 Train / Day 5 Train / Day 6 Rest / Day 7 Rest</div><div id="programList"></div></div></section>
+<section id="guide" class="page"><div class="card"><h3>Guide</h3><div id="guideList"></div></div></section>
+
+<section id="donate" class="page">
+  <div class="card">
+    <h3>Donate</h3>
+    <div class="msg ok">
+      สามารถ Donate ให้กำลังใจในการพัฒนาต่อได้ที่
+      <br><br>
+      ธนาคาร กรุงไทย
+      <br>
+      เลขบัญชี 989-3-26352-2
+      <br>
+      ชื่อบัญชี กฤต วาสินานนท์
+    </div>
+  </div>
+</section>
+
+</main>
+<div class="modal" id="altModal"><div class="modalBox"><h3>เลือกท่าทดแทน</h3><div class="small">เลือกตาม movement pattern เพื่อไม่ให้หลุดโปรแกรม</div><input id="altSearch" placeholder="ค้นหาท่า เช่น leg extension, curl, squat" style="margin:10px 0"><div id="altList"></div><button class="secondary modalCloseSticky" id="closeAlt">ปิด</button></div></div>
+<nav class="tabs"><button class="tab active" data-page="setup">Setup</button><button class="tab" data-page="dash">Dash</button><button class="tab" data-page="coach">Coach</button><button class="tab" data-page="calendar">Calendar</button><button class="tab" data-page="log">Log</button><button class="tab" data-page="program">Program</button><button class="tab" data-page="guide">Guide</button><button class="tab" data-page="donate">Donate</button></nav>
+
+<script type="module" src="js/app.module.js"></script></body></html>

@@ -1,0 +1,10 @@
+Workout PRO v3.4.1 Plateau Engine Fix
+Updated: 2026-05-14
+
+แก้เฉพาะ Plateau Detection:
+- ไม่ตัดสินจากน้ำหนักล่าสุดอย่างเดียว
+- ดู trend หลาย session
+- ดู reps, RIR, fatigue, performance change
+- ลด false positive
+
+ใช้ไฟล์นี้แทน v3.4.0
