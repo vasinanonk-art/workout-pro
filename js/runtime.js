@@ -1,226 +1,32 @@
-// ===== script =====
-function uiRecoveryRun(){
- try{
-  document.querySelectorAll('.card').forEach(c=>{
-   c.style.display='block';
-   c.style.visibility='visible';
-   c.style.opacity='1';
-  });
-
-  [['program','Program'],['guide','Guide'],['dashboard','Dashboard'],['coach','Coach']].forEach(x=>{
-   const el=document.getElementById(x[0]);
-   if(el && !el.querySelector('.uiRecoveredTitle')){
-    const d=document.createElement('div');
-    d.className='uiRecoveredTitle';
-    d.innerHTML='<div class="section-title">'+x[1]+'</div>';
-    el.prepend(d);
-   }
-  });
-
-  const pg=document.getElementById('program');
-  if(pg && !document.getElementById('programRecoveryBox')){
-    const d=document.createElement('div');
-    d.id='programRecoveryBox';
-    d.className='card';
-    d.innerHTML='<div class="section-title">Program Overview</div><div class="msg info">Program = หน้าใช้งานจริงระหว่างฝึก ใช้ดู split / readiness / progression</div>';
-    pg.appendChild(d);
-  }
-
-  const gd=document.getElementById('guide');
-  if(gd && !document.getElementById('guideRecoveryBox')){
-    const d=document.createElement('div');
-    d.id='guideRecoveryBox';
-    d.className='card';
-    d.innerHTML='<div class="section-title">Guide Quick Reference</div><div class="msg warn">Recovery / Technique / Injury Guide</div>';
-    gd.appendChild(d);
-  }
-
- }catch(e){console.warn(e)}
-}
-window.addEventListener('load',()=>{
- setTimeout(uiRecoveryRun,300);
- setTimeout(uiRecoveryRun,1200);
-});
-
-
-// ===== script =====
-function uiPolishActiveDay(){
- try{return typeof activeDay==='function'?activeDay():'-'}catch(e){return '-'}
-}
-function uiPolishRecoveryLabel(){
- try{
-  const r=typeof recoveryScore==='function'?recoveryScore():null;
-  if(r===null||r===undefined) return ['Recovery Unknown','status-warn'];
-  if(r>=70) return ['Recovery Good','status-good'];
-  if(r>=50) return ['Recovery Moderate','status-warn'];
-  return ['Recovery Low','status-bad'];
- }catch(e){return ['Recovery Unknown','status-warn']}
-}
-function uiPolishFatigueLabel(){
- try{
-  const f=typeof fatigueRisk==='function'?fatigueRisk():null;
-  if(f===null||f===undefined) return ['Fatigue Unknown','status-warn'];
-  if(f<40) return ['Fatigue Low','status-good'];
-  if(f<65) return ['Fatigue Medium','status-warn'];
-  return ['Fatigue High','status-bad'];
- }catch(e){return ['Fatigue Unknown','status-warn']}
-}
-function uiPolishAddQuickStart(){
- try{
-  const log=document.getElementById('log');
-  if(!log || document.getElementById('quickStartCard')) return;
-  const rec=uiPolishRecoveryLabel();
-  const fat=uiPolishFatigueLabel();
-  const d=document.createElement('div');
-  d.id='quickStartCard';
-  d.className='card';
-  d.innerHTML='<div class="section-title">Quick Start</div><div class="quick-grid"><div class="quick-action"><b>Active Day</b><br><span>'+uiPolishActiveDay()+'</span></div><div class="quick-action"><b>Status</b><br><span class="status-pill '+rec[1]+'">'+rec[0]+'</span><span class="status-pill '+fat[1]+'">'+fat[0]+'</span></div><div class="quick-action"><b>Next Step</b><br><span>เลือกท่า → ใส่น้ำหนัก → Save Set</span></div></div>';
-  log.prepend(d);
- }catch(e){console.warn(e)}
-}
-function uiPolishAddVersionPanel(){
- try{
-  const donate=document.getElementById('donate') || document.querySelector('main');
-  if(!donate || document.getElementById('versionQAPanel')) return;
-  const d=document.createElement('div');
-  d.id='versionQAPanel';
-  d.className='card version-panel';
-  d.innerHTML='<div class="section-title">Build / QA</div><div class="msg info">Version: <b>v4.1.0</b><br>Build: Modular Source Refactor<br>QA: JS syntax / core IDs / tabs / charts preserved<br>Note: Low-risk UI only, core logic untouched</div>';
-  donate.appendChild(d);
- }catch(e){console.warn(e)}
-}
-function uiPolishEmptyStates(){
- try{
-  document.querySelectorAll('.msg').forEach(el=>{
-   const t=(el.textContent||'').trim();
-   if(t==='กำลังตรวจสอบ...' || t===''){
-    el.innerHTML='<span class="empty-soft">ยังไม่มีข้อมูลเพียงพอ หรือกำลังรอข้อมูลจาก log</span>';
-   }
-  });
- }catch(e){console.warn(e)}
-}
-function uiPolishRun(){
- uiPolishAddQuickStart();
- uiPolishAddVersionPanel();
- uiPolishEmptyStates();
-}
-window.addEventListener('load',()=>{
- setTimeout(uiPolishRun,400);
- setTimeout(uiPolishRun,1400);
-});
-
-
-// ===== script =====
-function modernUiHeader(){
- try{
-   if(document.getElementById('modernHero')) return;
-   const main=document.querySelector('main') || document.body;
-   const hero=document.createElement('div');
-   hero.id='modernHero';
-   hero.className='card';
-   hero.style.marginBottom='18px';
-   hero.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><div><div style="font-size:28px;font-weight:800">Workout PRO</div><div style="opacity:.8;margin-top:4px">Modern Hypertrophy & Recovery System</div></div><div><span class="status-pill status-good">v4.1.0</span><span class="status-pill status-warn">Modern UI</span></div></div>';
-   main.prepend(hero);
- }catch(e){console.warn(e)}
-}
-window.addEventListener('load',()=>setTimeout(modernUiHeader,200));
-
-
-// ===== v400StableRuntime =====
-function v400HideCompleteOutsideLog(){
-  try{
-    var box=document.getElementById("exerciseCompleteBox");
-    if(!box) return;
-    var active=document.querySelector(".page.active");
-    if(active && active.id!=="log") box.style.display="none";
-  }catch(e){}
-}
-function v400AddQaPanel(){
-  try{
-    var setup=document.getElementById("setup");
-    if(!setup || document.getElementById("v400QaPanel")) return;
-    var p=document.createElement("div");
-    p.id="v400QaPanel";
-    p.className="card";
-    p.innerHTML="<h3>v4.0 Stable QA</h3><div class='msg ok'>Modular Source Refactor<br>Router patch cleanup: ON<br>Complete card scoped to Log: ON<br>Heavy runtime patches removed: ON</div>";
-    setup.appendChild(p);
-  }catch(e){}
-}
-window.addEventListener("load",function(){
-  setTimeout(v400HideCompleteOutsideLog,500);
-  setTimeout(v400AddQaPanel,900);
-});
-document.addEventListener("click",function(e){
-  if(e.target.closest && e.target.closest(".tab[data-page],nav button,.tabbar button")){
-    setTimeout(v400HideCompleteOutsideLog,100);
-  }
-},true);
-
-
-// ===== v404LazyTabRuntime =====
+// v4.2.0 Stable Performance QA runtime
 (function(){
-  if(window.__v404LazyTabInstalled) return;
-  window.__v404LazyTabInstalled=true;
+  if(window.__workoutV420Runtime) return;
+  window.__workoutV420Runtime=true;
 
-  const lastRun={};
-  window.__v404TooSoon=function(key,ms){
-    const now=Date.now();
-    if(lastRun[key] && now-lastRun[key]<ms) return true;
-    lastRun[key]=now;
-    return false;
-  };
-
-  function pageNow(page){
-    if(!page) return;
-    window.__v404TabSwitching=true;
-
-    document.querySelectorAll(".page").forEach(function(p){
-      const active=p.id===page;
-      p.classList.toggle("active",active);
-      p.style.display=active?"":"none";
-    });
-    document.querySelectorAll(".tab[data-page]").forEach(function(b){
-      b.classList.toggle("active",b.dataset.page===page);
-    });
-
-    const done=document.getElementById("exerciseCompleteBox");
-    if(done) done.style.display=page==="log"?"":"none";
-
-    try{localStorage.setItem("workoutActivePage",page);}catch(e){}
-
-    // Release heavy render after UI has already switched. This keeps tap response instant.
-    clearTimeout(window.__v404ReleaseTimer);
-    window.__v404ReleaseTimer=setTimeout(function(){
-      window.__v404TabSwitching=false;
-      // Render only lightweight page-specific panels, not full renderAll.
-      try{
-        if(page==="log" && typeof v403Run==="function") v403Run();
-        if(page==="coach" && typeof coachCoreRun==="function") coachCoreRun();
-        if(page==="calendar" && typeof renderCal==="function") renderCal();
-      }catch(e){}
-    },80);
+  function hideCompleteOutsideLog(){
+    try{
+      const box=document.getElementById("exerciseCompleteBox");
+      const active=document.querySelector(".page.active");
+      if(box && active && active.id!=="log") box.style.display="none";
+    }catch(e){}
   }
 
-  function bind(){
-    document.querySelectorAll(".tab[data-page]").forEach(function(btn){
-      if(btn.dataset.v404Bound==="1") return;
-      btn.dataset.v404Bound="1";
-      const handler=function(e){
-        const page=btn.dataset.page;
-        if(!page) return;
-        pageNow(page);
-      };
-      btn.addEventListener("pointerdown",handler,{passive:true});
-      btn.addEventListener("touchstart",handler,{passive:true});
-      btn.addEventListener("click",handler,{passive:true});
-    });
-  }
-
-  window.addEventListener("load",function(){
-    setTimeout(bind,80);
+  function restoreSavedPage(){
     try{
       const saved=localStorage.getItem("workoutActivePage");
-      if(saved && document.getElementById(saved)) pageNow(saved);
+      if(!saved || !document.getElementById(saved)) return;
+      document.querySelectorAll(".page").forEach(p=>{
+        const on=p.id===saved;
+        p.classList.toggle("active",on);
+        p.style.display=on?"":"none";
+      });
+      document.querySelectorAll(".tab[data-page]").forEach(t=>t.classList.toggle("active",t.dataset.page===saved));
+      hideCompleteOutsideLog();
     }catch(e){}
-  });
+  }
+
+  window.addEventListener("DOMContentLoaded",restoreSavedPage);
+  document.addEventListener("click",function(e){
+    if(e.target.closest && e.target.closest(".tab[data-page]")) setTimeout(hideCompleteOutsideLog,40);
+  },true);
 })();

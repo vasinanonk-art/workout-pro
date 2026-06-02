@@ -2,13 +2,20 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-const VERSION="v4.1.0", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
+const VERSION="v4.2.0", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
 const PROGRAM=[
 ["Day 1","Push","Barbell Bench Press",4,"5-8","Chest","heavy"],["Day 1","Push","Incline Dumbbell Press",3,"8-12","Chest","standard"],["Day 1","Push","Seated Shoulder Press",3,"8-12","Shoulder","standard"],["Day 1","Push","Dumbbell Lateral Raise",4,"12-15","Shoulder","quick"],["Day 1","Push","Cable Triceps Pushdown",3,"10-15","Triceps","quick"],
 ["Day 2","Pull","Lat Pulldown",4,"8-12","Back","standard"],["Day 2","Pull","Barbell Row",4,"6-10","Back","heavy"],["Day 2","Pull","Seated Cable Row",3,"10-12","Back","standard"],["Day 2","Pull","Face Pull",3,"12-15","Rear Delt","quick"],["Day 2","Pull","Dumbbell Curl",3,"10-15","Biceps","quick"],
 ["Day 4","Upper","Incline Machine Press",3,"10-12","Chest","standard"],["Day 4","Upper","Chest Supported Row",3,"10-12","Back","standard"],["Day 4","Upper","Machine Shoulder Press",3,"10-12","Shoulder","standard"],["Day 4","Upper","Cable Fly",3,"12-15","Chest","quick"],["Day 4","Upper","Hammer Curl",3,"10-15","Biceps","quick"],["Day 4","Upper","Overhead Triceps Extension",3,"10-15","Triceps","quick"],
 ["Day 5","Leg","Back Squat",4,"5-8","Legs","heavy"],["Day 5","Leg","Romanian Deadlift",4,"6-10","Hamstrings","heavy"],["Day 5","Leg","Leg Press",3,"10-15","Quads","standard"],["Day 5","Leg","Walking Lunge",3,"10/side","Legs","standard"],["Day 5","Leg","Lying Leg Curl",3,"12-15","Hamstrings","quick"],["Day 5","Leg","Standing Calf Raise",4,"12-20","Calves","quick"]];
 const DAY_ORDER=["Day 1","Day 2","Day 4","Day 5"], REST={quick:45,standard:75,heavy:105};
+
+function localDateKey(d=new Date()){
+  const x=new Date(d);
+  x.setMinutes(x.getMinutes()-x.getTimezoneOffset());
+  return x.toISOString().slice(0,10);
+}
+
 const ALT={
 "Barbell Bench Press":[["Dumbbell Bench Press","Horizontal Push","dumbbell bench press proper form","Dumbbell","Chest"],["Machine Chest Press","Horizontal Push","machine chest press proper form","Machine","Stable"],["Smith Machine Bench Press","Horizontal Push","smith machine bench press proper form","Smith","Stable"],["Push-up","Horizontal Push","push up proper form chest","Bodyweight","No equipment"]],
 "Incline Dumbbell Press":[["Incline Machine Press","Incline Push","incline machine chest press proper form","Machine","Upper chest"],["Smith Machine Incline Press","Incline Push","smith machine incline press proper form","Smith","Stable"],["Incline Barbell Press","Incline Push","incline barbell bench press proper form","Barbell","Upper chest"],["Low-to-High Cable Fly","Upper Chest Fly","low to high cable fly proper form","Cable","Isolation"]],
@@ -94,11 +101,11 @@ function renderMediaPanel(){if(!$("mediaPanel"))return;const ex=currentMediaExer
 function openCurrentMedia(kind){openSearch(kind,mediaQueryForCurrent());}
 
 const app=initializeApp(firebaseConfig), auth=getAuth(app), db=getFirestore(app);
-let user=null, teamId=localStorage.getItem("teamId")||"", unsub=null, logs=[], currentSet=1, calDate=new Date(), selectedDate=new Date().toISOString().slice(0,10), timer=null, selectedAlt=null;
-$("teamId").value=teamId;$("date").value=selectedDate;PROGRAM.forEach(p=>{let o=document.createElement("option");o.value=p[2];o.textContent=`${p[0]} - ${p[2]}`;$("exercise").appendChild(o)});
+let user=null, teamId=localStorage.getItem("teamId")||"", unsub=null, logs=[], currentSet=1, calDate=new Date(), selectedDate=localDateKey(), timer=null, selectedAlt=null;
+$("teamId").value=teamId;selectedDate=localDateKey();$("date").value=selectedDate;PROGRAM.forEach(p=>{let o=document.createElement("option");o.value=p[2];o.textContent=`${p[0]} - ${p[2]}`;$("exercise").appendChild(o)});
 const meta=()=>PROGRAM.find(p=>p[2]===$("exercise").value), target=ex=>{let p=PROGRAM.find(p=>p[2]===ex);return p?+p[3]:1}, planned=x=>x.plannedExercise||x.exercise;
 function toKg(v,u){return u==="lb"?v/2.2046:v} function fromKg(v,u){return u==="lb"?(+v*2.2046||0).toFixed(1):(+v||0).toFixed(1)}
-function today(){return new Date().toISOString().slice(0,10)} function parseD(s){let [y,m,d]=String(s).split("-").map(Number);return new Date(y,m-1,d)} function keyD(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")} function addDays(d,n){let x=new Date(d);x.setDate(x.getDate()+n);return x}
+function today(){return localDateKey()} function parseD(s){let [y,m,d]=String(s).split("-").map(Number);return new Date(y,m-1,d)} function keyD(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")} function addDays(d,n){let x=new Date(d);x.setDate(x.getDate()+n);return x}
 function diffDate(s){let a=new Date(),b=parseD(s);a.setHours(0,0,0,0);b.setHours(0,0,0,0);return Math.round((a-b)/86400000)}
 function normalizedLogs(){return [...logs].sort((a,b)=>(a.date||"").localeCompare(b.date||"")||(+a.createdAt?.seconds||0)-(+b.createdAt?.seconds||0))}
 function countIn(c,ex){return c.filter(x=>planned(x)===ex).length} function dayComplete(c,d){if(!c||!c.length)return false;return PROGRAM.filter(p=>p[0]===d).every(p=>countIn(c,p[2])>=target(p[2]))} function cycleComplete(c){if(!c||!c.length)return false;return DAY_ORDER.every(d=>dayComplete(c,d))}
@@ -451,11 +458,7 @@ function activeExerciseSetState(ex){
   }
 }
 
-function calSyncTodayKey(){
-  const d=new Date();
-  d.setMinutes(d.getMinutes()-d.getTimezoneOffset());
-  return d.toISOString().slice(0,10);
-}
+function calSyncTodayKey(){return localDateKey()}
 function calSyncLastWorkoutLog(){
   return (logs||[]).filter(x=>x.date).sort((a,b)=>(b.date||"").localeCompare(a.date||"") || (+b.createdAt?.seconds||0)-(+a.createdAt?.seconds||0))[0] || null;
 }
@@ -516,7 +519,7 @@ function calSyncBind(){
 const EX_SESSION_KEY_PREFIX = "workout_session_state_";
 function exSessionKey(ex){
   const team = (typeof teamId!=="undefined" && teamId) ? teamId : "default";
-  const date = $("date") ? $("date").value : (typeof calSyncTodayKey==="function" ? calSyncTodayKey() : new Date().toISOString().slice(0,10));
+  const date = $("date") ? $("date").value : (typeof calSyncTodayKey==="function" ? calSyncTodayKey() : localDateKey());
   return `${EX_SESSION_KEY_PREFIX}${team}_${date}_${ex}`;
 }
 function exSessionRead(ex){
@@ -695,7 +698,7 @@ function stableRenderDiagnostics(){
     console.warn("stableRenderDiagnostics", e);
   }
 }
-function stableRenderAllPanels(){setTimeout(renderPlateauDetectionSafe,80);autoApplyPersistentAlternative();
+function stableRenderAllPanels(){autoApplyPersistentAlternative();
   try{
     if(typeof bindCanonicalExerciseSwitch==="function") bindCanonicalExerciseSwitch();
     if($("exercise") && typeof applyCanonicalSetDisplay==="function") applyCanonicalSetDisplay($("exercise").value);
@@ -838,11 +841,18 @@ function cleanForFirestore(obj){
   );
 }
 
-async function saveSet(){try{$("saveDebug").className="msg";$("saveDebug").textContent="กำลังบันทึก...";if(!user)return alert("Login ก่อน");if(!teamId)return alert("ใส่ Team ID ก่อน");if(!validateDate())return;let m=meta(),ad=activeDay(),st=nextState(),wk=autoWeek();if(st.restLock)return alert("ยังพักไม่ครบ 2 วัน");if(!canSaveCurrentExerciseAdaptive())return alert("ท่านี้ยังไม่สามารถบันทึกได้: อาจเป็นคนละ Day หรือครบเซตแล้ว");let raw=parseFloat($("weight").value),reps=parseInt($("reps").value),rir=parseInt($("rir").value||2);if(!raw||!reps)return alert("กรอก Weight และ Reps");let rememberedAlt=altMemoryForPlanned(m[2]);let persistentAlt=(typeof autoApplyPersistentAlternative==="function"?autoApplyPersistentAlternative():null);let effectiveAlt=selectedAlt||persistentAlt||rememberedAlt;let computedSetNo=canonicalSetState(m[2]).next;let w=toKg(raw,$("unit").value),ex=effectiveAlt?effectiveAlt.name:m[2];await addDoc(collection(db,`teams/${teamId}/workouts`),cleanForFirestore({date:$("date").value,week:wk,autoWeek:wk,day:m[0],focus:m[1],exercise:ex,plannedExercise:m[2],isAlternative:!!effectiveAlt,alternativePattern:effectiveAlt?effectiveAlt.pattern:"",alternativeQuery:(effectiveAlt&&effectiveAlt.query)?effectiveAlt.query:"",targetSets:m[3],setNo:computedSetNo,muscle:m[5],weight:w,reps,rir,volume:w*reps,note:$("note").value||"",sleepHours:parseFloat($("sleepHours")?.value||7),soreness:parseInt($("soreness")?.value||2),stress:parseInt($("stress")?.value||2),tempo:$("tempo")?.value||"",repQuality:$("repQuality")?.value||"",biasMode:$("biasMode")?.value||"auto",effectiveReps:effectiveRepsForSet({reps,rir}),userId:user.uid,userName:user.displayName||user.email,userEmail:user.email,appVersion:VERSION,createdAt:serverTimestamp()})); if(typeof exSessionAfterSave==="function") exSessionMarkSavedLocal(m[2]); applyCanonicalSetDisplay(m[2]);selectedAlt=null;$("weight").value="";$("reps").value="";$("rir").value=2;$("note").value="";$("saveDebug").className="msg ok";$("saveDebug").textContent="บันทึกสำเร็จ ✅";startRest();setTimeout(sync,600);setTimeout(v403Run,250);setTimeout(fullStabilizationRun,950);setTimeout(coachCoreRun,950);setTimeout(authDebugGuardRun,950);setTimeout(permissionSafeRun,900);setTimeout(plateauLiveRecompute,900);setTimeout(stableRenderAllPanels,700)}catch(e){$("saveDebug").className="msg err";$("saveDebug").textContent="Save error: "+e.message;alert("Save error: "+e.message)}}
+async function saveSet(){try{$("saveDebug").className="msg";$("saveDebug").textContent="กำลังบันทึก...";if(!user)return alert("Login ก่อน");if(!teamId)return alert("ใส่ Team ID ก่อน");if(!validateDate())return;let m=meta(),ad=activeDay(),st=nextState(),wk=autoWeek();if(st.restLock)return alert("ยังพักไม่ครบ 2 วัน");if(!canSaveCurrentExerciseAdaptive())return alert("ท่านี้ยังไม่สามารถบันทึกได้: อาจเป็นคนละ Day หรือครบเซตแล้ว");let raw=parseFloat($("weight").value),reps=parseInt($("reps").value),rir=parseInt($("rir").value||2);if(!raw||!reps)return alert("กรอก Weight และ Reps");let rememberedAlt=altMemoryForPlanned(m[2]);let persistentAlt=(typeof autoApplyPersistentAlternative==="function"?autoApplyPersistentAlternative():null);let effectiveAlt=selectedAlt||persistentAlt||rememberedAlt;let computedSetNo=canonicalSetState(m[2]).next;let w=toKg(raw,$("unit").value),ex=effectiveAlt?effectiveAlt.name:m[2];await addDoc(collection(db,`teams/${teamId}/workouts`),cleanForFirestore({date:$("date").value,week:wk,autoWeek:wk,day:m[0],focus:m[1],exercise:ex,plannedExercise:m[2],isAlternative:!!effectiveAlt,alternativePattern:effectiveAlt?effectiveAlt.pattern:"",alternativeQuery:(effectiveAlt&&effectiveAlt.query)?effectiveAlt.query:"",targetSets:m[3],setNo:computedSetNo,muscle:m[5],weight:w,reps,rir,volume:w*reps,note:$("note").value||"",sleepHours:parseFloat($("sleepHours")?.value||7),soreness:parseInt($("soreness")?.value||2),stress:parseInt($("stress")?.value||2),tempo:$("tempo")?.value||"",repQuality:$("repQuality")?.value||"",biasMode:$("biasMode")?.value||"auto",effectiveReps:effectiveRepsForSet({reps,rir}),userId:user.uid,userName:user.displayName||user.email,userEmail:user.email,appVersion:VERSION,createdAt:serverTimestamp()})); if(typeof exSessionAfterSave==="function") exSessionMarkSavedLocal(m[2]); applyCanonicalSetDisplay(m[2]);selectedAlt=null;$("weight").value="";$("reps").value="";$("rir").value=2;$("note").value="";$("saveDebug").className="msg ok";$("saveDebug").textContent="บันทึกสำเร็จ ✅";startRest();setTimeout(()=>renderPage("log","afterSave"),250)}catch(e){$("saveDebug").className="msg err";$("saveDebug").textContent="Save error: "+e.message;alert("Save error: "+e.message)}}
 function subscribe(){if(unsub)unsub();if(!teamId)return;unsub=onSnapshot(query(collection(db,`teams/${teamId}/workouts`),orderBy("createdAt","desc")),s=>{logs=s.docs.map(d=>({id:d.id,...d.data()}));$("debug").className="msg ok";$("debug").textContent=`โหลดข้อมูลแล้ว ${logs.length} sets • ${VERSION}`;renderAll()},e=>{$("debug").className="msg err";$("debug").textContent=e.message})}
 onAuthStateChanged(auth,u=>{user=u;$("authState").textContent=u?`Login: ${u.displayName||u.email}`:"ยังไม่ได้ login";$("userLine").textContent=u?`${u.displayName||u.email} / Team: ${teamId||"-"} / ${VERSION}`:`Clean QA • ${VERSION}`;if(u&&teamId)subscribe()});
 $("loginBtn").onclick=()=>signInWithPopup(auth,new GoogleAuthProvider()).catch(e=>alert(e.message));$("logoutBtn").onclick=()=>signOut(auth);$("saveTeamBtn").onclick=()=>{teamId=$("teamId").value.trim();localStorage.setItem("teamId",teamId);subscribe()};
-document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));$(b.dataset.page).classList.add("active");document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));b.classList.add("active");renderAll()});
+document.querySelectorAll(".tab").forEach(b=>{
+  if(b.dataset.v420Bound==="1") return;
+  b.dataset.v420Bound="1";
+  const go=()=>{const page=b.dataset.page;switchPageFast(page);setTimeout(()=>renderPage(page,"tab"),0);};
+  b.onclick=go;
+  b.addEventListener("pointerdown",()=>switchPageFast(b.dataset.page),{passive:true});
+  b.addEventListener("touchstart",()=>switchPageFast(b.dataset.page),{passive:true});
+});
 $("exercise").onchange=()=>{selectedAlt=null;$("altStatus").textContent="ยังไม่ได้เลือกท่าทดแทน";applyMeta();sync()};$("date").onchange=()=>{selectedDate=$("date").value;sync()};$("unit").onchange=sync;$("saveBtn").onclick=saveSet;$("resetBtn").onclick=sync;
 $("clearAltBtn").onclick=clearAltMemoryForCurrent;
 $("imageBtn").onclick=()=>openCurrentMedia("image");
@@ -1222,7 +1232,7 @@ function renderDashboard(){try{$("kVol").textContent=logs.reduce((a,b)=>a+(+b.vo
 function fmt(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}function dayForDate(d){let a=logs.filter(x=>x.date===d);if(!a.length)return null;let c={};a.forEach(x=>c[x.day]=(c[x.day]||0)+1);return Object.entries(c).sort((a,b)=>b[1]-a[1])[0][0]}function renderCalendar(){let grid=$("calGrid");grid.innerHTML="";let names=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];$("monthTitle").textContent=names[calDate.getMonth()]+" "+calDate.getFullYear();["อา","จ","อ","พ","พฤ","ศ","ส"].forEach(h=>grid.innerHTML+=`<div class="calHead">${h}</div>`);let first=new Date(calDate.getFullYear(),calDate.getMonth(),1),last=new Date(calDate.getFullYear(),calDate.getMonth()+1,0).getDate();for(let i=0;i<first.getDay();i++)grid.innerHTML+=`<div class="calDay empty"></div>`;for(let d=1;d<=last;d++){let key=fmt(new Date(calDate.getFullYear(),calDate.getMonth(),d)),a=logs.filter(x=>x.date===key),day=dayForDate(key),sel=key===selectedDate?" sel":"",tod=key===today()?" today":"";grid.innerHTML+=`<div class="calDay${sel}${tod}" data-date="${key}"><b>${d}</b><br><span class="calTag ${a.length?'partial':'rest'}">${day||'Rest'}</span>${a.length?`<div class="small">${a.length} sets</div>`:""}</div>`}grid.querySelectorAll(".calDay[data-date]").forEach(el=>el.onclick=()=>{selectedDate=el.dataset.date;$("date").value=selectedDate;sync();document.querySelector('[data-page="log"]').click()})}function renderDaySummary(d){let a=logs.filter(x=>x.date===d);$("dayTitle").textContent="Daily Summary: "+d;if(!a.length){$("daySummary").innerHTML="ยังไม่มีข้อมูล";return}let by={};a.forEach(x=>{if(!by[x.exercise])by[x.exercise]=[];by[x.exercise].push(x)});$("daySummary").innerHTML=Object.entries(by).map(([ex,arr])=>{let max=arr.reduce((m,x)=>+x.weight>+m.weight?x:m,arr[0]);return `<div class="item"><h3>${ex}</h3><div class="meta">Sets: ${arr.length}<br>Max: ${fromKg(max.weight,$("unit").value)} ${$("unit").value} × ${max.reps}${max.isAlternative?`<br>แทน: ${max.plannedExercise}`:""}</div></div>`}).join("")}
 $("prevM").onclick=()=>{calDate=new Date(calDate.getFullYear(),calDate.getMonth()-1,1);renderCalendar()};$("nextM").onclick=()=>{calDate=new Date(calDate.getFullYear(),calDate.getMonth()+1,1);renderCalendar()};
 function renderSafe(){try{renderDashboard();renderCoach();renderCalendar();renderDaySummary(selectedDate)}catch(e){$("chartStatus").textContent="Render fallback: "+e.message}}
-/* v4.1.0 Modular Source Refactor
+/* v4.2.0 Stable Performance QA
    This code is intentionally inside the Firebase module script so it can access logs / PROGRAM / $ safely.
 */
 const COACH_MOVEMENT_GROUPS = {
@@ -1341,7 +1351,7 @@ function coachCoreStatusPanel(){
   const p=document.createElement("div");
   p.id="coachCoreStatusPanel";
   p.className="card";
-  p.innerHTML='<h3>Coach Core Stabilization</h3><div class="msg ok">v4.1.0<br>Module-scoped logs access: FIXED<br>Plateau: productive trend + full exercise list<br>History Remap: movement guard<br>Alternative: auto apply guard</div>';
+  p.innerHTML='<h3>Coach Core Stabilization</h3><div class="msg ok">v4.2.0<br>Module-scoped logs access: FIXED<br>Plateau: productive trend + full exercise list<br>History Remap: movement guard<br>Alternative: auto apply guard</div>';
   setup.appendChild(p);
 }
 function coachCoreRun(){ if(window.__v404TooSoon&&window.__v404TooSoon('coachCoreRun',1200)) return; 
@@ -1350,11 +1360,7 @@ function coachCoreRun(){ if(window.__v404TooSoon&&window.__v404TooSoon('coachCor
   try{renderPlateauDetectionSafe();}catch(e){}
   try{coachCoreStatusPanel();}catch(e){}
 }
-window.addEventListener("load",function(){
-  setTimeout(coachCoreRun,600);
-  setTimeout(coachCoreRun,1500);
-  setTimeout(coachCoreRun,3000);
-});
+window.addEventListener("load",function(){setTimeout(()=>renderPage(activePageId(),"load"),300);});
 
 
 function historyRowsByExactExercise(ex){
@@ -1453,10 +1459,10 @@ function syncAlternativeNameDisplay(){
   }catch(e){}
 }
 
-window.addEventListener("load",function(){setTimeout(fullStabilizationRun,800);});
 
 
-/* v4.1.0 Stable Recovery: scoped complete card and throttled stabilization */
+
+/* v4.2.0 Stable Recovery: scoped complete card and throttled stabilization */
 function renderExerciseCompleteState(){
   try{
     const m=typeof meta==="function"?meta():null;
@@ -1519,21 +1525,14 @@ function fullStabilizationRun(){ if(window.__v404TooSoon&&window.__v404TooSoon('
 }
 
 
-/* v4.1.0 Modular Source Refactor */
-
-
-
-async 
-
-
-
+/* v4.2.0 Stable Performance QA */
 window.addEventListener("load",function(){
   
   
 });
 
 
-/* v4.1.0 Modular Source Refactor */
+/* v4.2.0 Stable Performance QA */
 function v403DayExercises(dayName){
   try{return (PROGRAM||[]).filter(p=>p[0]===dayName);}catch(e){return [];}
 }
@@ -1560,7 +1559,7 @@ function v403SkipTargetDay(){
   }catch(e){return "Next Day";}
 }
 function v403SaveSkipEvent(targetDay,reason){
-  const payload={type:"DAY_SKIP_OVERRIDE",date:($("date")&&$("date").value)||new Date().toISOString().slice(0,10),fromDay:(typeof activeDay==="function"?activeDay():""),toDay:targetDay,reason:reason||"manual override",createdAt:new Date().toISOString()};
+  const payload={type:"DAY_SKIP_OVERRIDE",date:($("date")&&$("date").value)||localDateKey(),fromDay:(typeof activeDay==="function"?activeDay():""),toDay:targetDay,reason:reason||"manual override",createdAt:new Date().toISOString()};
   try{
     const arr=JSON.parse(localStorage.getItem("workoutSkipEvents")||"[]");
     arr.push(payload);
@@ -1608,7 +1607,74 @@ function v403Run(){ if(window.__v404TooSoon&&window.__v404TooSoon('v403Run',900)
   try{v403RenderUnlockPanel();}catch(e){}
 }
 
-function renderAll(){ if(window.__v404TabSwitching){return;} setTimeout(v403Run,80);setTimeout(plateauLiveRecompute,120);setTimeout(renderPlateauDetectionSafe,120);bindAutoPersistentAlternative();autoApplyPersistentAlternative();bindStableRenderTriggers();setTimeout(stableRenderAllPanels,80);bindCanonicalExerciseSwitch(); if($('exercise')) applyCanonicalSetDisplay($('exercise').value);exSessionBindDropdown(); if($('exercise')) exSessionRestore($('exercise').value);calSyncBind();calSyncUpdateStatus();exSessionBindDropdown(); if($('exercise')) exSessionRestore($('exercise').value);historySummaryForCurrent();bindPersistentAltButtons();if(typeof renderMediaPanel==="function")renderMediaPanel();bindAiCoachButtons();renderRecent();renderProgram();renderGuide();renderDashboard();renderCoach();renderCalendar();renderDaySummary(selectedDate);sync()}
+
+
+/* v4.2.0 Stable Performance QA: page-scoped renderer */
+function activePageId(){
+  const active=document.querySelector(".page.active");
+  return active ? active.id : "setup";
+}
+function switchPageFast(page){
+  if(!page || !$(page)) return;
+  document.querySelectorAll(".page").forEach(p=>{
+    const on=p.id===page;
+    p.classList.toggle("active",on);
+    p.style.display=on?"":"none";
+  });
+  document.querySelectorAll(".tab[data-page]").forEach(t=>t.classList.toggle("active",t.dataset.page===page));
+  try{localStorage.setItem("workoutActivePage",page);}catch(e){}
+  const complete=document.getElementById("exerciseCompleteBox");
+  if(complete) complete.style.display=page==="log"?"":"none";
+}
+let __renderPageBusy=false;
+function renderPage(page=activePageId(), reason="manual"){
+  if(__renderPageBusy) return;
+  __renderPageBusy=true;
+  try{
+    if(page==="dash"){
+      renderDashboard();
+    }else if(page==="coach"){
+      renderCoach();
+      try{renderPlateauDetectionSafe();}catch(e){}
+      try{coachCoreRun();}catch(e){}
+    }else if(page==="calendar"){
+      renderCalendar();
+      renderDaySummary(selectedDate);
+      try{calSyncUpdateStatus();}catch(e){}
+    }else if(page==="log"){
+      bindAutoPersistentAlternative();
+      bindStableRenderTriggers();
+      bindCanonicalExerciseSwitch();
+      exSessionBindDropdown();
+      calSyncBind();
+      bindPersistentAltButtons();
+      bindAiCoachButtons();
+      applyMeta();
+      sync();
+      renderRecent();
+      try{v403Run();}catch(e){}
+      try{renderExerciseCompleteState();}catch(e){}
+    }else if(page==="program"){
+      renderProgram();
+    }else if(page==="guide"){
+      renderGuide();
+    }else if(page==="setup"){
+      updateDateStatus();
+    }
+  }catch(e){
+    console.warn("renderPage", page, reason, e);
+    const dbg=$("debug");
+    if(dbg){dbg.className="msg err";dbg.textContent="Render error: "+e.message;}
+  }finally{
+    __renderPageBusy=false;
+  }
+}
+function renderAll(){
+  updateDateStatus();
+  const page=activePageId();
+  renderPage(page,"renderAll");
+}
+
 updateDateStatus();renderAll();
 
 document.addEventListener("DOMContentLoaded",()=>bindAiCoachButtons());

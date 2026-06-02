@@ -37,3 +37,9 @@ button,.btn{box-shadow:none!important}
 button,.btn,.card,.msg{transition:none!important}
 .page{contain:layout paint style}
 .page:not(.active){display:none!important}
+
+/* v4.2.0 performance */
+.page{contain:layout paint style;}
+.page:not(.active){display:none!important;}
+button,.btn,.card,.msg{transition:none!important;}
+canvas{contain:strict;}

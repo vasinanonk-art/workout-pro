@@ -1,28 +1,21 @@
-# v4.1.0 Modular Source Refactor
+# v4.2.0 Stable Performance QA
 
-Changed:
-- Split monolithic index.html into:
-  - index.html
-  - css/styles.css
-  - js/runtime.js
-  - js/app.module.js
-  - docs/*
-- No feature intentionally removed.
-- Kept Firebase module script logic in js/app.module.js.
-- Kept non-module UI/runtime helpers in js/runtime.js.
-- Kept original app HTML structure in index.html.
-
-Purpose:
-- Make GitHub maintenance possible.
-- Reduce risk of patching the wrong area.
-- Prepare for v4.2 performance refactor by separating concerns.
+Fixed / Refactored:
+- Tab switching no longer calls full `renderAll()` for every page change.
+- Added page-scoped rendering via `renderPage(page)`.
+- Dashboard, Coach, Calendar, Log, Program, Guide now render only when opened.
+- Reduced post-save timeout storm to one Log-only refresh.
+- Removed heavy runtime UI injectors and duplicate tab runtime.
+- Kept local date fix from v4.1.1.
+- Exercise Complete remains scoped to Log.
+- Skip / Unlock override preserved.
 
 Preserved:
-- Login / Firestore
-- Save set
-- Log / History
-- Calendar
-- Coach / Plateau
-- Alternative / History Priority
-- Program / Guide / Donate
-- Day complete / unlock features from base build where present
+- Login / Firebase / Firestore paths.
+- Save set schema.
+- Logs / History.
+- Calendar.
+- Coach / Plateau.
+- Alternative / History Priority.
+- Program / Guide / Donate.
+- Modular structure.
