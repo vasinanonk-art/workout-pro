@@ -3,7 +3,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* ===== v5.1.1 Calendar Stay Fix ===== */
+/* ===== v5.1.2 Calendar Month Safe Fix ===== */
 function setTextSafe(id, value){
   const el = document.getElementById(id);
   if(el) el.textContent = value;
@@ -32,9 +32,9 @@ function valueSafe(id, fallback=""){
   return el ? el.value : fallback;
 }
 
-const VERSION="v5.1.1", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
+const VERSION="v5.1.2", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
 
-/* ===== v5.1.1 Calendar Stay Fix ===== */
+/* ===== v5.1.2 Calendar Month Safe Fix ===== */
 function safeKeyPart(v){
   return String(v || "default").trim().replace(/[^\w\-@.]/g, "_").slice(0,80) || "default";
 }
@@ -1000,8 +1000,8 @@ function cleanForFirestore(obj){
 
 async function saveSet(){try{$("saveDebug").className="msg";$("saveDebug").textContent="กำลังบันทึก...";if(!user)return alert("Login ก่อน");if(!teamId)return alert("ใส่ Team ID ก่อน");if(!validateDate())return;let m=meta(),ad=activeDay(),st=nextState(),wk=autoWeek();if(st.restLock)return alert("ยังพักไม่ครบ 2 วัน");if(!canSaveCurrentExerciseAdaptive())return alert("ท่านี้ยังไม่สามารถบันทึกได้: อาจเป็นคนละ Day หรือครบเซตแล้ว");let raw=parseFloat($("weight").value),reps=parseInt($("reps").value),rir=parseInt($("rir").value||2);if(!raw||!reps)return alert("กรอก Weight และ Reps");let rememberedAlt=altMemoryForPlanned(m[2]);let persistentAlt=(typeof autoApplyPersistentAlternative==="function"?autoApplyPersistentAlternative():null);let effectiveAlt=selectedAlt||persistentAlt||rememberedAlt;let computedSetNo=canonicalSetState(m[2]).next;let w=toKg(raw,$("unit").value),ex=effectiveAlt?effectiveAlt.name:m[2];await addDoc(collection(db, scopedWorkoutsCollection()),cleanForFirestore({date:$("date").value,week:wk,autoWeek:wk,day:m[0],focus:m[1],exercise:ex,plannedExercise:m[2],isAlternative:!!effectiveAlt,alternativePattern:effectiveAlt?effectiveAlt.pattern:"",alternativeQuery:(effectiveAlt&&effectiveAlt.query)?effectiveAlt.query:"",targetSets:m[3],setNo:computedSetNo,muscle:m[5],weight:w,reps,rir,volume:w*reps,note:$("note").value||"",sleepHours:parseFloat($("sleepHours")?.value||7),soreness:parseInt($("soreness")?.value||2),stress:parseInt($("stress")?.value||2),tempo:$("tempo")?.value||"",repQuality:$("repQuality")?.value||"",biasMode:$("biasMode")?.value||"auto",effectiveReps:effectiveRepsForSet({reps,rir}),userId:user.uid,userName:user.displayName||user.email,userEmail:user.email,teamLabel:activeTeamLabel(),userScope:activeUserKey(),ownerUid:user.uid,ownerEmail:user.email,appVersion:VERSION,createdAt:serverTimestamp()})); if(typeof exSessionAfterSave==="function") exSessionMarkSavedLocal(m[2]); applyCanonicalSetDisplay(m[2]);selectedAlt=null;$("weight").value="";$("reps").value="";$("rir").value=2;$("note").value="";$("saveDebug").className="msg ok";$("saveDebug").textContent="บันทึกสำเร็จ ✅";startRest();setTimeout(sync,600);setTimeout(v403Run,250);setTimeout(fullStabilizationRun,950);setTimeout(coachCoreRun,950);setTimeout(authDebugGuardRun,950);setTimeout(permissionSafeRun,900);setTimeout(plateauLiveRecompute,900);setTimeout(stableRenderAllPanels,700)}catch(e){$("saveDebug").className="msg err";$("saveDebug").textContent="Save error: "+e.message;alert("Save error: "+e.message)}}
 
-/* ===== v5.1.1 LEGACY_MIGRATION_CODE ===== */
-/* ===== v5.1.1 MIGRATION_RECOVERY_CODE ===== */
+/* ===== v5.1.2 LEGACY_MIGRATION_CODE ===== */
+/* ===== v5.1.2 MIGRATION_RECOVERY_CODE ===== */
 
 
 
@@ -1009,7 +1009,7 @@ async function saveSet(){try{$("saveDebug").className="msg";$("saveDebug").textC
 
 
 
-/* ===== v5.1.1 FULL_QA_MIGRATION_CHAIN ===== */
+/* ===== v5.1.2 FULL_QA_MIGRATION_CHAIN ===== */
 let legacyMigrationState = { checked:false, count:0, docs:[] };
 window.__legacyMigrationReadyToMigrate = false;
 
@@ -1194,7 +1194,7 @@ function bindLegacyMigration(){
   window.__migrationModuleReady = true;
 }
 
-function subscribe(){if(unsub)unsub();if(!teamId)return;unsub=onSnapshot(query(collection(db, scopedWorkoutsCollection()),orderBy("createdAt","desc")),s=>{logs=s.docs.map(d=>({id:d.id,...d.data()}));$("debug").className="msg ok";$("debug").textContent=`โหลดข้อมูลแล้ว ${logs.length} sets • ${VERSION} • Isolated User Data`;renderAll();bindLegacyMigration();setTimeout(function(){try{bindCalendarStayFixV511();bindCalendarGoLogV511();}catch(e){}},50);if(logs.length===0)setTimeout(checkLegacyLogsForMigration,400)},e=>{$("debug").className="msg err";$("debug").textContent=e.message})}
+function subscribe(){if(unsub)unsub();if(!teamId)return;unsub=onSnapshot(query(collection(db, scopedWorkoutsCollection()),orderBy("createdAt","desc")),s=>{logs=s.docs.map(d=>({id:d.id,...d.data()}));$("debug").className="msg ok";$("debug").textContent=`โหลดข้อมูลแล้ว ${logs.length} sets • ${VERSION} • Isolated User Data`;renderAll();bindLegacyMigration();setTimeout(function(){try{bindCalendarStayFixV512();bindCalendarGoLogV512();}catch(e){}},50);if(logs.length===0)setTimeout(checkLegacyLogsForMigration,400)},e=>{$("debug").className="msg err";$("debug").textContent=e.message})}
 onAuthStateChanged(auth,u=>{user=u;$("authState").textContent=u?`Login: ${u.displayName||u.email}`:"ยังไม่ได้ login";$("userLine").textContent=u?`${u.displayName||u.email} / Team: ${teamId||"-"} / ${VERSION}`:`Clean QA • ${VERSION}`;if(u&&teamId)subscribe()});
 $("loginBtn").onclick=()=>signInWithPopup(auth,new GoogleAuthProvider()).catch(e=>alert(e.message));$("logoutBtn").onclick=()=>signOut(auth);$("saveTeamBtn").onclick=()=>{teamId=$("teamId").value.trim();localStorage.setItem("teamId",teamId);subscribe()};
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));$(b.dataset.page).classList.add("active");document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));b.classList.add("active");renderAll()});
@@ -1577,7 +1577,7 @@ function renderDashboard(){try{$("kVol").textContent=logs.reduce((a,b)=>a+(+b.vo
 function fmt(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}function dayForDate(d){let a=logs.filter(x=>x.date===d);if(!a.length)return null;let c={};a.forEach(x=>c[x.day]=(c[x.day]||0)+1);return Object.entries(c).sort((a,b)=>b[1]-a[1])[0][0]}function renderCalendar(){let grid=$("calGrid");grid.innerHTML="";let names=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];$("monthTitle").textContent=names[calDate.getMonth()]+" "+calDate.getFullYear();["อา","จ","อ","พ","พฤ","ศ","ส"].forEach(h=>grid.innerHTML+=`<div class="calHead">${h}</div>`);let first=new Date(calDate.getFullYear(),calDate.getMonth(),1),last=new Date(calDate.getFullYear(),calDate.getMonth()+1,0).getDate();for(let i=0;i<first.getDay();i++)grid.innerHTML+=`<div class="calDay empty"></div>`;for(let d=1;d<=last;d++){let key=fmt(new Date(calDate.getFullYear(),calDate.getMonth(),d)),a=logs.filter(x=>x.date===key),day=dayForDate(key),sel=key===selectedDate?" sel":"",tod=key===today()?" today":"";grid.innerHTML+=`<div class="calDay${sel}${tod}" data-date="${key}"><b>${d}</b><br><span class="calTag ${a.length?'partial':'rest'}">${day||'Rest'}</span>${a.length?`<div class="small">${a.length} sets</div>`:""}</div>`}grid.querySelectorAll(".calDay[data-date]").forEach(el=>el.onclick=()=>{selectedDate=el.dataset.date;$("date").value=selectedDate;sync();document.querySelector('[data-page="log"]').click()})}function renderDaySummary(d){let a=logs.filter(x=>x.date===d);$("dayTitle").textContent="Daily Summary: "+d;if(!a.length){$("daySummary").innerHTML="ยังไม่มีข้อมูล";return}let by={};a.forEach(x=>{if(!by[x.exercise])by[x.exercise]=[];by[x.exercise].push(x)});$("daySummary").innerHTML=Object.entries(by).map(([ex,arr])=>{let max=arr.reduce((m,x)=>+x.weight>+m.weight?x:m,arr[0]);return `<div class="item"><h3>${ex}</h3><div class="meta">Sets: ${arr.length}<br>Max: ${fromKg(max.weight,$("unit").value)} ${$("unit").value} × ${max.reps}${max.isAlternative?`<br>แทน: ${max.plannedExercise}`:""}</div></div>`}).join("")}
 $("prevM").onclick=()=>{calDate=new Date(calDate.getFullYear(),calDate.getMonth()-1,1);renderCalendar()};$("nextM").onclick=()=>{calDate=new Date(calDate.getFullYear(),calDate.getMonth()+1,1);renderCalendar()};
 function renderSafe(){try{renderDashboard();renderCoach();renderCalendar();renderDaySummary(selectedDate)}catch(e){$("chartStatus").textContent="Render fallback: "+e.message}}
-/* v5.1.1 Calendar Stay Fix
+/* v5.1.2 Calendar Month Safe Fix
    This code is intentionally inside the Firebase module script so it can access logs / PROGRAM / $ safely.
 */
 const COACH_MOVEMENT_GROUPS = {
@@ -1696,7 +1696,7 @@ function coachCoreStatusPanel(){
   const p=document.createElement("div");
   p.id="coachCoreStatusPanel";
   p.className="card";
-  p.innerHTML='<h3>Coach Core Stabilization</h3><div class="msg ok">v5.1.1<br>Module-scoped logs access: FIXED<br>Plateau: productive trend + full exercise list<br>History Remap: movement guard<br>Alternative: auto apply guard</div>';
+  p.innerHTML='<h3>Coach Core Stabilization</h3><div class="msg ok">v5.1.2<br>Module-scoped logs access: FIXED<br>Plateau: productive trend + full exercise list<br>History Remap: movement guard<br>Alternative: auto apply guard</div>';
   setup.appendChild(p);
 }
 function coachCoreRun(){ if(window.__v404TooSoon&&window.__v404TooSoon('coachCoreRun',1200)) return; 
@@ -1811,7 +1811,7 @@ function syncAlternativeNameDisplay(){
 window.addEventListener("load",function(){setTimeout(fullStabilizationRun,800);});
 
 
-/* v5.1.1 Stable Recovery: scoped complete card and throttled stabilization */
+/* v5.1.2 Stable Recovery: scoped complete card and throttled stabilization */
 function renderExerciseCompleteState(){
   try{
     const m=typeof meta==="function"?meta():null;
@@ -1877,7 +1877,7 @@ function fullStabilizationRun(){ if(window.__v404TooSoon&&window.__v404TooSoon('
 
 
 
-/* v5.1.1 Calendar Stay Fix */
+/* v5.1.2 Calendar Month Safe Fix */
 function v403DayExercises(dayName){
   try{return (PROGRAM||[]).filter(p=>p[0]===dayName);}catch(e){return [];}
 }
@@ -1953,7 +1953,7 @@ function v403Run(){ if(window.__v404TooSoon&&window.__v404TooSoon('v403Run',900)
 }
 
 
-/* ===== v5.1.1 Complete Analytics / Export / Coach ===== */
+/* ===== v5.1.2 Complete Analytics / Export / Coach ===== */
 function v5SafeLogs(){try{return Array.isArray(logs)?logs:[]}catch(e){return []}}
 function v5Date(){return $("date")?.value || (typeof today==="function"?today():new Date().toISOString().slice(0,10))}
 function v5Volume(x){return Number(x.weight||0)*Number(x.reps||0)}
@@ -2054,7 +2054,7 @@ function v5EnhanceCalendar(){
   }catch(e){}
 }
 function v5ExportJson(){
-  const payload={version:"v5.1.1",exportedAt:new Date().toISOString(),logs:v5SafeLogs()};
+  const payload={version:"v5.1.2",exportedAt:new Date().toISOString(),logs:v5SafeLogs()};
   const text=JSON.stringify(payload,null,2);
   if($("v5BackupText")) $("v5BackupText").value=text;
   try{navigator.clipboard&&navigator.clipboard.writeText(text)}catch(e){}
@@ -2098,7 +2098,7 @@ window.addEventListener('load',()=>{setTimeout(()=>{try{v430RestoreDraft();v430R
 
 
 
-/* ===== v5.1.1 Feature Functions ===== */
+/* ===== v5.1.2 Feature Functions ===== */
 function v430SafeLogs(){try{return Array.isArray(logs)?logs:[]}catch(e){return []}}
 function v430CurrentExercise(){return $("exercise")?$("exercise").value:""}
 function v430Today(){return (typeof today==="function"?today():(new Date()).toISOString().slice(0,10))}
@@ -2177,7 +2177,7 @@ window.addEventListener('load',function(){setTimeout(function(){try{bindLegacyMi
 
 
 
-/* ===== v5.1.1 MIGRATION_BUTTON_FIX_CODE ===== */
+/* ===== v5.1.2 MIGRATION_BUTTON_FIX_CODE ===== */
 function v503UpdateTeamStatus(){
   try{
     const st=$("teamSaveStatus");
@@ -2256,7 +2256,7 @@ function v503BindCriticalButtons(){
 window.addEventListener('load',function(){setTimeout(v503BindCriticalButtons,300);setTimeout(v503BindCriticalButtons,1200);});
 
 
-/* ===== v5.1.1 MANUAL_IMPORT_CODE ===== */
+/* ===== v5.1.2 MANUAL_IMPORT_CODE ===== */
 
 
 
@@ -2265,19 +2265,19 @@ window.addEventListener('load',function(){setTimeout(v503BindCriticalButtons,300
 
 
 
-/* ===== v5.1.1 MIGRATION_BINDING_HARD_FIX_CODE ===== */
+/* ===== v5.1.2 MIGRATION_BINDING_HARD_FIX_CODE ===== */
 
 
 
 
 
-/* ===== v5.1.1 MIGRATION_CONFIRM_FLOW_FIX_CODE ===== */
+/* ===== v5.1.2 MIGRATION_CONFIRM_FLOW_FIX_CODE ===== */
 
 
 
 
 
-/* ===== v5.1.1 MIGRATION_SINGLE_HANDLER_FIX_CODE ===== */
+/* ===== v5.1.2 MIGRATION_SINGLE_HANDLER_FIX_CODE ===== */
 
 
 
@@ -2287,12 +2287,53 @@ window.addEventListener('load',function(){setTimeout(bindLegacyMigration,120);se
 
 
 
-/* ===== v5.1.1 CALENDAR_STAY_FIX_CODE ===== */
-let calendarSelectedDateV511 = null;
+/* ===== v5.1.2 CALENDAR_MONTH_SAFE_FIX_CODE ===== */
+var calendarSelectedDateV512 = window.calendarSelectedDateV512 || null;
 
-function renderCalendarSelectedDayV511(dateStr){
+function calendarSafeKeyV512(d){
+  if(typeof keyD === "function"){
+    try{return keyD(d);}catch(_){}
+  }
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+
+function calendarBaseMonthV512(){
   try{
-    calendarSelectedDateV511 = dateStr;
+    if(typeof calMonth !== "undefined" && calMonth instanceof Date && !isNaN(calMonth)){
+      return new Date(calMonth.getFullYear(), calMonth.getMonth(), 1);
+    }
+  }catch(_){}
+  const dateInput = document.getElementById("date");
+  if(dateInput && dateInput.value && /^\d{4}-\d{2}-\d{2}$/.test(dateInput.value)){
+    const d = new Date(dateInput.value + "T00:00:00");
+    if(!isNaN(d)) return new Date(d.getFullYear(), d.getMonth(), 1);
+  }
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), 1);
+}
+
+function extractCalendarDateV512(cell){
+  if(!cell) return null;
+  const ds = cell.dataset ? cell.dataset.date : null;
+  if(ds && /^\d{4}-\d{2}-\d{2}$/.test(ds)) return ds;
+  const attr = cell.getAttribute ? cell.getAttribute("data-date") : null;
+  if(attr && /^\d{4}-\d{2}-\d{2}$/.test(attr)) return attr;
+
+  const text = (cell.textContent || "").trim();
+  const day = parseInt(text, 10);
+  if(!day || day < 1 || day > 31) return null;
+  const base = calendarBaseMonthV512();
+  const d = new Date(base.getFullYear(), base.getMonth(), day);
+  if(isNaN(d)) return null;
+  return calendarSafeKeyV512(d);
+}
+
+function renderCalendarSelectedDayV512(dateStr){
+  try{
+    if(!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return false;
+    calendarSelectedDateV512 = dateStr;
+    window.calendarSelectedDateV512 = dateStr;
+
     const title = document.getElementById("dayTitle");
     const summary = document.getElementById("daySummary");
     const insight = document.getElementById("v5DayInsight");
@@ -2324,58 +2365,61 @@ function renderCalendarSelectedDayV511(dateStr){
     if(dateInput) dateInput.value = dateStr;
 
     setTimeout(function(){
-      if(typeof show === "function"){
-        // Force stay on Calendar after old handlers finish.
-        try{ show("calendar"); }catch(e){}
-      }
-    }, 0);
+      try{
+        if(typeof show === "function") show("calendar");
+      }catch(_){}
+    },0);
+    return true;
   }catch(e){
-    console.warn("renderCalendarSelectedDayV511", e);
+    console.warn("renderCalendarSelectedDayV512", e);
+    return false;
   }
 }
 
-function bindCalendarStayFixV511(){
+function bindCalendarStayFixV512(){
   try{
     const grid = document.getElementById("calGrid");
-    if(!grid || grid.dataset.v511Bound === "1") return;
-    grid.dataset.v511Bound = "1";
+    if(!grid || grid.dataset.v512Bound === "1") return;
+    grid.dataset.v512Bound = "1";
+
     grid.addEventListener("click", function(ev){
-      const cell = ev.target.closest(".calCell, [data-date], button, div");
-      if(!cell || !grid.contains(cell)) return;
+      try{
+        const cell = ev.target.closest("[data-date], .calCell, .calendar-day, button, div");
+        if(!cell || !grid.contains(cell)) return;
 
-      let dateStr = cell.dataset ? (cell.dataset.date || cell.getAttribute("data-date")) : null;
+        const dateStr = extractCalendarDateV512(cell);
+        if(!dateStr) return;
 
-      if(!dateStr){
-        const text = (cell.textContent || "").trim();
-        const day = parseInt(text,10);
-        if(!day || !calMonth) return;
-        const d = new Date(calMonth.getFullYear(), calMonth.getMonth(), day);
-        dateStr = (typeof keyD === "function") ? keyD(d) : d.toISOString().slice(0,10);
+        ev.preventDefault();
+        ev.stopPropagation();
+        if(ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+
+        renderCalendarSelectedDayV512(dateStr);
+        return false;
+      }catch(e){
+        console.warn("calendar click safe guard", e);
+        ev.preventDefault();
+        ev.stopPropagation();
+        return false;
       }
-
-      if(!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return;
-
-      ev.preventDefault();
-      ev.stopPropagation();
-      if(ev.stopImmediatePropagation) ev.stopImmediatePropagation();
-
-      renderCalendarSelectedDayV511(dateStr);
-      return false;
     }, true);
   }catch(e){
-    console.warn("bindCalendarStayFixV511", e);
+    console.warn("bindCalendarStayFixV512", e);
   }
 }
 
-function bindCalendarGoLogV511(){
+function bindCalendarGoLogV512(){
   const btn = document.getElementById("calendarGoLogBtn");
-  if(!btn || btn.dataset.v511Bound === "1") return;
-  btn.dataset.v511Bound = "1";
+  if(!btn || btn.dataset.v512Bound === "1") return;
+  btn.dataset.v512Bound = "1";
   btn.onclick = function(){
-    if(calendarSelectedDateV511){
+    if(calendarSelectedDateV512){
       const dateInput = document.getElementById("date");
-      if(dateInput) dateInput.value = calendarSelectedDateV511;
+      if(dateInput) dateInput.value = calendarSelectedDateV512;
     }
     if(typeof show === "function") show("log");
   };
 }
+
+
+window.addEventListener('load',function(){setTimeout(function(){try{bindCalendarStayFixV512();bindCalendarGoLogV512();}catch(e){}},200);setTimeout(function(){try{bindCalendarStayFixV512();bindCalendarGoLogV512();}catch(e){}},1200);});
