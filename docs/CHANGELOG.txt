@@ -1,15 +1,18 @@
-# v5.0.10 Helper Injection Fix
+# v5.0.11 Migration Confirm Flow Fix
 
 Fixed:
-- setValueSafe was not defined after v5.0.9.
-- Added missing setValueSafe helper directly to app.module.js.
-- Added runtime fallback.
+- After scan found legacy logs, clicking the same button could still trigger the old runtime guard.
+- Added migration ready state:
+  window.__legacyMigrationReadyToMigrate
+- Removed old v5.0.8 migration runtime guard.
+- Runtime now routes:
+  - before scan: checkLegacyLogsForMigration()
+  - after records found: migrateLegacyLogsToUser()
 
 Confirmed from user test:
-- Legacy migration detects old logs: 329 records.
+- Legacy logs detected: 329 records
 
 Preserved:
+- v5.0.10 helper fix
 - v5.0.9 sync null guard
-- v5.0.8 migration hard binding
-- v5.0.7 migration UI cleanup
 - v5.0.1 user isolation

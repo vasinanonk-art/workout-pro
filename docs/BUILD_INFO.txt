@@ -1,4 +1,4 @@
 App: Workout PRO
-Version: v5.0.10
-Build: Helper Injection Fix
+Version: v5.0.11
+Build: Migration Confirm Flow Fix
 Updated: 2026-06-03

@@ -1,18 +1,18 @@
-# QA REPORT v5.0.10 Helper Injection Fix
+# QA REPORT v5.0.11 Migration Confirm Flow Fix
 
-✅ Version v5.0.10
-✅ setValueSafe defined
-✅ sync uses helper
-✅ Migration preserved
-✅ Legacy records path preserved
-✅ Runtime fallback
+✅ Version v5.0.11
+✅ Migration ready state set
+✅ Confirm runtime routes migrate
+✅ Old v508 runtime removed
+✅ Helper fix preserved
+✅ Migration functions preserved
+✅ User isolation preserved
 ✅ Runtime JS syntax
 ✅ Module JS syntax
-✅ No duplicate setValueSafe
 
 Manual QA:
-1. Deploy and hard refresh.
-2. Console must no longer show: setValueSafe is not defined.
-3. Migration should still show 329 records.
-4. Click ย้ายข้อมูลทั้งหมด and confirm.
-5. Logs should appear under isolated user path.
+1. Click ตรวจสอบ Log เก่า.
+2. It should show 329 records.
+3. Button should show ย้ายข้อมูลทั้งหมด (329 records).
+4. Click the same button again.
+5. It must show confirm dialog and then start migration.
