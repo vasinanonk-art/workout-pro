@@ -1,18 +1,18 @@
-# QA REPORT v5.0.9 Sync Null Guard Fix
+# QA REPORT v5.0.10 Helper Injection Fix
 
-✅ Version v5.0.9
-✅ sync rewritten
-✅ safe setters
-✅ removed original sync line
-✅ Migration window expose preserved
-✅ Migration functions preserved
-✅ applyMeta guard preserved
+✅ Version v5.0.10
+✅ setValueSafe defined
+✅ sync uses helper
+✅ Migration preserved
+✅ Legacy records path preserved
+✅ Runtime fallback
 ✅ Runtime JS syntax
 ✅ Module JS syntax
-✅ No duplicate functions
+✅ No duplicate setValueSafe
 
 Manual QA:
-1. Open Console: app.module.js null textContent error should be gone.
-2. Click ตรวจสอบ Log เก่า.
-3. Migration box must change to legacy path / count / permission error.
-4. Dashboard/Log/Calendar should still render.
+1. Deploy and hard refresh.
+2. Console must no longer show: setValueSafe is not defined.
+3. Migration should still show 329 records.
+4. Click ย้ายข้อมูลทั้งหมด and confirm.
+5. Logs should appear under isolated user path.

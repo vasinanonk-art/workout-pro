@@ -1,13 +1,15 @@
-# v5.0.9 Sync Null Guard Fix
+# v5.0.10 Helper Injection Fix
 
 Fixed:
-- sync() crashed on missing DOM elements such as kWeek, lockStatus, setStatus, exercise, saveBtn.
-- Rewrote sync() to use safe DOM setters.
-- This prevents renderAll from stopping before Migration module is exposed.
+- setValueSafe was not defined after v5.0.9.
+- Added missing setValueSafe helper directly to app.module.js.
+- Added runtime fallback.
+
+Confirmed from user test:
+- Legacy migration detects old logs: 329 records.
 
 Preserved:
-- v5.0.8 Migration Binding Hard Fix
-- v5.0.7 Migration UI Cleanup
-- v5.0.6 applyMeta null guard
-- v5.0.4 Team ID hard save
-- v5.0.1 User Isolation
+- v5.0.9 sync null guard
+- v5.0.8 migration hard binding
+- v5.0.7 migration UI cleanup
+- v5.0.1 user isolation
