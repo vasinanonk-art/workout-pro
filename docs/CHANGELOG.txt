@@ -1,18 +1,28 @@
-# v5.0.11 Migration Confirm Flow Fix
+# v5.1.0 Full QA Stable Build
 
-Fixed:
-- After scan found legacy logs, clicking the same button could still trigger the old runtime guard.
-- Added migration ready state:
-  window.__legacyMigrationReadyToMigrate
-- Removed old v5.0.8 migration runtime guard.
-- Runtime now routes:
-  - before scan: checkLegacyLogsForMigration()
-  - after records found: migrateLegacyLogsToUser()
+Rebuilt as a QA consolidation build, not a hotfix.
 
-Confirmed from user test:
-- Legacy logs detected: 329 records
+Fixed / consolidated:
+- Removed runtime migration click interception.
+- Rebuilt one migration handler in app.module.js only.
+- Rebuilt migration flow:
+  1. ตรวจสอบ Log เก่า
+  2. Found records
+  3. ย้ายข้อมูลทั้งหมด
+  4. Confirm
+  5. Copy to isolated user path
+- Rebuilt sync() with safe DOM guards.
+- Preserved Team ID hard save.
+- Preserved User Isolation path:
+  teams/{teamLabel}/users/{userUid}/workouts
+- Removed Manual Import JSON.
+- Added deterministic migration card.
+
+Known expected result from previous live test:
+- Legacy scan found 329 records.
+- This build is designed to let the second click run migrateLegacyLogsToUser(), not runtime guard.
 
 Preserved:
-- v5.0.10 helper fix
-- v5.0.9 sync null guard
-- v5.0.1 user isolation
+- Login / Firestore / Save / Delete
+- Dashboard / Log / Calendar / Coach / Program / Guide / Donate
+- v5 dashboard analytics

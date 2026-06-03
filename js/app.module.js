@@ -3,7 +3,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* ===== v5.0.11 Migration Confirm Flow Fix ===== */
+/* ===== v5.1.0 Full QA Stable Build ===== */
 function setTextSafe(id, value){
   const el = document.getElementById(id);
   if(el) el.textContent = value;
@@ -32,9 +32,9 @@ function valueSafe(id, fallback=""){
   return el ? el.value : fallback;
 }
 
-const VERSION="v5.0.11", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
+const VERSION="v5.1.0", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
 
-/* ===== v5.0.11 Migration Confirm Flow Fix ===== */
+/* ===== v5.1.0 Full QA Stable Build ===== */
 function safeKeyPart(v){
   return String(v || "default").trim().replace(/[^\w\-@.]/g, "_").slice(0,80) || "default";
 }
@@ -854,6 +854,10 @@ function applyMeta(){
 
 
 
+
+
+
+
 function sync(){
   try{
     updateDateStatus();
@@ -877,13 +881,13 @@ function sync(){
       }
       if(typeof updateCycleDebug==="function") updateCycleDebug();
       if(typeof updateDayDateLockDebug==="function") updateDayDateLockDebug();
-      renderMediaPanel();
-      syncSelectedExerciseState();
-      calSyncUpdateStatus();
+      if(typeof renderMediaPanel==="function") renderMediaPanel();
+      if(typeof syncSelectedExerciseState==="function") syncSelectedExerciseState();
+      if(typeof calSyncUpdateStatus==="function") calSyncUpdateStatus();
       if(exerciseEl && typeof applyCanonicalSetDisplay==="function") applyCanonicalSetDisplay(exerciseEl.value);
-      stableRenderAllPanels();
-      autoApplyPersistentAlternative();
-      renderSafe();
+      if(typeof stableRenderAllPanels==="function") stableRenderAllPanels();
+      if(typeof autoApplyPersistentAlternative==="function") autoApplyPersistentAlternative();
+      if(typeof renderSafe==="function") renderSafe();
       return;
     }
 
@@ -894,7 +898,7 @@ function sync(){
       if(exerciseEl){
         Array.from(exerciseEl.options).forEach(o=>{o.disabled=true;o.textContent=o.value+" 🔒 Rest";});
       }
-      renderSafe();
+      if(typeof renderSafe==="function") renderSafe();
       return;
     }
 
@@ -911,11 +915,11 @@ function sync(){
     }
 
     if(st && !st.complete){
-      if(!canSaveCurrentExerciseAdaptive() && exerciseEl){
+      if(typeof canSaveCurrentExerciseAdaptive==="function" && !canSaveCurrentExerciseAdaptive() && exerciseEl){
         exerciseEl.value=st.exercise;
       }
-      applyMeta();
-      updateAltMemoryUI(st.exercise);
+      if(typeof applyMeta==="function") applyMeta();
+      if(typeof updateAltMemoryUI==="function") updateAltMemoryUI(st.exercise);
       currentSet=st.next;
       setTextSafe("setNo", st.next);
       setTextSafe("targetShow", st.target);
@@ -926,15 +930,15 @@ function sync(){
       if(saveBtn) saveBtn.disabled=true;
     }
 
-    applyPersistentAltIfExists();
-    updatePersistentAltUI();
-    historySummaryForCurrent();
-    updatePR();
-    updateWeekly();
-    updateNextWeekRecommendation();
-    updateOrderGuidance();
-    renderHypertrophyIntelligence();
-    renderSafe();
+    if(typeof applyPersistentAltIfExists==="function") applyPersistentAltIfExists();
+    if(typeof updatePersistentAltUI==="function") updatePersistentAltUI();
+    if(typeof historySummaryForCurrent==="function") historySummaryForCurrent();
+    if(typeof updatePR==="function") updatePR();
+    if(typeof updateWeekly==="function") updateWeekly();
+    if(typeof updateNextWeekRecommendation==="function") updateNextWeekRecommendation();
+    if(typeof updateOrderGuidance==="function") updateOrderGuidance();
+    if(typeof renderHypertrophyIntelligence==="function") renderHypertrophyIntelligence();
+    if(typeof renderSafe==="function") renderSafe();
   }catch(e){
     console.warn("sync null guard", e);
     const box=document.getElementById("legacyMigrationBox");
@@ -942,7 +946,7 @@ function sync(){
       box.className="msg warn";
       box.innerHTML="Sync null guard จับ DOM error ได้แล้ว<br><span class='small'>ปุ่ม Migration ยังควรกดได้</span>";
     }
-    try{renderSafe();}catch(_){}
+    try{ if(typeof renderSafe==="function") renderSafe(); }catch(_){}
   }
 }
 
@@ -996,33 +1000,41 @@ function cleanForFirestore(obj){
 
 async function saveSet(){try{$("saveDebug").className="msg";$("saveDebug").textContent="กำลังบันทึก...";if(!user)return alert("Login ก่อน");if(!teamId)return alert("ใส่ Team ID ก่อน");if(!validateDate())return;let m=meta(),ad=activeDay(),st=nextState(),wk=autoWeek();if(st.restLock)return alert("ยังพักไม่ครบ 2 วัน");if(!canSaveCurrentExerciseAdaptive())return alert("ท่านี้ยังไม่สามารถบันทึกได้: อาจเป็นคนละ Day หรือครบเซตแล้ว");let raw=parseFloat($("weight").value),reps=parseInt($("reps").value),rir=parseInt($("rir").value||2);if(!raw||!reps)return alert("กรอก Weight และ Reps");let rememberedAlt=altMemoryForPlanned(m[2]);let persistentAlt=(typeof autoApplyPersistentAlternative==="function"?autoApplyPersistentAlternative():null);let effectiveAlt=selectedAlt||persistentAlt||rememberedAlt;let computedSetNo=canonicalSetState(m[2]).next;let w=toKg(raw,$("unit").value),ex=effectiveAlt?effectiveAlt.name:m[2];await addDoc(collection(db, scopedWorkoutsCollection()),cleanForFirestore({date:$("date").value,week:wk,autoWeek:wk,day:m[0],focus:m[1],exercise:ex,plannedExercise:m[2],isAlternative:!!effectiveAlt,alternativePattern:effectiveAlt?effectiveAlt.pattern:"",alternativeQuery:(effectiveAlt&&effectiveAlt.query)?effectiveAlt.query:"",targetSets:m[3],setNo:computedSetNo,muscle:m[5],weight:w,reps,rir,volume:w*reps,note:$("note").value||"",sleepHours:parseFloat($("sleepHours")?.value||7),soreness:parseInt($("soreness")?.value||2),stress:parseInt($("stress")?.value||2),tempo:$("tempo")?.value||"",repQuality:$("repQuality")?.value||"",biasMode:$("biasMode")?.value||"auto",effectiveReps:effectiveRepsForSet({reps,rir}),userId:user.uid,userName:user.displayName||user.email,userEmail:user.email,teamLabel:activeTeamLabel(),userScope:activeUserKey(),ownerUid:user.uid,ownerEmail:user.email,appVersion:VERSION,createdAt:serverTimestamp()})); if(typeof exSessionAfterSave==="function") exSessionMarkSavedLocal(m[2]); applyCanonicalSetDisplay(m[2]);selectedAlt=null;$("weight").value="";$("reps").value="";$("rir").value=2;$("note").value="";$("saveDebug").className="msg ok";$("saveDebug").textContent="บันทึกสำเร็จ ✅";startRest();setTimeout(sync,600);setTimeout(v403Run,250);setTimeout(fullStabilizationRun,950);setTimeout(coachCoreRun,950);setTimeout(authDebugGuardRun,950);setTimeout(permissionSafeRun,900);setTimeout(plateauLiveRecompute,900);setTimeout(stableRenderAllPanels,700)}catch(e){$("saveDebug").className="msg err";$("saveDebug").textContent="Save error: "+e.message;alert("Save error: "+e.message)}}
 
-/* ===== v5.0.11 LEGACY_MIGRATION_CODE ===== */
+/* ===== v5.1.0 LEGACY_MIGRATION_CODE ===== */
+/* ===== v5.1.0 MIGRATION_RECOVERY_CODE ===== */
+
+
+
+
+
+
+
+/* ===== v5.1.0 FULL_QA_MIGRATION_CHAIN ===== */
 let legacyMigrationState = { checked:false, count:0, docs:[] };
+window.__legacyMigrationReadyToMigrate = false;
 
-
-
-
-
-
-
-
-/* ===== v5.0.11 MIGRATION_RECOVERY_CODE ===== */
 async function checkLegacyLogsForMigration(){
-  const box = $("legacyMigrationBox");
-  try{ if(box){box.className="msg info";box.innerHTML="เริ่มตรวจสอบ legacy migration...";} }catch(_e){}
-  const btn = $("legacyMigrationBtn");
+  const box = document.getElementById("legacyMigrationBox");
+  const btn = document.getElementById("legacyMigrationBtn");
   try{
-    if(!box || !btn) return;
-    btn.disabled = false;
+    if(btn){
+      btn.disabled = false;
+      btn.type = "button";
+    }
+    if(!box) return;
+
+    window.__legacyMigrationReadyToMigrate = false;
+    legacyMigrationState = { checked:false, count:0, docs:[] };
 
     if(!user){
       box.className = "msg warn";
       box.innerHTML = "ยังไม่ได้ Login: กรุณา Login ก่อนตรวจ Log เก่า";
+      if(btn) btn.textContent = "ตรวจสอบ Log เก่า";
       return;
     }
 
     if(!teamId){
-      const inputVal = $("teamId") ? String($("teamId").value || "").trim() : "";
+      const inputVal = document.getElementById("teamId") ? String(document.getElementById("teamId").value || "").trim() : "";
       if(inputVal){
         teamId = inputVal;
         localStorage.setItem("teamId", teamId);
@@ -1032,20 +1044,21 @@ async function checkLegacyLogsForMigration(){
     if(!teamId){
       box.className = "msg warn";
       box.innerHTML = "ยังไม่มี Team ID: ใส่ Team ID แล้วกด Save Team ID ก่อน";
+      if(btn) btn.textContent = "ตรวจสอบ Log เก่า";
       return;
     }
 
     box.className = "msg info";
     box.innerHTML = "กำลังตรวจ legacy path:<br><b>" + legacySharedWorkoutsCollection() + "</b>";
-    btn.textContent = "กำลังตรวจ...";
+    if(btn) btn.textContent = "กำลังตรวจ...";
 
     let legacySnap;
     try{
       legacySnap = await getDocs(query(collection(db, legacySharedWorkoutsCollection()), orderBy("createdAt","desc")));
     }catch(readErr){
       box.className = "msg err";
-      box.innerHTML = "อ่าน legacy path ไม่ได้: " + readErr.message + "<br><span class='small'>สาเหตุที่พบบ่อย: Firestore Rules ไม่อนุญาตให้อ่าน path เก่า หรือ path เดิมไม่ใช่ teams/{teamId}/workouts</span><br>ใช้ Manual Import JSON ด้านล่างแทนได้";
-      btn.textContent = "ตรวจสอบ Log เก่า";
+      box.innerHTML = "อ่าน legacy path ไม่ได้: " + readErr.message + "<br><span class='small'>ตรวจ Firestore Rules หรือ Team ID</span>";
+      if(btn) btn.textContent = "ตรวจสอบ Log เก่า";
       return;
     }
 
@@ -1054,20 +1067,23 @@ async function checkLegacyLogsForMigration(){
 
     if(!legacyDocs.length){
       box.className = "msg warn";
-      box.innerHTML = "ไม่พบ log เก่าที่ path:<br><b>" + legacySharedWorkoutsCollection() + "</b><br><span class='small'>ถ้ามั่นใจว่ามี log เก่า อาจอยู่คนละ Team ID หรือ path เดิมชื่ออื่น</span>";
-      btn.textContent = "ตรวจสอบ Log เก่า";
+      box.innerHTML = "ไม่พบ log เก่าที่ path:<br><b>" + legacySharedWorkoutsCollection() + "</b>";
+      if(btn) btn.textContent = "ตรวจสอบ Log เก่า";
       return;
     }
 
     const first = legacyDocs[legacyDocs.length-1]?.data?.date || "-";
     const last = legacyDocs[0]?.data?.date || "-";
-
-    box.className = "msg warn";
-    box.innerHTML = "พบ log เก่า <b>" + legacyDocs.length + "</b> records<br>ช่วงวันที่: " + first + " → " + last + "<br><span class='small'>กดปุ่มอีกครั้งเพื่อย้ายเข้า user account ปัจจุบัน</span>";
-    btn.textContent = "ย้ายข้อมูลทั้งหมด (" + legacyDocs.length + " records)";
     window.__legacyMigrationReadyToMigrate = true;
     window.__legacyMigrationCount = legacyDocs.length;
-    btn.onclick = migrateLegacyLogsToUser;
+
+    box.className = "msg warn";
+    box.innerHTML = "พบ log เก่า <b>" + legacyDocs.length + "</b> records<br>ช่วงวันที่: " + first + " → " + last + "<br><span class='small'>กดปุ่มเดิมอีกครั้งเพื่อย้ายเข้า user account ปัจจุบัน</span>";
+    if(btn){
+      btn.disabled = false;
+      btn.textContent = "ย้ายข้อมูลทั้งหมด (" + legacyDocs.length + " records)";
+      btn.onclick = migrationButtonHandlerV5100;
+    }
   }catch(e){
     if(box){
       box.className = "msg err";
@@ -1081,23 +1097,37 @@ async function checkLegacyLogsForMigration(){
 }
 
 async function migrateLegacyLogsToUser(){
-  const box = $("legacyMigrationBox");
-  const btn = $("legacyMigrationBtn");
+  const box = document.getElementById("legacyMigrationBox");
+  const btn = document.getElementById("legacyMigrationBtn");
   try{
-    if(!user) return alert("กรุณา Login ก่อน");
-    if(!teamId) return alert("กรุณา Save Team ID ก่อน");
-    if(!legacyMigrationState.docs.length){
-      await checkLegacyLogsForMigration();
-      if(!legacyMigrationState.docs.length) return;
+    if(!user){
+      alert("กรุณา Login ก่อน");
+      return;
+    }
+    if(!teamId){
+      alert("กรุณา Save Team ID ก่อน");
+      return;
+    }
+    if(!legacyMigrationState.docs || !legacyMigrationState.docs.length){
+      if(box){
+        box.className = "msg warn";
+        box.innerHTML = "ยังไม่มีข้อมูลสำหรับย้าย กรุณากดตรวจสอบ Log เก่าก่อน";
+      }
+      window.__legacyMigrationReadyToMigrate = false;
+      if(btn) btn.textContent = "ตรวจสอบ Log เก่า";
+      return;
     }
 
-    const ok = confirm("ยืนยันย้าย log เก่า " + legacyMigrationState.docs.length + " records เข้าบัญชีนี้?\\n\\nระบบจะ copy ไป path ใหม่และไม่ลบข้อมูลเก่า");
+    const ok = confirm("ยืนยันย้าย log เก่า " + legacyMigrationState.docs.length + " records เข้าบัญชีนี้?\n\nระบบจะ copy ไป path ใหม่และไม่ลบข้อมูลเก่า");
     if(!ok) return;
 
-    if(box){box.className="msg info";box.innerHTML="กำลัง migrate...";}
+    if(box){
+      box.className = "msg info";
+      box.innerHTML = "กำลัง migrate legacy logs...";
+    }
     if(btn) btn.disabled = true;
 
-    let migrated=0;
+    let migrated = 0;
     for(const oldDoc of legacyMigrationState.docs){
       const data = oldDoc.data || {};
       await addDoc(collection(db, scopedWorkoutsCollection()), cleanForFirestore({
@@ -1111,28 +1141,57 @@ async function migrateLegacyLogsToUser(){
         ownerEmail:user.email
       }));
       migrated++;
-      if(box && migrated % 20 === 0) box.innerHTML = "Migrating... " + migrated + "/" + legacyMigrationState.docs.length;
+      if(box && migrated % 20 === 0){
+        box.innerHTML = "Migrating... " + migrated + "/" + legacyMigrationState.docs.length;
+      }
     }
 
-    if(box){box.className="msg ok";box.innerHTML="Migration สำเร็จ ✅<br>ย้ายแล้ว " + migrated + " records";}
-    if(btn){btn.disabled=true;btn.textContent="Migration Completed"; window.__legacyMigrationReadyToMigrate=false;}
+    window.__legacyMigrationReadyToMigrate = false;
+    if(box){
+      box.className = "msg ok";
+      box.innerHTML = "Migration สำเร็จ ✅<br>ย้ายแล้ว " + migrated + " records<br><span class='small'>ข้อมูลเก่ายังอยู่ ไม่ได้ลบ</span>";
+    }
+    if(btn){
+      btn.disabled = true;
+      btn.textContent = "Migration Completed";
+    }
     setTimeout(sync,800);
   }catch(e){
-    if(box){box.className="msg err";box.innerHTML="Migration error: " + e.message;}
-    if(btn){btn.disabled=false;btn.textContent="Migrate Legacy Logs";}
+    if(box){
+      box.className = "msg err";
+      box.innerHTML = "Migration error: " + e.message;
+    }
+    if(btn){
+      btn.disabled = false;
+      btn.textContent = "ย้ายข้อมูลทั้งหมด (" + (legacyMigrationState.docs ? legacyMigrationState.docs.length : 0) + " records)";
+    }
     alert("Migration error: " + e.message);
   }
 }
 
-function bindLegacyMigration(){
-  const btn = $("legacyMigrationBtn");
-  if(btn){
-    btn.disabled = false;
-    if(btn.dataset.v505Bound !== "1"){
-      btn.dataset.v505Bound = "1";
-      btn.onclick = checkLegacyLogsForMigration;
-    }
+function migrationButtonHandlerV5100(ev){
+  if(ev){
+    ev.preventDefault();
+    ev.stopPropagation();
   }
+  if(window.__legacyMigrationReadyToMigrate && legacyMigrationState.docs && legacyMigrationState.docs.length){
+    migrateLegacyLogsToUser();
+  }else{
+    checkLegacyLogsForMigration();
+  }
+  return false;
+}
+
+function bindLegacyMigration(){
+  const btn = document.getElementById("legacyMigrationBtn");
+  if(!btn) return;
+  btn.disabled = false;
+  btn.type = "button";
+  btn.onclick = migrationButtonHandlerV5100;
+  window.checkLegacyLogsForMigration = checkLegacyLogsForMigration;
+  window.migrateLegacyLogsToUser = migrateLegacyLogsToUser;
+  window.bindLegacyMigration = bindLegacyMigration;
+  window.__migrationModuleReady = true;
 }
 
 function subscribe(){if(unsub)unsub();if(!teamId)return;unsub=onSnapshot(query(collection(db, scopedWorkoutsCollection()),orderBy("createdAt","desc")),s=>{logs=s.docs.map(d=>({id:d.id,...d.data()}));$("debug").className="msg ok";$("debug").textContent=`โหลดข้อมูลแล้ว ${logs.length} sets • ${VERSION} • Isolated User Data`;renderAll();bindLegacyMigration();if(logs.length===0)setTimeout(checkLegacyLogsForMigration,400)},e=>{$("debug").className="msg err";$("debug").textContent=e.message})}
@@ -1514,11 +1573,11 @@ function renderCoach(){
   }
 }
 
-function renderDashboard(){try{$("kVol").textContent=logs.reduce((a,b)=>a+(+b.volume||0),0).toFixed(0);$("kSets").textContent=logs.length;$("kUsers").textContent=new Set(logs.map(x=>x.userId)).size;$("kWeek").textContent=autoWeek();drawLine("weekChart",group(logs,x=>+(x.week||x.autoWeek||1)),"Auto Weekly Volume");drawBars("exChart",group(logs,x=>x.exercise),"Exercise Volume");$("chartStatus").textContent="Dashboard OK"}catch(e){$("chartStatus").textContent="Dashboard error: "+e.message}}function group(arr,keyFn){let g={};arr.forEach(x=>{let k=keyFn(x)||"-";g[k]=(g[k]||0)+(+x.volume||0)});return g}function drawLine(id,obj,title){let c=$(id),ctx=c.getContext("2d");ctx.clearRect(0,0,c.width,c.height);ctx.fillStyle="#020617";ctx.fillRect(0,0,c.width,c.height);ctx.fillStyle="#94a3b8";ctx.fillText(title,20,25);let ks=Object.keys(obj).sort((a,b)=>+a-+b);if(!ks.length){ctx.fillText("No data yet",330,130);return}let vals=ks.map(k=>obj[k]),max=Math.max(...vals)*1.15||1,p=45,W=c.width-p*2,H=c.height-p*2;ctx.strokeStyle="#38bdf8";ctx.lineWidth=4;ctx.beginPath();ks.forEach((k,i)=>{let x=p+(ks.length===1?W/2:W*i/(ks.length-1)),y=p+H-(vals[i]/max)*H;if(i)ctx.lineTo(x,y);else ctx.moveTo(x,y)});ctx.stroke()}function drawBars(id,obj,title){let c=$(id),ctx=c.getContext("2d");ctx.clearRect(0,0,c.width,c.height);ctx.fillStyle="#020617";ctx.fillRect(0,0,c.width,c.height);ctx.fillStyle="#94a3b8";ctx.fillText(title,20,25);let ks=Object.keys(obj).sort((a,b)=>obj[b]-obj[a]).slice(0,8);if(!ks.length){ctx.fillText("No data yet",330,130);return}let max=Math.max(...ks.map(k=>obj[k]))||1,p=45,W=c.width-p*2,H=c.height-p*2,bw=W/ks.length*.55;ks.forEach((k,i)=>{let x=p+W*(i+.2)/ks.length,h=obj[k]/max*H;ctx.fillStyle="#2563eb";ctx.fillRect(x,p+H-h,bw,h);ctx.fillStyle="#fff";ctx.font="11px Arial";ctx.fillText(k.slice(0,9),x,p+H+18)})}
+function renderDashboard(){try{$("kVol").textContent=logs.reduce((a,b)=>a+(+b.volume||0),0).toFixed(0);setTextSafe("kSets", logs.length);setTextSafe("kUsers", new Set(logs.map(x=>x.userId)).size);setTextSafe("kWeek", autoWeek());drawLine("weekChart",group(logs,x=>+(x.week||x.autoWeek||1)),"Auto Weekly Volume");drawBars("exChart",group(logs,x=>x.exercise),"Exercise Volume");$("chartStatus").textContent="Dashboard OK"}catch(e){$("chartStatus").textContent="Dashboard error: "+e.message}}function group(arr,keyFn){let g={};arr.forEach(x=>{let k=keyFn(x)||"-";g[k]=(g[k]||0)+(+x.volume||0)});return g}function drawLine(id,obj,title){let c=$(id),ctx=c.getContext("2d");ctx.clearRect(0,0,c.width,c.height);ctx.fillStyle="#020617";ctx.fillRect(0,0,c.width,c.height);ctx.fillStyle="#94a3b8";ctx.fillText(title,20,25);let ks=Object.keys(obj).sort((a,b)=>+a-+b);if(!ks.length){ctx.fillText("No data yet",330,130);return}let vals=ks.map(k=>obj[k]),max=Math.max(...vals)*1.15||1,p=45,W=c.width-p*2,H=c.height-p*2;ctx.strokeStyle="#38bdf8";ctx.lineWidth=4;ctx.beginPath();ks.forEach((k,i)=>{let x=p+(ks.length===1?W/2:W*i/(ks.length-1)),y=p+H-(vals[i]/max)*H;if(i)ctx.lineTo(x,y);else ctx.moveTo(x,y)});ctx.stroke()}function drawBars(id,obj,title){let c=$(id),ctx=c.getContext("2d");ctx.clearRect(0,0,c.width,c.height);ctx.fillStyle="#020617";ctx.fillRect(0,0,c.width,c.height);ctx.fillStyle="#94a3b8";ctx.fillText(title,20,25);let ks=Object.keys(obj).sort((a,b)=>obj[b]-obj[a]).slice(0,8);if(!ks.length){ctx.fillText("No data yet",330,130);return}let max=Math.max(...ks.map(k=>obj[k]))||1,p=45,W=c.width-p*2,H=c.height-p*2,bw=W/ks.length*.55;ks.forEach((k,i)=>{let x=p+W*(i+.2)/ks.length,h=obj[k]/max*H;ctx.fillStyle="#2563eb";ctx.fillRect(x,p+H-h,bw,h);ctx.fillStyle="#fff";ctx.font="11px Arial";ctx.fillText(k.slice(0,9),x,p+H+18)})}
 function fmt(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}function dayForDate(d){let a=logs.filter(x=>x.date===d);if(!a.length)return null;let c={};a.forEach(x=>c[x.day]=(c[x.day]||0)+1);return Object.entries(c).sort((a,b)=>b[1]-a[1])[0][0]}function renderCalendar(){let grid=$("calGrid");grid.innerHTML="";let names=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];$("monthTitle").textContent=names[calDate.getMonth()]+" "+calDate.getFullYear();["อา","จ","อ","พ","พฤ","ศ","ส"].forEach(h=>grid.innerHTML+=`<div class="calHead">${h}</div>`);let first=new Date(calDate.getFullYear(),calDate.getMonth(),1),last=new Date(calDate.getFullYear(),calDate.getMonth()+1,0).getDate();for(let i=0;i<first.getDay();i++)grid.innerHTML+=`<div class="calDay empty"></div>`;for(let d=1;d<=last;d++){let key=fmt(new Date(calDate.getFullYear(),calDate.getMonth(),d)),a=logs.filter(x=>x.date===key),day=dayForDate(key),sel=key===selectedDate?" sel":"",tod=key===today()?" today":"";grid.innerHTML+=`<div class="calDay${sel}${tod}" data-date="${key}"><b>${d}</b><br><span class="calTag ${a.length?'partial':'rest'}">${day||'Rest'}</span>${a.length?`<div class="small">${a.length} sets</div>`:""}</div>`}grid.querySelectorAll(".calDay[data-date]").forEach(el=>el.onclick=()=>{selectedDate=el.dataset.date;$("date").value=selectedDate;sync();document.querySelector('[data-page="log"]').click()})}function renderDaySummary(d){let a=logs.filter(x=>x.date===d);$("dayTitle").textContent="Daily Summary: "+d;if(!a.length){$("daySummary").innerHTML="ยังไม่มีข้อมูล";return}let by={};a.forEach(x=>{if(!by[x.exercise])by[x.exercise]=[];by[x.exercise].push(x)});$("daySummary").innerHTML=Object.entries(by).map(([ex,arr])=>{let max=arr.reduce((m,x)=>+x.weight>+m.weight?x:m,arr[0]);return `<div class="item"><h3>${ex}</h3><div class="meta">Sets: ${arr.length}<br>Max: ${fromKg(max.weight,$("unit").value)} ${$("unit").value} × ${max.reps}${max.isAlternative?`<br>แทน: ${max.plannedExercise}`:""}</div></div>`}).join("")}
 $("prevM").onclick=()=>{calDate=new Date(calDate.getFullYear(),calDate.getMonth()-1,1);renderCalendar()};$("nextM").onclick=()=>{calDate=new Date(calDate.getFullYear(),calDate.getMonth()+1,1);renderCalendar()};
 function renderSafe(){try{renderDashboard();renderCoach();renderCalendar();renderDaySummary(selectedDate)}catch(e){$("chartStatus").textContent="Render fallback: "+e.message}}
-/* v5.0.11 Migration Confirm Flow Fix
+/* v5.1.0 Full QA Stable Build
    This code is intentionally inside the Firebase module script so it can access logs / PROGRAM / $ safely.
 */
 const COACH_MOVEMENT_GROUPS = {
@@ -1637,7 +1696,7 @@ function coachCoreStatusPanel(){
   const p=document.createElement("div");
   p.id="coachCoreStatusPanel";
   p.className="card";
-  p.innerHTML='<h3>Coach Core Stabilization</h3><div class="msg ok">v5.0.11<br>Module-scoped logs access: FIXED<br>Plateau: productive trend + full exercise list<br>History Remap: movement guard<br>Alternative: auto apply guard</div>';
+  p.innerHTML='<h3>Coach Core Stabilization</h3><div class="msg ok">v5.1.0<br>Module-scoped logs access: FIXED<br>Plateau: productive trend + full exercise list<br>History Remap: movement guard<br>Alternative: auto apply guard</div>';
   setup.appendChild(p);
 }
 function coachCoreRun(){ if(window.__v404TooSoon&&window.__v404TooSoon('coachCoreRun',1200)) return; 
@@ -1752,7 +1811,7 @@ function syncAlternativeNameDisplay(){
 window.addEventListener("load",function(){setTimeout(fullStabilizationRun,800);});
 
 
-/* v5.0.11 Stable Recovery: scoped complete card and throttled stabilization */
+/* v5.1.0 Stable Recovery: scoped complete card and throttled stabilization */
 function renderExerciseCompleteState(){
   try{
     const m=typeof meta==="function"?meta():null;
@@ -1818,7 +1877,7 @@ function fullStabilizationRun(){ if(window.__v404TooSoon&&window.__v404TooSoon('
 
 
 
-/* v5.0.11 Migration Confirm Flow Fix */
+/* v5.1.0 Full QA Stable Build */
 function v403DayExercises(dayName){
   try{return (PROGRAM||[]).filter(p=>p[0]===dayName);}catch(e){return [];}
 }
@@ -1894,7 +1953,7 @@ function v403Run(){ if(window.__v404TooSoon&&window.__v404TooSoon('v403Run',900)
 }
 
 
-/* ===== v5.0.11 Complete Analytics / Export / Coach ===== */
+/* ===== v5.1.0 Complete Analytics / Export / Coach ===== */
 function v5SafeLogs(){try{return Array.isArray(logs)?logs:[]}catch(e){return []}}
 function v5Date(){return $("date")?.value || (typeof today==="function"?today():new Date().toISOString().slice(0,10))}
 function v5Volume(x){return Number(x.weight||0)*Number(x.reps||0)}
@@ -1995,7 +2054,7 @@ function v5EnhanceCalendar(){
   }catch(e){}
 }
 function v5ExportJson(){
-  const payload={version:"v5.0.11",exportedAt:new Date().toISOString(),logs:v5SafeLogs()};
+  const payload={version:"v5.1.0",exportedAt:new Date().toISOString(),logs:v5SafeLogs()};
   const text=JSON.stringify(payload,null,2);
   if($("v5BackupText")) $("v5BackupText").value=text;
   try{navigator.clipboard&&navigator.clipboard.writeText(text)}catch(e){}
@@ -2039,7 +2098,7 @@ window.addEventListener('load',()=>{setTimeout(()=>{try{v430RestoreDraft();v430R
 
 
 
-/* ===== v5.0.11 Feature Functions ===== */
+/* ===== v5.1.0 Feature Functions ===== */
 function v430SafeLogs(){try{return Array.isArray(logs)?logs:[]}catch(e){return []}}
 function v430CurrentExercise(){return $("exercise")?$("exercise").value:""}
 function v430Today(){return (typeof today==="function"?today():(new Date()).toISOString().slice(0,10))}
@@ -2118,7 +2177,7 @@ window.addEventListener('load',function(){setTimeout(function(){try{bindLegacyMi
 
 
 
-/* ===== v5.0.11 MIGRATION_BUTTON_FIX_CODE ===== */
+/* ===== v5.1.0 MIGRATION_BUTTON_FIX_CODE ===== */
 function v503UpdateTeamStatus(){
   try{
     const st=$("teamSaveStatus");
@@ -2197,7 +2256,7 @@ function v503BindCriticalButtons(){
 window.addEventListener('load',function(){setTimeout(v503BindCriticalButtons,300);setTimeout(v503BindCriticalButtons,1200);});
 
 
-/* ===== v5.0.11 MANUAL_IMPORT_CODE ===== */
+/* ===== v5.1.0 MANUAL_IMPORT_CODE ===== */
 
 
 
@@ -2206,65 +2265,22 @@ window.addEventListener('load',function(){setTimeout(v503BindCriticalButtons,300
 
 
 
-/* ===== v5.0.11 MIGRATION_BINDING_HARD_FIX_CODE ===== */
-function exposeMigrationFunctionsV508(){
-  try{
-    window.checkLegacyLogsForMigration = checkLegacyLogsForMigration;
-    window.migrateLegacyLogsToUser = migrateLegacyLogsToUser;
-    window.bindLegacyMigration = bindLegacyMigration;
-    window.__migrationModuleReady = true;
-  }catch(e){
-    console.warn("Migration expose failed", e);
-  }
-}
-function bindLegacyMigrationV508(){
-  try{
-    exposeMigrationFunctionsV508();
-    const btn = $("legacyMigrationBtn");
-    if(btn){
-      btn.disabled = false;
-      btn.type = "button";
-      btn.onclick = function(ev){
-        if(ev){ev.preventDefault();ev.stopPropagation();}
-        checkLegacyLogsForMigration();
-        return false;
-      };
-    }
-  }catch(e){
-    console.warn("bindLegacyMigrationV508", e);
-  }
-}
+/* ===== v5.1.0 MIGRATION_BINDING_HARD_FIX_CODE ===== */
 
 
 
-/* ===== v5.0.11 MIGRATION_CONFIRM_FLOW_FIX_CODE ===== */
-function exposeMigrationFunctionsV5011(){
-  try{
-    window.checkLegacyLogsForMigration = checkLegacyLogsForMigration;
-    window.migrateLegacyLogsToUser = migrateLegacyLogsToUser;
-    window.bindLegacyMigration = bindLegacyMigration;
-    window.__migrationModuleReady = true;
-  }catch(e){
-    console.warn("v5.0.11 migration expose failed", e);
-  }
-}
-function bindMigrationConfirmFlowV5011(){
-  try{
-    exposeMigrationFunctionsV5011();
-    const btn = document.getElementById("legacyMigrationBtn");
-    if(!btn) return;
-    btn.disabled = false;
-    btn.type = "button";
-    btn.onclick = function(ev){
-      if(ev){ev.preventDefault();ev.stopPropagation();}
-      if(window.__legacyMigrationReadyToMigrate && typeof window.migrateLegacyLogsToUser === "function"){
-        window.migrateLegacyLogsToUser();
-      }else if(typeof window.checkLegacyLogsForMigration === "function"){
-        window.checkLegacyLogsForMigration();
-      }
-      return false;
-    };
-  }catch(e){
-    console.warn("bindMigrationConfirmFlowV5011", e);
-  }
-}
+
+
+/* ===== v5.1.0 MIGRATION_CONFIRM_FLOW_FIX_CODE ===== */
+
+
+
+
+
+/* ===== v5.1.0 MIGRATION_SINGLE_HANDLER_FIX_CODE ===== */
+
+
+
+
+
+window.addEventListener('load',function(){setTimeout(bindLegacyMigration,120);setTimeout(bindLegacyMigration,800);setTimeout(bindLegacyMigration,2000);});

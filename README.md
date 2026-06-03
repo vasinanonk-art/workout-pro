@@ -1,4 +1,4 @@
-# Workout PRO v5.0.11 Migration Confirm Flow Fix
+# Workout PRO v5.1.0 Full QA Stable Build
 
 Push this folder to GitHub. Cloudflare will auto deploy.
 

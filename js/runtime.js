@@ -85,7 +85,7 @@ function uiPolishAddVersionPanel(){
   const d=document.createElement('div');
   d.id='versionQAPanel';
   d.className='card version-panel';
-  d.innerHTML='<div class="section-title">Build / QA</div><div class="msg info">Version: <b>v5.0.11</b><br>Build: Migration Confirm Flow Fix<br>QA: JS syntax / core IDs / tabs / charts preserved<br>Note: Low-risk UI only, core logic untouched</div>';
+  d.innerHTML='<div class="section-title">Build / QA</div><div class="msg info">Version: <b>v5.1.0</b><br>Build: Full QA Stable Build<br>QA: JS syntax / core IDs / tabs / charts preserved<br>Note: Low-risk UI only, core logic untouched</div>';
   donate.appendChild(d);
  }catch(e){console.warn(e)}
 }
@@ -119,7 +119,7 @@ function modernUiHeader(){
    hero.id='modernHero';
    hero.className='card';
    hero.style.marginBottom='18px';
-   hero.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><div><div style="font-size:28px;font-weight:800">Workout PRO</div><div style="opacity:.8;margin-top:4px">Modern Hypertrophy & Recovery System</div></div><div><span class="status-pill status-good">v5.0.11</span><span class="status-pill status-warn">Modern UI</span></div></div>';
+   hero.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><div><div style="font-size:28px;font-weight:800">Workout PRO</div><div style="opacity:.8;margin-top:4px">Modern Hypertrophy & Recovery System</div></div><div><span class="status-pill status-good">v5.1.0</span><span class="status-pill status-warn">Modern UI</span></div></div>';
    main.prepend(hero);
  }catch(e){console.warn(e)}
 }
@@ -142,7 +142,7 @@ function v400AddQaPanel(){
     var p=document.createElement("div");
     p.id="v400QaPanel";
     p.className="card";
-    p.innerHTML="<h3>v4.0 Stable QA</h3><div class='msg ok'>Migration Confirm Flow Fix<br>Router patch cleanup: ON<br>Complete card scoped to Log: ON<br>Heavy runtime patches removed: ON</div>";
+    p.innerHTML="<h3>v4.0 Stable QA</h3><div class='msg ok'>Full QA Stable Build<br>Router patch cleanup: ON<br>Complete card scoped to Log: ON<br>Heavy runtime patches removed: ON</div>";
     setup.appendChild(p);
   }catch(e){}
 }
@@ -226,7 +226,7 @@ document.addEventListener("click",function(e){
 })();
 
 
-// ===== v5.0.11 Navigation Speed Cache =====
+// ===== v5.1.0 Navigation Speed Cache =====
 (function(){
   if(window.__v430NavInstalled) return; window.__v430NavInstalled=true;
   function activatePage(page){if(!page)return;document.querySelectorAll('.page').forEach(function(p){var a=p.id===page;p.classList.toggle('active',a);p.style.display=a?'':'none';});document.querySelectorAll('.tab[data-page]').forEach(function(b){b.classList.toggle('active',b.dataset.page===page);});try{localStorage.setItem('workoutActivePage',page);}catch(e){}}
@@ -236,7 +236,7 @@ document.addEventListener("click",function(e){
 
 
 
-// ===== v5.0.11 Alternative Button Cleanup =====
+// ===== v5.1.0 Alternative Button Cleanup =====
 (function(){
   if(window.__v431AltButtonCleanup) return;
   window.__v431AltButtonCleanup = true;
@@ -260,7 +260,7 @@ document.addEventListener("click",function(e){
 
 
 
-// ===== v5.0.11 Alternative Action Polish =====
+// ===== v5.1.0 Alternative Action Polish =====
 (function(){
   if(window.__v432AltPolish) return;
   window.__v432AltPolish = true;
@@ -293,7 +293,7 @@ document.addEventListener("click",function(e){
 
 
 
-// ===== v5.0.11 Mobile UX + Performance Shell =====
+// ===== v5.1.0 Mobile UX + Performance Shell =====
 (function(){
   if(window.__v5ShellInstalled) return;
   window.__v5ShellInstalled = true;
@@ -328,7 +328,7 @@ document.addEventListener("click",function(e){
 
 
 
-// ===== v5.0.11 User Isolation Status UI =====
+// ===== v5.1.0 User Isolation Status UI =====
 (function(){
   function showIsolationStatus(){
     try{
@@ -343,7 +343,7 @@ document.addEventListener("click",function(e){
 
 
 
-// ===== v5.0.11 Migration Button Runtime Guard =====
+// ===== v5.1.0 Migration Button Runtime Guard =====
 (function(){
   function guardButtons(){
     try{
@@ -358,7 +358,7 @@ document.addEventListener("click",function(e){
 
 
 
-// ===== v5.0.11 Migration Confirm Flow Fix =====
+// ===== v5.1.0 Full QA Stable Build =====
 (function(){
   if(window.__v504TeamHardFix) return;
   window.__v504TeamHardFix = true;
@@ -440,13 +440,13 @@ document.addEventListener("click",function(e){
 
 
 
-// ===== v5.0.11 Runtime Error Guard =====
+// ===== v5.1.0 Runtime Error Guard =====
 (function(){
   if(window.__v506ErrorGuard) return;
   window.__v506ErrorGuard = true;
   window.addEventListener("error", function(e){
     try{
-      console.warn("v5.0.11 guarded runtime error:", e.message);
+      console.warn("v5.1.0 guarded runtime error:", e.message);
       var mig=document.getElementById("legacyMigrationBtn");
       if(mig) mig.disabled=false;
       var save=document.getElementById("saveTeamBtn");
@@ -457,8 +457,8 @@ document.addEventListener("click",function(e){
 
 
 
-// ===== v5.0.11 Migration Binding Runtime Hard Fix =====
-// ===== v5.0.11 Sync Error Guard =====
+// ===== v5.1.0 Migration Binding Runtime Hard Fix =====
+// ===== v5.1.0 Sync Error Guard =====
 (function(){
   if(window.__v509SyncGuard) return;
   window.__v509SyncGuard = true;
@@ -479,7 +479,7 @@ document.addEventListener("click",function(e){
 
 
 
-// ===== v5.0.11 Runtime Helper Fallback =====
+// ===== v5.1.0 Runtime Helper Fallback =====
 (function(){
   if(window.__v5010HelperFallback) return;
   window.__v5010HelperFallback = true;
@@ -488,42 +488,18 @@ document.addEventListener("click",function(e){
 
 
 
-// ===== v5.0.11 Migration Confirm Runtime Guard =====
+// ===== v5.1.0 Migration Confirm Runtime Guard =====
+
+
+
+// ===== v5.1.0 Full QA Runtime Safety =====
 (function(){
-  if(window.__v5011MigrationConfirmGuard) return;
-  window.__v5011MigrationConfirmGuard = true;
-
-  function setMigBox(msg, cls){
-    var box=document.getElementById("legacyMigrationBox");
-    if(box){box.className=cls||"msg info";box.innerHTML=msg;}
-  }
-
-  document.addEventListener("click", function(e){
-    var target=e.target && e.target.closest ? e.target.closest("#legacyMigrationBtn") : null;
-    if(!target) return;
-
-    e.preventDefault();
-    e.stopPropagation();
-    if(e.stopImmediatePropagation) e.stopImmediatePropagation();
-
-    if(window.__legacyMigrationReadyToMigrate && typeof window.migrateLegacyLogsToUser === "function"){
-      setMigBox("กำลังเริ่มย้ายข้อมูลทั้งหมด...", "msg info");
-      setTimeout(function(){ window.migrateLegacyLogsToUser(); }, 30);
-      return false;
-    }
-
-    if(typeof window.checkLegacyLogsForMigration === "function"){
-      setMigBox("กำลังตรวจสอบ Log เก่า...", "msg info");
-      setTimeout(function(){ window.checkLegacyLogsForMigration(); }, 30);
-      return false;
-    }
-
-    setMigBox("Migration module ยังไม่พร้อมหรือโหลดไม่สำเร็จ<br><span class='small'>เปิด Console ดู error ของ app.module.js</span>", "msg err");
-    return false;
-  }, true);
-
+  if(window.__v510RuntimeSafety) return;
+  window.__v510RuntimeSafety = true;
   window.addEventListener("load", function(){
-    var btn=document.getElementById("legacyMigrationBtn");
-    if(btn){btn.disabled=false;btn.type="button";}
+    var mig=document.getElementById("legacyMigrationBtn");
+    if(mig){mig.disabled=false;mig.type="button";}
+    var save=document.getElementById("saveTeamBtn");
+    if(save){save.disabled=false;save.type="button";}
   });
 })();
