@@ -1,3 +1,3 @@
-# Workout PRO v4.3.0
+# Workout PRO v4.3.1
 
-Full Feature Pack.
+UI Fix Pack.

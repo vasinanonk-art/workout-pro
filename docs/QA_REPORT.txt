@@ -1,33 +1,16 @@
-# QA REPORT v4.3.0 Full Feature Pack
+# QA REPORT v4.3.1 UI Fix Pack
 
-✅ Version v4.3.0
-✅ Feature UI ids
-✅ Feature functions
-✅ Navigation cache
-✅ Horizontal footer
+✅ Version v4.3.1
+✅ Chart visible colors
+✅ Resume disabled when empty
+✅ Alt button runtime cleanup
 ✅ Save preserved
-✅ Login preserved
-✅ Firestore preserved
-✅ Coach preserved
-✅ Log preserved
-✅ Calendar preserved
-✅ Program preserved
-✅ Guide preserved
-✅ Donate preserved
 ✅ Runtime JS syntax
 ✅ Module JS syntax
 ✅ No duplicate functions
 
-Manual QA Required:
-1. Header shows v4.3.0.
-2. Login with Google.
-3. Switch all tabs; target response < 500ms.
-4. Log date must be current local date.
-5. Draft fields restore after refresh.
-6. Save set clears draft and updates recent list.
-7. Auto Resume card returns to Log/exercise.
-8. PR/Volume/Recovery dashboards show data after login.
-9. Deload button stores workoutDeloadMode=ON.
-10. Exercise Database updates when exercise changes.
-11. AI Daily Summary appears after daily logs.
-12. Existing Coach/Plateau/Calendar/Program/Guide/Donate still render.
+Manual QA:
+1. Volume Dashboard chart bars/text are visible.
+2. Auto Resume button is disabled when no session exists.
+3. Alternative cancel buttons no longer float awkwardly.
+4. Save/Login/Log/Coach still work.

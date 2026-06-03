@@ -85,7 +85,7 @@ function uiPolishAddVersionPanel(){
   const d=document.createElement('div');
   d.id='versionQAPanel';
   d.className='card version-panel';
-  d.innerHTML='<div class="section-title">Build / QA</div><div class="msg info">Version: <b>v4.3.0</b><br>Build: Full Feature Pack<br>QA: JS syntax / core IDs / tabs / charts preserved<br>Note: Low-risk UI only, core logic untouched</div>';
+  d.innerHTML='<div class="section-title">Build / QA</div><div class="msg info">Version: <b>v4.3.1</b><br>Build: UI Fix Pack<br>QA: JS syntax / core IDs / tabs / charts preserved<br>Note: Low-risk UI only, core logic untouched</div>';
   donate.appendChild(d);
  }catch(e){console.warn(e)}
 }
@@ -119,7 +119,7 @@ function modernUiHeader(){
    hero.id='modernHero';
    hero.className='card';
    hero.style.marginBottom='18px';
-   hero.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><div><div style="font-size:28px;font-weight:800">Workout PRO</div><div style="opacity:.8;margin-top:4px">Modern Hypertrophy & Recovery System</div></div><div><span class="status-pill status-good">v4.3.0</span><span class="status-pill status-warn">Modern UI</span></div></div>';
+   hero.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><div><div style="font-size:28px;font-weight:800">Workout PRO</div><div style="opacity:.8;margin-top:4px">Modern Hypertrophy & Recovery System</div></div><div><span class="status-pill status-good">v4.3.1</span><span class="status-pill status-warn">Modern UI</span></div></div>';
    main.prepend(hero);
  }catch(e){console.warn(e)}
 }
@@ -142,7 +142,7 @@ function v400AddQaPanel(){
     var p=document.createElement("div");
     p.id="v400QaPanel";
     p.className="card";
-    p.innerHTML="<h3>v4.0 Stable QA</h3><div class='msg ok'>Full Feature Pack<br>Router patch cleanup: ON<br>Complete card scoped to Log: ON<br>Heavy runtime patches removed: ON</div>";
+    p.innerHTML="<h3>v4.0 Stable QA</h3><div class='msg ok'>UI Fix Pack<br>Router patch cleanup: ON<br>Complete card scoped to Log: ON<br>Heavy runtime patches removed: ON</div>";
     setup.appendChild(p);
   }catch(e){}
 }
@@ -226,10 +226,34 @@ document.addEventListener("click",function(e){
 })();
 
 
-// ===== v4.3.0 Navigation Speed Cache =====
+// ===== v4.3.1 Navigation Speed Cache =====
 (function(){
   if(window.__v430NavInstalled) return; window.__v430NavInstalled=true;
   function activatePage(page){if(!page)return;document.querySelectorAll('.page').forEach(function(p){var a=p.id===page;p.classList.toggle('active',a);p.style.display=a?'':'none';});document.querySelectorAll('.tab[data-page]').forEach(function(b){b.classList.toggle('active',b.dataset.page===page);});try{localStorage.setItem('workoutActivePage',page);}catch(e){}}
   function bindFastTabs(){document.querySelectorAll('.tab[data-page]').forEach(function(btn){if(btn.dataset.v430FastBound==='1')return;btn.dataset.v430FastBound='1';var fn=function(){activatePage(btn.dataset.page);};btn.addEventListener('pointerdown',fn,{passive:true});btn.addEventListener('touchstart',fn,{passive:true});});}
   window.v430ActivatePage=activatePage;window.addEventListener('load',function(){bindFastTabs();try{var saved=localStorage.getItem('workoutActivePage');if(saved&&document.getElementById(saved))activatePage(saved);}catch(e){}});
+})();
+
+
+
+// ===== v4.3.1 Alternative Button Cleanup =====
+(function(){
+  if(window.__v431AltButtonCleanup) return;
+  window.__v431AltButtonCleanup = true;
+  function cleanAltButtons(){
+    try{
+      document.querySelectorAll("button").forEach(function(btn){
+        var t=(btn.textContent||"").trim();
+        if(t==="ยกเลิกท่าทดแทน" || t==="ยกเลิกท่าแทนถาวร"){
+          btn.classList.add("v431-alt-cancel-clean");
+        }
+      });
+    }catch(e){}
+  }
+  window.addEventListener("load",function(){
+    cleanAltButtons();
+    setTimeout(cleanAltButtons,500);
+    setTimeout(cleanAltButtons,1500);
+  });
+  document.addEventListener("click",function(){setTimeout(cleanAltButtons,100);},true);
 })();

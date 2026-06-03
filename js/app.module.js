@@ -2,7 +2,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-const VERSION="v4.3.0", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
+const VERSION="v4.3.1", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
 const PROGRAM=[
 ["Day 1","Push","Barbell Bench Press",4,"5-8","Chest","heavy"],["Day 1","Push","Incline Dumbbell Press",3,"8-12","Chest","standard"],["Day 1","Push","Seated Shoulder Press",3,"8-12","Shoulder","standard"],["Day 1","Push","Dumbbell Lateral Raise",4,"12-15","Shoulder","quick"],["Day 1","Push","Cable Triceps Pushdown",3,"10-15","Triceps","quick"],
 ["Day 2","Pull","Lat Pulldown",4,"8-12","Back","standard"],["Day 2","Pull","Barbell Row",4,"6-10","Back","heavy"],["Day 2","Pull","Seated Cable Row",3,"10-12","Back","standard"],["Day 2","Pull","Face Pull",3,"12-15","Rear Delt","quick"],["Day 2","Pull","Dumbbell Curl",3,"10-15","Biceps","quick"],
@@ -1225,7 +1225,7 @@ function renderDashboard(){try{$("kVol").textContent=logs.reduce((a,b)=>a+(+b.vo
 function fmt(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}function dayForDate(d){let a=logs.filter(x=>x.date===d);if(!a.length)return null;let c={};a.forEach(x=>c[x.day]=(c[x.day]||0)+1);return Object.entries(c).sort((a,b)=>b[1]-a[1])[0][0]}function renderCalendar(){let grid=$("calGrid");grid.innerHTML="";let names=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];$("monthTitle").textContent=names[calDate.getMonth()]+" "+calDate.getFullYear();["อา","จ","อ","พ","พฤ","ศ","ส"].forEach(h=>grid.innerHTML+=`<div class="calHead">${h}</div>`);let first=new Date(calDate.getFullYear(),calDate.getMonth(),1),last=new Date(calDate.getFullYear(),calDate.getMonth()+1,0).getDate();for(let i=0;i<first.getDay();i++)grid.innerHTML+=`<div class="calDay empty"></div>`;for(let d=1;d<=last;d++){let key=fmt(new Date(calDate.getFullYear(),calDate.getMonth(),d)),a=logs.filter(x=>x.date===key),day=dayForDate(key),sel=key===selectedDate?" sel":"",tod=key===today()?" today":"";grid.innerHTML+=`<div class="calDay${sel}${tod}" data-date="${key}"><b>${d}</b><br><span class="calTag ${a.length?'partial':'rest'}">${day||'Rest'}</span>${a.length?`<div class="small">${a.length} sets</div>`:""}</div>`}grid.querySelectorAll(".calDay[data-date]").forEach(el=>el.onclick=()=>{selectedDate=el.dataset.date;$("date").value=selectedDate;sync();document.querySelector('[data-page="log"]').click()})}function renderDaySummary(d){let a=logs.filter(x=>x.date===d);$("dayTitle").textContent="Daily Summary: "+d;if(!a.length){$("daySummary").innerHTML="ยังไม่มีข้อมูล";return}let by={};a.forEach(x=>{if(!by[x.exercise])by[x.exercise]=[];by[x.exercise].push(x)});$("daySummary").innerHTML=Object.entries(by).map(([ex,arr])=>{let max=arr.reduce((m,x)=>+x.weight>+m.weight?x:m,arr[0]);return `<div class="item"><h3>${ex}</h3><div class="meta">Sets: ${arr.length}<br>Max: ${fromKg(max.weight,$("unit").value)} ${$("unit").value} × ${max.reps}${max.isAlternative?`<br>แทน: ${max.plannedExercise}`:""}</div></div>`}).join("")}
 $("prevM").onclick=()=>{calDate=new Date(calDate.getFullYear(),calDate.getMonth()-1,1);renderCalendar()};$("nextM").onclick=()=>{calDate=new Date(calDate.getFullYear(),calDate.getMonth()+1,1);renderCalendar()};
 function renderSafe(){try{renderDashboard();renderCoach();renderCalendar();renderDaySummary(selectedDate)}catch(e){$("chartStatus").textContent="Render fallback: "+e.message}}
-/* v4.3.0 Full Feature Pack
+/* v4.3.1 UI Fix Pack
    This code is intentionally inside the Firebase module script so it can access logs / PROGRAM / $ safely.
 */
 const COACH_MOVEMENT_GROUPS = {
@@ -1344,7 +1344,7 @@ function coachCoreStatusPanel(){
   const p=document.createElement("div");
   p.id="coachCoreStatusPanel";
   p.className="card";
-  p.innerHTML='<h3>Coach Core Stabilization</h3><div class="msg ok">v4.3.0<br>Module-scoped logs access: FIXED<br>Plateau: productive trend + full exercise list<br>History Remap: movement guard<br>Alternative: auto apply guard</div>';
+  p.innerHTML='<h3>Coach Core Stabilization</h3><div class="msg ok">v4.3.1<br>Module-scoped logs access: FIXED<br>Plateau: productive trend + full exercise list<br>History Remap: movement guard<br>Alternative: auto apply guard</div>';
   setup.appendChild(p);
 }
 function coachCoreRun(){ if(window.__v404TooSoon&&window.__v404TooSoon('coachCoreRun',1200)) return; 
@@ -1459,7 +1459,7 @@ function syncAlternativeNameDisplay(){
 window.addEventListener("load",function(){setTimeout(fullStabilizationRun,800);});
 
 
-/* v4.3.0 Stable Recovery: scoped complete card and throttled stabilization */
+/* v4.3.1 Stable Recovery: scoped complete card and throttled stabilization */
 function renderExerciseCompleteState(){
   try{
     const m=typeof meta==="function"?meta():null;
@@ -1525,7 +1525,7 @@ function fullStabilizationRun(){ if(window.__v404TooSoon&&window.__v404TooSoon('
 
 
 
-/* v4.3.0 Full Feature Pack */
+/* v4.3.1 UI Fix Pack */
 function v403DayExercises(dayName){
   try{return (PROGRAM||[]).filter(p=>p[0]===dayName);}catch(e){return [];}
 }
@@ -1609,20 +1609,70 @@ window.addEventListener('load',()=>{setTimeout(()=>{try{v430RestoreDraft();v430R
 
 
 
-/* ===== v4.3.0 Feature Functions ===== */
+/* ===== v4.3.1 Feature Functions ===== */
 function v430SafeLogs(){try{return Array.isArray(logs)?logs:[]}catch(e){return []}}
 function v430CurrentExercise(){return $("exercise")?$("exercise").value:""}
 function v430Today(){return (typeof today==="function"?today():(new Date()).toISOString().slice(0,10))}
 function v430SessionKey(){return "workoutDraftSessionV430"}
 function v430SaveResumeState(){try{const st={date:$("date")?.value||v430Today(),week:$("week")?.value||"",day:typeof activeDay==="function"?activeDay():"",exercise:v430CurrentExercise(),set:$("setNo")?.textContent||"",target:$("targetShow")?.textContent||"",updatedAt:new Date().toISOString()};localStorage.setItem("workoutResumeState",JSON.stringify(st));}catch(e){}}
-function v430RenderResume(){try{const el=$("v430ResumeBox");if(!el)return;const st=JSON.parse(localStorage.getItem("workoutResumeState")||"null");if(!st){el.className="msg info";el.innerHTML="ยังไม่มี session ล่าสุด";return;}el.className="msg ok";el.innerHTML=`ล่าสุด<br><b>${st.week?`Week ${st.week}`:""}</b> ${st.day||""}<br>${st.exercise||"-"}<br>Set ${st.set||"-"} / ${st.target||"-"}<br><span class="small">${st.date||""}</span>`;const btn=$("v430ResumeBtn");if(btn&&!btn.dataset.v430Bound){btn.dataset.v430Bound="1";btn.onclick=()=>{try{if(st.date&&$("date"))$("date").value=st.date;if(st.exercise&&$("exercise"))$("exercise").value=st.exercise;if(window.v430ActivatePage)window.v430ActivatePage("log");renderAll();}catch(e){}}}}catch(e){console.warn("v430RenderResume",e)}}
+
+
+function v430RenderResume(){
+  try{
+    const el=$("v430ResumeBox"); if(!el) return;
+    const btn=$("v430ResumeBtn");
+    const st=JSON.parse(localStorage.getItem("workoutResumeState")||"null");
+    if(!st || !st.exercise){
+      el.className="msg info";
+      el.innerHTML="ยังไม่มี session ล่าสุด<br><span class='small'>ปุ่มนี้จะใช้ได้หลังจากเริ่มกรอกหรือเล่น workout แล้ว</span>";
+      if(btn){btn.disabled=true;btn.textContent="ยังไม่มี Session ให้เล่นต่อ";}
+      return;
+    }
+    el.className="msg ok";
+    el.innerHTML=`ล่าสุด<br><b>${st.week?`Week ${st.week}`:""}</b> ${st.day||""}<br>${st.exercise||"-"}<br>Set ${st.set||"-"} / ${st.target||"-"}<br><span class="small">${st.date||""}</span>`;
+    if(btn){
+      btn.disabled=false;
+      btn.textContent="กลับไปเล่นต่อ";
+      if(!btn.dataset.bound){
+        btn.dataset.bound="1";
+        btn.onclick=()=>{try{if(st.date&&$("date"))$("date").value=st.date;if(st.exercise&&$("exercise"))$("exercise").value=st.exercise;if(window.v430ActivatePage)window.v430ActivatePage("log");renderAll();}catch(e){}};
+      }
+    }
+  }catch(e){console.warn("v430RenderResume",e)}
+}
+
 function v430BindDraftSave(){["weight","reps","rir","note","tempo","repQuality","biasMode","exercise","date"].forEach(id=>{const el=$(id);if(!el||el.dataset.v430DraftBound==="1")return;el.dataset.v430DraftBound="1";el.addEventListener("input",v430SaveDraft);el.addEventListener("change",v430SaveDraft);});}
 function v430SaveDraft(){try{const d={date:$("date")?.value||"",exercise:$("exercise")?.value||"",weight:$("weight")?.value||"",reps:$("reps")?.value||"",rir:$("rir")?.value||"",note:$("note")?.value||"",tempo:$("tempo")?.value||"",repQuality:$("repQuality")?.value||"",biasMode:$("biasMode")?.value||"",updatedAt:new Date().toISOString()};localStorage.setItem(v430SessionKey(),JSON.stringify(d));const s=$("v430DraftStatus");if(s){s.className="msg ok";s.innerHTML="Draft Save: บันทึกอัตโนมัติแล้ว";}v430SaveResumeState();}catch(e){}}
 function v430RestoreDraft(){try{const d=JSON.parse(localStorage.getItem(v430SessionKey())||"null");if(!d)return;[["date","date"],["exercise","exercise"],["weight","weight"],["reps","reps"],["rir","rir"],["note","note"],["tempo","tempo"],["repQuality","repQuality"],["biasMode","biasMode"]].forEach(([id,k])=>{if($(id)&&d[k]!==undefined&&d[k]!==null&&d[k]!=="")$(id).value=d[k]});const s=$("v430DraftStatus");if(s){s.className="msg info";s.innerHTML="Draft Save: กู้ข้อมูลล่าสุดแล้ว";}}catch(e){}}
 function v430BestByExercise(){const map={};v430SafeLogs().forEach(x=>{const ex=x.exercise||x.plannedExercise;if(!ex)return;const score=Number(x.weight||0)*Number(x.reps||0);if(!map[ex]||score>map[ex].score)map[ex]={...x,score};});return map;}
 function v430RenderPRDashboard(){try{const el=$("v430PrDashboard");if(!el)return;const rows=Object.entries(v430BestByExercise()).sort((a,b)=>b[1].score-a[1].score).slice(0,10);if(!rows.length){el.className="msg info";el.innerHTML="ยังไม่มี PR";return;}el.className="msg ok";el.innerHTML=rows.map(([ex,x],i)=>`${i+1}. <b>${ex}</b><br>${Number(x.weight||0).toFixed(1)} kg × ${x.reps||0}`).join("<hr>");}catch(e){console.warn("v430RenderPRDashboard",e)}}
 function v430MuscleVolume(days=14){const since=new Date();since.setDate(since.getDate()-days);const m={};v430SafeLogs().forEach(x=>{try{if(x.date&&typeof parseD==="function"&&parseD(x.date)<since)return;}catch(e){}const ex=x.plannedExercise||x.exercise||"";const p=(PROGRAM||[]).find(r=>r[2]===ex)||[];const muscle=p[5]||"Other";m[muscle]=(m[muscle]||0)+(Number(x.weight||0)*Number(x.reps||0));});return m;}
-function v430RenderVolumeDashboard(){try{const box=$("v430VolumeSummary");if(!box)return;const rows=Object.entries(v430MuscleVolume(14)).sort((a,b)=>b[1]-a[1]);box.innerHTML=rows.length?rows.map(([k,v])=>`${k}: <b>${Math.round(v)}</b> kg`).join(" • "):"ยังไม่มีข้อมูล Volume";const cv=$("v430VolumeChart");if(cv&&cv.getContext){const ctx=cv.getContext("2d"),w=cv.width,h=cv.height;ctx.clearRect(0,0,w,h);const max=Math.max(1,...rows.map(r=>r[1]));ctx.font="18px sans-serif";rows.slice(0,8).forEach(([k,v],i)=>{const bh=(h-40)*(v/max),x=25+i*((w-50)/8),y=h-25-bh;ctx.fillRect(x,y,35,bh);ctx.fillText(k.slice(0,8),x,h-5);});}}catch(e){console.warn("v430RenderVolumeDashboard",e)}}
+
+
+function v430RenderVolumeDashboard(){
+  try{
+    const box=$("v430VolumeSummary"); if(!box) return;
+    const rows=Object.entries(v430MuscleVolume(14)).sort((a,b)=>b[1]-a[1]);
+    box.innerHTML=rows.length?rows.map(([k,v])=>`${k}: <b>${Math.round(v)}</b> kg`).join(" • "):"ยังไม่มีข้อมูล Volume";
+    const cv=$("v430VolumeChart");
+    if(cv&&cv.getContext){
+      const ctx=cv.getContext("2d"), w=cv.width, h=cv.height;
+      ctx.clearRect(0,0,w,h); ctx.fillStyle="#020617"; ctx.fillRect(0,0,w,h);
+      const shown=rows.slice(0,8), max=Math.max(1,...shown.map(r=>r[1]));
+      const gap=(w-80)/Math.max(1,shown.length), barW=Math.max(28,Math.min(54,gap*.42));
+      ctx.textAlign="center";
+      shown.forEach(([k,v],i)=>{
+        const x=40+i*gap, bh=(h-78)*(v/max), y=h-46-bh;
+        const grad=ctx.createLinearGradient(0,y,0,h-46);
+        grad.addColorStop(0,"#60a5fa"); grad.addColorStop(1,"#7c3aed");
+        ctx.fillStyle=grad; ctx.fillRect(x,y,barW,bh);
+        ctx.font="14px sans-serif"; ctx.fillStyle="#93c5fd"; ctx.fillText(Math.round(v),x+barW/2,Math.max(18,y-8));
+        ctx.font="18px sans-serif"; ctx.fillStyle="#e5e7eb"; ctx.fillText(k.slice(0,9),x+barW/2,h-16);
+      });
+    }
+  }catch(e){console.warn("v430RenderVolumeDashboard",e)}
+}
+
 function v430RecoveryScoreFrom(x){const sleep=Number(x.sleepHours||$("sleepHours")?.value||7);const soreness=Number(x.soreness||$("soreness")?.value||2);const stress=Number(x.stress||$("stress")?.value||2);const rec=Math.max(0,Math.min(100,Math.round((sleep/8)*55+(6-soreness)*5+(6-stress)*5)));const fatigue=Math.max(0,Math.min(100,100-rec+Math.round((soreness+stress)*4)));return{rec,fatigue,sleep,soreness,stress};}
 function v430RenderRecoveryDashboard(){try{const el=$("v430RecoveryDash");if(!el)return;const latest=[...v430SafeLogs()].reverse().find(x=>x.sleepHours||x.soreness||x.stress)||{};const s=v430RecoveryScoreFrom(latest);el.className=s.rec>=65?"msg ok":s.rec>=45?"msg warn":"msg bad";el.innerHTML=`Recovery Score: <b>${s.rec}</b><br>Fatigue Risk: <b>${s.fatigue}</b><br>Sleep ${s.sleep}h • Soreness ${s.soreness} • Stress ${s.stress}`;}catch(e){console.warn("v430RenderRecoveryDashboard",e)}}
 function v430RenderDeload(){try{const el=$("v430DeloadBox");if(!el)return;const s=v430RecoveryScoreFrom({});const recent=v430SafeLogs().slice(-30);const lowPerf=recent.filter(x=>Number(x.rir||2)<=0||String(x.note||"").includes("เจ็บ")).length;const suggest=s.fatigue>=65||lowPerf>=3;el.className=suggest?"msg warn":"msg ok";el.innerHTML=suggest?`⚠ Deload Recommended<br>ลด volume 30–40% / ใช้ machine stable / คุม RIR 2–3`:`ยังไม่จำเป็นต้อง deload<br>Recovery ${s.rec} / Fatigue ${s.fatigue}`;const btn=$("v430ApplyDeloadBtn");if(btn&&!btn.dataset.v430Bound){btn.dataset.v430Bound="1";btn.onclick=()=>{localStorage.setItem("workoutDeloadMode","ON");alert("เปิด Deload Suggestion แล้ว");v430RenderDeload();}}}catch(e){console.warn("v430RenderDeload",e)}}

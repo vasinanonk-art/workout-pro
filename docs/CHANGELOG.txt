@@ -1,5 +1,15 @@
-# v4.3.0 Full Feature Pack
+# v4.3.1 UI Fix Pack
 
-Added all 10 requested features: Auto Resume, Draft Save, PR Dashboard, Volume Dashboard, Recovery Dashboard, Deload Detection, Navigation Speed Cache, horizontal footer, Exercise Database, AI Daily Coach Summary.
+Fixed:
+1. Volume Dashboard chart bars/text were too dark on dark mode.
+2. Auto Resume button now disables itself when there is no session and explains what it does.
+3. Alternative cancel buttons are cleaned up by runtime text matching, covering all current layouts.
 
-Preserved Login / Firestore / Save / Log / Calendar / Coach / Plateau / Alternative / Program / Guide / Donate.
+Preserved:
+- v4.3.0 feature pack
+- Login / Firestore
+- Save set
+- Log / History
+- Calendar
+- Coach / Plateau
+- Program / Guide / Donate
