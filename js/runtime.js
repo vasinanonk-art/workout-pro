@@ -85,7 +85,7 @@ function uiPolishAddVersionPanel(){
   const d=document.createElement('div');
   d.id='versionQAPanel';
   d.className='card version-panel';
-  d.innerHTML='<div class="section-title">Build / QA</div><div class="msg info">Version: <b>v5.0.3</b><br>Build: Migration Button Fix<br>QA: JS syntax / core IDs / tabs / charts preserved<br>Note: Low-risk UI only, core logic untouched</div>';
+  d.innerHTML='<div class="section-title">Build / QA</div><div class="msg info">Version: <b>v5.0.4</b><br>Build: Team ID Hard Fix<br>QA: JS syntax / core IDs / tabs / charts preserved<br>Note: Low-risk UI only, core logic untouched</div>';
   donate.appendChild(d);
  }catch(e){console.warn(e)}
 }
@@ -119,7 +119,7 @@ function modernUiHeader(){
    hero.id='modernHero';
    hero.className='card';
    hero.style.marginBottom='18px';
-   hero.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><div><div style="font-size:28px;font-weight:800">Workout PRO</div><div style="opacity:.8;margin-top:4px">Modern Hypertrophy & Recovery System</div></div><div><span class="status-pill status-good">v5.0.3</span><span class="status-pill status-warn">Modern UI</span></div></div>';
+   hero.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><div><div style="font-size:28px;font-weight:800">Workout PRO</div><div style="opacity:.8;margin-top:4px">Modern Hypertrophy & Recovery System</div></div><div><span class="status-pill status-good">v5.0.4</span><span class="status-pill status-warn">Modern UI</span></div></div>';
    main.prepend(hero);
  }catch(e){console.warn(e)}
 }
@@ -142,7 +142,7 @@ function v400AddQaPanel(){
     var p=document.createElement("div");
     p.id="v400QaPanel";
     p.className="card";
-    p.innerHTML="<h3>v4.0 Stable QA</h3><div class='msg ok'>Migration Button Fix<br>Router patch cleanup: ON<br>Complete card scoped to Log: ON<br>Heavy runtime patches removed: ON</div>";
+    p.innerHTML="<h3>v4.0 Stable QA</h3><div class='msg ok'>Team ID Hard Fix<br>Router patch cleanup: ON<br>Complete card scoped to Log: ON<br>Heavy runtime patches removed: ON</div>";
     setup.appendChild(p);
   }catch(e){}
 }
@@ -226,7 +226,7 @@ document.addEventListener("click",function(e){
 })();
 
 
-// ===== v5.0.3 Navigation Speed Cache =====
+// ===== v5.0.4 Navigation Speed Cache =====
 (function(){
   if(window.__v430NavInstalled) return; window.__v430NavInstalled=true;
   function activatePage(page){if(!page)return;document.querySelectorAll('.page').forEach(function(p){var a=p.id===page;p.classList.toggle('active',a);p.style.display=a?'':'none';});document.querySelectorAll('.tab[data-page]').forEach(function(b){b.classList.toggle('active',b.dataset.page===page);});try{localStorage.setItem('workoutActivePage',page);}catch(e){}}
@@ -236,7 +236,7 @@ document.addEventListener("click",function(e){
 
 
 
-// ===== v5.0.3 Alternative Button Cleanup =====
+// ===== v5.0.4 Alternative Button Cleanup =====
 (function(){
   if(window.__v431AltButtonCleanup) return;
   window.__v431AltButtonCleanup = true;
@@ -260,7 +260,7 @@ document.addEventListener("click",function(e){
 
 
 
-// ===== v5.0.3 Alternative Action Polish =====
+// ===== v5.0.4 Alternative Action Polish =====
 (function(){
   if(window.__v432AltPolish) return;
   window.__v432AltPolish = true;
@@ -293,7 +293,7 @@ document.addEventListener("click",function(e){
 
 
 
-// ===== v5.0.3 Mobile UX + Performance Shell =====
+// ===== v5.0.4 Mobile UX + Performance Shell =====
 (function(){
   if(window.__v5ShellInstalled) return;
   window.__v5ShellInstalled = true;
@@ -328,7 +328,7 @@ document.addEventListener("click",function(e){
 
 
 
-// ===== v5.0.3 User Isolation Status UI =====
+// ===== v5.0.4 User Isolation Status UI =====
 (function(){
   function showIsolationStatus(){
     try{
@@ -343,7 +343,7 @@ document.addEventListener("click",function(e){
 
 
 
-// ===== v5.0.3 Migration Button Runtime Guard =====
+// ===== v5.0.4 Migration Button Runtime Guard =====
 (function(){
   function guardButtons(){
     try{
@@ -354,4 +354,86 @@ document.addEventListener("click",function(e){
     }catch(e){}
   }
   window.addEventListener("load",function(){setTimeout(guardButtons,300);setTimeout(guardButtons,1200);});
+})();
+
+
+
+// ===== v5.0.4 Team ID Hard Fix =====
+(function(){
+  if(window.__v504TeamHardFix) return;
+  window.__v504TeamHardFix = true;
+
+  function getTeamInput(){
+    return document.getElementById("teamId");
+  }
+
+  function showTeamStatus(msg, cls){
+    var st = document.getElementById("teamSaveStatus") || document.getElementById("userIsolationStatus");
+    if(st){
+      st.className = cls || "msg ok";
+      st.innerHTML = msg;
+    }
+  }
+
+  function saveTeamIdHard(e){
+    try{
+      var btn = e && e.target && e.target.closest ? e.target.closest("#saveTeamBtn") : null;
+      if(!btn) return;
+
+      if(e){
+        e.preventDefault();
+        e.stopPropagation();
+        if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+      }
+
+      var input = getTeamInput();
+      var val = input ? String(input.value || "").trim() : "";
+      if(!val){
+        showTeamStatus("กรุณาใส่ Team ID ก่อน", "msg warn");
+        alert("กรุณาใส่ Team ID ก่อน");
+        return false;
+      }
+
+      localStorage.setItem("teamId", val);
+      localStorage.setItem("workoutTeamIdSavedAt", new Date().toISOString());
+      showTeamStatus("Team ID saved: <b>"+val+"</b><br><span class='small'>กำลัง reload เพื่อโหลดข้อมูลของทีมนี้</span>", "msg ok");
+
+      setTimeout(function(){
+        location.reload();
+      }, 350);
+      return false;
+    }catch(err){
+      alert("Save Team ID error: " + err.message);
+      return false;
+    }
+  }
+
+  function hydrateTeamInput(){
+    try{
+      var input = getTeamInput();
+      var val = localStorage.getItem("teamId") || "";
+      if(input && val && !input.value) input.value = val;
+      if(val){
+        showTeamStatus("Team ID saved: <b>"+val+"</b><br><span class='small'>ข้อมูลแยกตาม Google Account</span>", "msg ok");
+      }
+    }catch(e){}
+  }
+
+  function bindHard(){
+    var btn = document.getElementById("saveTeamBtn");
+    if(btn){
+      btn.disabled = false;
+      btn.type = "button";
+      if(btn.dataset.v504Bound !== "1"){
+        btn.dataset.v504Bound = "1";
+        btn.addEventListener("click", saveTeamIdHard, true);
+        btn.onclick = saveTeamIdHard;
+      }
+    }
+    hydrateTeamInput();
+  }
+
+  document.addEventListener("click", saveTeamIdHard, true);
+  window.addEventListener("DOMContentLoaded", function(){ setTimeout(bindHard, 50); });
+  window.addEventListener("load", function(){ setTimeout(bindHard, 150); setTimeout(bindHard, 1000); });
 })();

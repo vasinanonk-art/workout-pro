@@ -1,23 +1,19 @@
-# QA REPORT v5.0.3 Migration Button Fix
+# QA REPORT v5.0.4 Team ID Hard Fix
 
-✅ Version v5.0.3
-✅ Team status UI
-✅ Save Team fallback
-✅ Migration fallback click
-✅ Critical button binder
-✅ Runtime guard
-✅ Migration UI
-✅ Migration logic preserved
-✅ Save preserved
+✅ Version v5.0.4
+✅ Hard save runtime
+✅ Capture click
+✅ Reload after save
+✅ Save button type
+✅ Migration preserved
+✅ User isolation preserved
 ✅ Runtime JS syntax
 ✅ Module JS syntax
-✅ No duplicate functions
 
-Manual QA Required:
-1. Login with Google.
+Manual QA:
+1. Open Setup.
 2. Enter Team ID.
-3. Click Save Team ID. Status must show saved team.
-4. Click ตรวจ / ย้าย Log เก่า.
-5. If old logs exist, migration button must become active.
-6. Click Migrate Legacy Logs and confirm.
-7. Old logs should appear again.
+3. Click Save Team ID.
+4. App should show saved status and reload.
+5. After reload, Team ID input should still show saved value.
+6. Click ตรวจ / ย้าย Log เก่า.
