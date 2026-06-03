@@ -1,4 +1,4 @@
 App: Workout PRO
-Version: v4.3.1
-Build: UI Fix Pack
+Version: v4.3.2
+Build: UI Polish Pack
 Updated: 2026-06-03

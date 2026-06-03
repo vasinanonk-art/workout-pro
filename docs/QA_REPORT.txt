@@ -1,16 +1,16 @@
-# QA REPORT v4.3.1 UI Fix Pack
+# QA REPORT v4.3.2 UI Polish Pack
 
-✅ Version v4.3.1
-✅ Chart visible colors
-✅ Resume disabled when empty
-✅ Alt button runtime cleanup
+✅ Version v4.3.2
+✅ Alt button full-width CSS
+✅ Alt label runtime
+✅ Program timeline
+✅ Guide cards
 ✅ Save preserved
 ✅ Runtime JS syntax
 ✅ Module JS syntax
-✅ No duplicate functions
 
 Manual QA:
-1. Volume Dashboard chart bars/text are visible.
-2. Auto Resume button is disabled when no session exists.
-3. Alternative cancel buttons no longer float awkwardly.
+1. Alternative buttons are full-width and no small floating button remains.
+2. Program page looks like weekly timeline, not a generic list only.
+3. Guide page looks like coaching guide cards, not the same as Program.
 4. Save/Login/Log/Coach still work.

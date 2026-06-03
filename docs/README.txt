@@ -1,1 +1,1 @@
-Workout PRO v4.3.1 UI Fix Pack
+Workout PRO v4.3.2 UI Polish Pack

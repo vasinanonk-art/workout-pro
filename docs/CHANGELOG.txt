@@ -1,15 +1,12 @@
-# v4.3.1 UI Fix Pack
+# v4.3.2 UI Polish Pack
 
 Fixed:
-1. Volume Dashboard chart bars/text were too dark on dark mode.
-2. Auto Resume button now disables itself when there is no session and explains what it does.
-3. Alternative cancel buttons are cleaned up by runtime text matching, covering all current layouts.
+- Alternative buttons are full-width, same height, and clearer.
+- Program page now has a distinct weekly timeline layout.
+- Guide page now has a distinct coaching guide card layout.
 
 Preserved:
+- v4.3.1 chart visibility fix
 - v4.3.0 feature pack
-- Login / Firestore
-- Save set
-- Log / History
-- Calendar
-- Coach / Plateau
-- Program / Guide / Donate
+- Login / Firestore / Save
+- Log / Calendar / Coach / Program / Guide / Donate
