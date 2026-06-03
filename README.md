@@ -1,4 +1,4 @@
-# Workout PRO v5.1.0 Full QA Stable Build
+# Workout PRO v5.1.1 Calendar Stay Fix
 
 Push this folder to GitHub. Cloudflare will auto deploy.
 

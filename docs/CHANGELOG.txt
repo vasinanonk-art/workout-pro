@@ -1,28 +1,14 @@
-# v5.1.0 Full QA Stable Build
+# v5.1.1 Calendar Stay Fix
 
-Rebuilt as a QA consolidation build, not a hotfix.
-
-Fixed / consolidated:
-- Removed runtime migration click interception.
-- Rebuilt one migration handler in app.module.js only.
-- Rebuilt migration flow:
-  1. ตรวจสอบ Log เก่า
-  2. Found records
-  3. ย้ายข้อมูลทั้งหมด
-  4. Confirm
-  5. Copy to isolated user path
-- Rebuilt sync() with safe DOM guards.
-- Preserved Team ID hard save.
-- Preserved User Isolation path:
-  teams/{teamLabel}/users/{userUid}/workouts
-- Removed Manual Import JSON.
-- Added deterministic migration card.
-
-Known expected result from previous live test:
-- Legacy scan found 329 records.
-- This build is designed to let the second click run migrateLegacyLogsToUser(), not runtime guard.
+Fixed:
+- Clicking an old date in Calendar jumped immediately to Log.
+- Calendar click now stays on Calendar and renders day details in-place.
+- Added optional button: ไปหน้า Log ของวันนี้.
+- Added runtime guard to force Calendar page if old handlers try to switch to Log.
 
 Preserved:
-- Login / Firestore / Save / Delete
-- Dashboard / Log / Calendar / Coach / Program / Guide / Donate
-- v5 dashboard analytics
+- v5.1.0 migration stable build
+- User isolation
+- Migration flow
+- Team ID hard save
+- Dashboard / Log / Calendar / Coach / Program / Guide

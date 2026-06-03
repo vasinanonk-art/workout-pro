@@ -1,40 +1,18 @@
-# QA REPORT v5.1.0 Full QA Stable Build
+# QA REPORT v5.1.1 Calendar Stay Fix
 
-✅ Version v5.1.0
-✅ Migration UI clean
-✅ No runtime migration interceptor
-✅ Single migration handler
-✅ Migration check function
-✅ Migration copy function
-✅ Migration ready state
-✅ Writes isolated path
-✅ Reads legacy path
+✅ Version v5.1.1
+✅ Calendar detail UI
+✅ Calendar stay function
+✅ Calendar click guard
+✅ Runtime calendar guard
+✅ Migration preserved
 ✅ User isolation preserved
-✅ Sync safe rewrite
-✅ Safe helpers
-✅ No known dangerous raw access
-✅ Critical UI IDs exist
-✅ Save Team hard fix preserved
-✅ Login preserved
-✅ Firestore preserved
 ✅ Runtime JS syntax
 ✅ Module JS syntax
-✅ No duplicate critical functions
 
-## Static DOM Audit
-Critical missing IDs: None
-Dangerous raw DOM access hits: None
-Duplicate critical functions: None
-
-
-## Manual QA Flow Required After Deploy
-1. Hard refresh.
-2. Confirm version shows v5.1.0.
-3. Save Team ID.
-4. Click ตรวจสอบ Log เก่า.
-5. It should show 329 records.
-6. Button should change to ย้ายข้อมูลทั้งหมด (329 records).
-7. Click the same button again.
-8. Confirm dialog should appear.
-9. Confirm migration.
-10. Logs should load under isolated user path.
+Manual QA:
+1. Open Calendar.
+2. Click an old date.
+3. Must stay on Calendar.
+4. Day Summary must update.
+5. Optional button ไปหน้า Log ของวันนี้ should navigate to Log only when clicked.
