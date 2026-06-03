@@ -1,20 +1,15 @@
-# v5.0.1 User Isolation Fix
+# v5.0.2 Legacy Log Migration
 
-Critical Fix:
-- Firestore workout data is now scoped by Google user UID.
-- Team ID is now a group/label, not the primary data owner.
-- Users with the same Team ID will no longer see each other's workout logs.
-
-New Firestore path:
-- teams/{teamLabel}/users/{userUid}/workouts
-
-Old shared path:
-- teams/{teamId}/workouts
-- Not deleted.
-- Not written to by this build.
+Added:
+- Detects old logs from legacy path:
+  teams/{teamId}/workouts
+- Migrates legacy logs into isolated user path:
+  teams/{teamLabel}/users/{userUid}/workouts
+- Manual confirmation required.
+- Migration copies only; it does not delete old logs.
+- Adds migratedFromLegacy, legacyId, migratedAt, ownerUid, ownerEmail metadata.
 
 Preserved:
-- Existing Team ID UI
-- Login / Save set
+- v5.0.1 user isolation fix
+- Login / Firestore / Save / Delete
 - Dashboard / Log / Calendar / Coach / Program / Guide / Donate
-- v5.0 dashboards and export tools

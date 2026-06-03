@@ -1,25 +1,24 @@
-# QA REPORT v5.0.1 User Isolation Fix
+# QA REPORT v5.0.2 Legacy Log Migration
 
-✅ Version v5.0.1
-✅ User scope helper
-✅ Scoped path includes users
-✅ Save uses scoped collection
-✅ Subscribe uses scoped collection
-✅ Delete uses scoped collection
-✅ No old raw Firestore path remains
-✅ Owner metadata
-✅ Isolation UI
+✅ Version v5.0.2
+✅ getDocs imported
+✅ Migration UI
+✅ Check legacy function
+✅ Migrate function
+✅ Reads legacy path
+✅ Writes scoped path
+✅ Migration metadata
+✅ Manual confirm
 ✅ Save preserved
-✅ Login preserved
-✅ Firestore preserved
 ✅ Runtime JS syntax
 ✅ Module JS syntax
 ✅ No duplicate functions
 
 Manual QA Required:
-1. Login with User A, Team ID = Beer-Team, save 1 set.
-2. Login with User B, Team ID = Beer-Team.
-3. User B must NOT see User A logs.
-4. User B saves 1 set.
-5. Login back User A; User A must see only User A logs.
-6. Dashboard/Calendar/Coach still load.
+1. Login with your Google account.
+2. Enter your old Team ID.
+3. Check Legacy Log Migration card.
+4. If it detects old records, click Migrate Legacy Logs.
+5. Confirm.
+6. Old logs should appear again under the new user-isolated path.
+7. Test with another Google account using same Team ID; logs must remain separated.

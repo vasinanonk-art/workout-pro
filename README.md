@@ -1,4 +1,4 @@
-# Workout PRO v5.0.1 User Isolation Fix
+# Workout PRO v5.0.2 Legacy Log Migration
 
 Push this folder to GitHub. Cloudflare will auto deploy.
 
