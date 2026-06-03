@@ -1,14 +1,17 @@
-# v5.0.4 Team ID Hard Fix
+# v5.0.5 Migration Recovery Fix
 
 Fixed:
-- Save Team ID button still did not work on deployed app.
-- Added runtime capture-phase hard save.
-- Save Team ID now writes directly to localStorage and reloads the app.
-- This guarantees the module reloads with the saved Team ID.
-- Migration button can be used after reload.
+- Migration could still fail or appear inactive.
+- Migration check now shows exact legacy path being checked.
+- If Firestore Rules block legacy read, app shows the real error.
+- Added Manual Import JSON fallback to recover logs even if auto migration cannot read the old path.
+
+How to recover:
+1. Try ตรวจ Log เก่า / Migrate first.
+2. If legacy path cannot be read, paste JSON export/backup into Manual Import.
+3. Click Manual Import Logs.
 
 Preserved:
-- v5.0.3 migration button fix
-- v5.0.2 legacy migration
+- v5.0.4 Team ID hard save
 - v5.0.1 user isolation
-- Login / Firestore / Save / Dashboard / Log / Calendar / Coach
+- Login / Save / Dashboard / Log / Calendar / Coach

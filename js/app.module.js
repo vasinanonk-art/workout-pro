@@ -2,9 +2,9 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-const VERSION="v5.0.4", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
+const VERSION="v5.0.5", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
 
-/* ===== v5.0.4 Team ID Hard Fix ===== */
+/* ===== v5.0.5 Migration Recovery Fix ===== */
 function safeKeyPart(v){
   return String(v || "default").trim().replace(/[^\w\-@.]/g, "_").slice(0,80) || "default";
 }
@@ -866,55 +866,84 @@ function cleanForFirestore(obj){
 
 async function saveSet(){try{$("saveDebug").className="msg";$("saveDebug").textContent="กำลังบันทึก...";if(!user)return alert("Login ก่อน");if(!teamId)return alert("ใส่ Team ID ก่อน");if(!validateDate())return;let m=meta(),ad=activeDay(),st=nextState(),wk=autoWeek();if(st.restLock)return alert("ยังพักไม่ครบ 2 วัน");if(!canSaveCurrentExerciseAdaptive())return alert("ท่านี้ยังไม่สามารถบันทึกได้: อาจเป็นคนละ Day หรือครบเซตแล้ว");let raw=parseFloat($("weight").value),reps=parseInt($("reps").value),rir=parseInt($("rir").value||2);if(!raw||!reps)return alert("กรอก Weight และ Reps");let rememberedAlt=altMemoryForPlanned(m[2]);let persistentAlt=(typeof autoApplyPersistentAlternative==="function"?autoApplyPersistentAlternative():null);let effectiveAlt=selectedAlt||persistentAlt||rememberedAlt;let computedSetNo=canonicalSetState(m[2]).next;let w=toKg(raw,$("unit").value),ex=effectiveAlt?effectiveAlt.name:m[2];await addDoc(collection(db, scopedWorkoutsCollection()),cleanForFirestore({date:$("date").value,week:wk,autoWeek:wk,day:m[0],focus:m[1],exercise:ex,plannedExercise:m[2],isAlternative:!!effectiveAlt,alternativePattern:effectiveAlt?effectiveAlt.pattern:"",alternativeQuery:(effectiveAlt&&effectiveAlt.query)?effectiveAlt.query:"",targetSets:m[3],setNo:computedSetNo,muscle:m[5],weight:w,reps,rir,volume:w*reps,note:$("note").value||"",sleepHours:parseFloat($("sleepHours")?.value||7),soreness:parseInt($("soreness")?.value||2),stress:parseInt($("stress")?.value||2),tempo:$("tempo")?.value||"",repQuality:$("repQuality")?.value||"",biasMode:$("biasMode")?.value||"auto",effectiveReps:effectiveRepsForSet({reps,rir}),userId:user.uid,userName:user.displayName||user.email,userEmail:user.email,teamLabel:activeTeamLabel(),userScope:activeUserKey(),ownerUid:user.uid,ownerEmail:user.email,appVersion:VERSION,createdAt:serverTimestamp()})); if(typeof exSessionAfterSave==="function") exSessionMarkSavedLocal(m[2]); applyCanonicalSetDisplay(m[2]);selectedAlt=null;$("weight").value="";$("reps").value="";$("rir").value=2;$("note").value="";$("saveDebug").className="msg ok";$("saveDebug").textContent="บันทึกสำเร็จ ✅";startRest();setTimeout(sync,600);setTimeout(v403Run,250);setTimeout(fullStabilizationRun,950);setTimeout(coachCoreRun,950);setTimeout(authDebugGuardRun,950);setTimeout(permissionSafeRun,900);setTimeout(plateauLiveRecompute,900);setTimeout(stableRenderAllPanels,700)}catch(e){$("saveDebug").className="msg err";$("saveDebug").textContent="Save error: "+e.message;alert("Save error: "+e.message)}}
 
-/* ===== v5.0.4 LEGACY_MIGRATION_CODE ===== */
+/* ===== v5.0.5 LEGACY_MIGRATION_CODE ===== */
 let legacyMigrationState = { checked:false, count:0, docs:[] };
 
+
+
+
+
+
+
+
+/* ===== v5.0.5 MIGRATION_RECOVERY_CODE ===== */
 async function checkLegacyLogsForMigration(){
   const box = $("legacyMigrationBox");
   const btn = $("legacyMigrationBtn");
   try{
     if(!box || !btn) return;
-    if(!user || !teamId){
-      box.className = "msg info";
-      box.innerHTML = "Login และใส่ Team ID ก่อน จึงจะตรวจ log เก่าได้";
-      btn.disabled = false;
+    btn.disabled = false;
+
+    if(!user){
+      box.className = "msg warn";
+      box.innerHTML = "ยังไม่ได้ Login: กรุณา Login ก่อนตรวจ Log เก่า";
+      return;
+    }
+
+    if(!teamId){
+      const inputVal = $("teamId") ? String($("teamId").value || "").trim() : "";
+      if(inputVal){
+        teamId = inputVal;
+        localStorage.setItem("teamId", teamId);
+      }
+    }
+
+    if(!teamId){
+      box.className = "msg warn";
+      box.innerHTML = "ยังไม่มี Team ID: ใส่ Team ID แล้วกด Save Team ID ก่อน";
       return;
     }
 
     box.className = "msg info";
-    box.innerHTML = "กำลังตรวจ log เก่าจาก path เดิม...";
-    btn.disabled = true;
+    box.innerHTML = "กำลังตรวจ legacy path:<br><b>" + legacySharedWorkoutsCollection() + "</b>";
+    btn.textContent = "กำลังตรวจ...";
 
-    const legacySnap = await getDocs(query(collection(db, legacySharedWorkoutsCollection()), orderBy("createdAt","desc")));
+    let legacySnap;
+    try{
+      legacySnap = await getDocs(query(collection(db, legacySharedWorkoutsCollection()), orderBy("createdAt","desc")));
+    }catch(readErr){
+      box.className = "msg err";
+      box.innerHTML = "อ่าน legacy path ไม่ได้: " + readErr.message + "<br><span class='small'>สาเหตุที่พบบ่อย: Firestore Rules ไม่อนุญาตให้อ่าน path เก่า หรือ path เดิมไม่ใช่ teams/{teamId}/workouts</span><br>ใช้ Manual Import JSON ด้านล่างแทนได้";
+      btn.textContent = "ตรวจ Log เก่าอีกครั้ง";
+      return;
+    }
+
     const legacyDocs = legacySnap.docs.map(function(d){ return { id:d.id, data:d.data() }; });
     legacyMigrationState = { checked:true, count:legacyDocs.length, docs:legacyDocs };
 
     if(!legacyDocs.length){
-      box.className = "msg ok";
-      box.innerHTML = "ไม่พบ log เก่าที่ต้อง migrate";
-      btn.disabled = true;
+      box.className = "msg warn";
+      box.innerHTML = "ไม่พบ log เก่าที่ path:<br><b>" + legacySharedWorkoutsCollection() + "</b><br><span class='small'>ถ้ามั่นใจว่ามี log เก่า อาจอยู่คนละ Team ID หรือ path เดิมชื่ออื่น</span>";
+      btn.textContent = "ตรวจ Log เก่าอีกครั้ง";
       return;
     }
 
-    const scopedSnap = await getDocs(query(collection(db, scopedWorkoutsCollection()), orderBy("createdAt","desc")));
-    if(scopedSnap.docs.length > 0){
-      box.className = "msg warn";
-      box.innerHTML = "พบ log เก่า " + legacyDocs.length + " records แต่ path ใหม่มีข้อมูลแล้ว " + scopedSnap.docs.length + " records<br><span class='small'>เพื่อกันข้อมูลซ้ำ ระบบไม่ auto migrate ให้ กดเฉพาะถ้าต้องการรวมข้อมูลเก่าเข้าบัญชีนี้</span>";
-      btn.disabled = false;
-      btn.textContent = "Migrate Legacy Logs (" + legacyDocs.length + ")";
-      return;
-    }
+    const first = legacyDocs[legacyDocs.length-1]?.data?.date || "-";
+    const last = legacyDocs[0]?.data?.date || "-";
 
     box.className = "msg warn";
-    box.innerHTML = "พบ log เก่า " + legacyDocs.length + " records จาก Team ID เดิม<br><b>พร้อมย้ายเข้าบัญชี Google นี้</b><br><span class='small'>ระบบจะ copy เท่านั้น ไม่ลบข้อมูลเก่า</span>";
-    btn.disabled = false;
+    box.innerHTML = "พบ log เก่า <b>" + legacyDocs.length + "</b> records<br>ช่วงวันที่: " + first + " → " + last + "<br><span class='small'>กดปุ่มอีกครั้งเพื่อย้ายเข้า user account ปัจจุบัน</span>";
     btn.textContent = "Migrate Legacy Logs (" + legacyDocs.length + ")";
+    btn.onclick = migrateLegacyLogsToUser;
   }catch(e){
     if(box){
       box.className = "msg err";
       box.innerHTML = "Migration check error: " + e.message;
     }
-    if(btn) btn.disabled = true;
+    if(btn){
+      btn.disabled = false;
+      btn.textContent = "ตรวจ Log เก่าอีกครั้ง";
+    }
   }
 }
 
@@ -922,28 +951,20 @@ async function migrateLegacyLogsToUser(){
   const box = $("legacyMigrationBox");
   const btn = $("legacyMigrationBtn");
   try{
-    if(!user || !teamId){
-      alert("Login และใส่ Team ID ก่อน");
-      return;
-    }
-    if(!legacyMigrationState.checked || !legacyMigrationState.docs.length){
-      await checkLegacyLogsForMigration();
-    }
+    if(!user) return alert("กรุณา Login ก่อน");
+    if(!teamId) return alert("กรุณา Save Team ID ก่อน");
     if(!legacyMigrationState.docs.length){
-      alert("ไม่พบ log เก่า");
-      return;
+      await checkLegacyLogsForMigration();
+      if(!legacyMigrationState.docs.length) return;
     }
 
     const ok = confirm("ยืนยันย้าย log เก่า " + legacyMigrationState.docs.length + " records เข้าบัญชีนี้?\\n\\nระบบจะ copy ไป path ใหม่และไม่ลบข้อมูลเก่า");
     if(!ok) return;
 
-    if(box){
-      box.className = "msg info";
-      box.innerHTML = "กำลัง migrate legacy logs...";
-    }
+    if(box){box.className="msg info";box.innerHTML="กำลัง migrate...";}
     if(btn) btn.disabled = true;
 
-    let migrated = 0;
+    let migrated=0;
     for(const oldDoc of legacyMigrationState.docs){
       const data = oldDoc.data || {};
       await addDoc(collection(db, scopedWorkoutsCollection()), cleanForFirestore({
@@ -957,35 +978,27 @@ async function migrateLegacyLogsToUser(){
         ownerEmail:user.email
       }));
       migrated++;
-      if(box && migrated % 25 === 0){
-        box.innerHTML = "Migrating... " + migrated + "/" + legacyMigrationState.docs.length;
-      }
+      if(box && migrated % 20 === 0) box.innerHTML = "Migrating... " + migrated + "/" + legacyMigrationState.docs.length;
     }
 
-    if(box){
-      box.className = "msg ok";
-      box.innerHTML = "Migration สำเร็จ ✅<br>ย้ายแล้ว " + migrated + " records<br><span class='small'>ข้อมูลเก่ายังอยู่ ไม่ได้ลบ</span>";
-    }
-    if(btn){
-      btn.disabled = true;
-      btn.textContent = "Migration Completed";
-    }
-    setTimeout(sync,700);
+    if(box){box.className="msg ok";box.innerHTML="Migration สำเร็จ ✅<br>ย้ายแล้ว " + migrated + " records";}
+    if(btn){btn.disabled=true;btn.textContent="Migration Completed";}
+    setTimeout(sync,800);
   }catch(e){
-    if(box){
-      box.className = "msg err";
-      box.innerHTML = "Migration error: " + e.message;
-    }
-    if(btn) btn.disabled = false;
+    if(box){box.className="msg err";box.innerHTML="Migration error: " + e.message;}
+    if(btn){btn.disabled=false;btn.textContent="Migrate Legacy Logs";}
     alert("Migration error: " + e.message);
   }
 }
 
 function bindLegacyMigration(){
   const btn = $("legacyMigrationBtn");
-  if(btn && btn.dataset.bound !== "1"){
-    btn.dataset.bound = "1";
-    btn.onclick = migrateLegacyLogsToUser;
+  if(btn){
+    btn.disabled = false;
+    if(btn.dataset.v505Bound !== "1"){
+      btn.dataset.v505Bound = "1";
+      btn.onclick = checkLegacyLogsForMigration;
+    }
   }
 }
 
@@ -1372,7 +1385,7 @@ function renderDashboard(){try{$("kVol").textContent=logs.reduce((a,b)=>a+(+b.vo
 function fmt(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}function dayForDate(d){let a=logs.filter(x=>x.date===d);if(!a.length)return null;let c={};a.forEach(x=>c[x.day]=(c[x.day]||0)+1);return Object.entries(c).sort((a,b)=>b[1]-a[1])[0][0]}function renderCalendar(){let grid=$("calGrid");grid.innerHTML="";let names=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];$("monthTitle").textContent=names[calDate.getMonth()]+" "+calDate.getFullYear();["อา","จ","อ","พ","พฤ","ศ","ส"].forEach(h=>grid.innerHTML+=`<div class="calHead">${h}</div>`);let first=new Date(calDate.getFullYear(),calDate.getMonth(),1),last=new Date(calDate.getFullYear(),calDate.getMonth()+1,0).getDate();for(let i=0;i<first.getDay();i++)grid.innerHTML+=`<div class="calDay empty"></div>`;for(let d=1;d<=last;d++){let key=fmt(new Date(calDate.getFullYear(),calDate.getMonth(),d)),a=logs.filter(x=>x.date===key),day=dayForDate(key),sel=key===selectedDate?" sel":"",tod=key===today()?" today":"";grid.innerHTML+=`<div class="calDay${sel}${tod}" data-date="${key}"><b>${d}</b><br><span class="calTag ${a.length?'partial':'rest'}">${day||'Rest'}</span>${a.length?`<div class="small">${a.length} sets</div>`:""}</div>`}grid.querySelectorAll(".calDay[data-date]").forEach(el=>el.onclick=()=>{selectedDate=el.dataset.date;$("date").value=selectedDate;sync();document.querySelector('[data-page="log"]').click()})}function renderDaySummary(d){let a=logs.filter(x=>x.date===d);$("dayTitle").textContent="Daily Summary: "+d;if(!a.length){$("daySummary").innerHTML="ยังไม่มีข้อมูล";return}let by={};a.forEach(x=>{if(!by[x.exercise])by[x.exercise]=[];by[x.exercise].push(x)});$("daySummary").innerHTML=Object.entries(by).map(([ex,arr])=>{let max=arr.reduce((m,x)=>+x.weight>+m.weight?x:m,arr[0]);return `<div class="item"><h3>${ex}</h3><div class="meta">Sets: ${arr.length}<br>Max: ${fromKg(max.weight,$("unit").value)} ${$("unit").value} × ${max.reps}${max.isAlternative?`<br>แทน: ${max.plannedExercise}`:""}</div></div>`}).join("")}
 $("prevM").onclick=()=>{calDate=new Date(calDate.getFullYear(),calDate.getMonth()-1,1);renderCalendar()};$("nextM").onclick=()=>{calDate=new Date(calDate.getFullYear(),calDate.getMonth()+1,1);renderCalendar()};
 function renderSafe(){try{renderDashboard();renderCoach();renderCalendar();renderDaySummary(selectedDate)}catch(e){$("chartStatus").textContent="Render fallback: "+e.message}}
-/* v5.0.4 Team ID Hard Fix
+/* v5.0.5 Migration Recovery Fix
    This code is intentionally inside the Firebase module script so it can access logs / PROGRAM / $ safely.
 */
 const COACH_MOVEMENT_GROUPS = {
@@ -1491,7 +1504,7 @@ function coachCoreStatusPanel(){
   const p=document.createElement("div");
   p.id="coachCoreStatusPanel";
   p.className="card";
-  p.innerHTML='<h3>Coach Core Stabilization</h3><div class="msg ok">v5.0.4<br>Module-scoped logs access: FIXED<br>Plateau: productive trend + full exercise list<br>History Remap: movement guard<br>Alternative: auto apply guard</div>';
+  p.innerHTML='<h3>Coach Core Stabilization</h3><div class="msg ok">v5.0.5<br>Module-scoped logs access: FIXED<br>Plateau: productive trend + full exercise list<br>History Remap: movement guard<br>Alternative: auto apply guard</div>';
   setup.appendChild(p);
 }
 function coachCoreRun(){ if(window.__v404TooSoon&&window.__v404TooSoon('coachCoreRun',1200)) return; 
@@ -1606,7 +1619,7 @@ function syncAlternativeNameDisplay(){
 window.addEventListener("load",function(){setTimeout(fullStabilizationRun,800);});
 
 
-/* v5.0.4 Stable Recovery: scoped complete card and throttled stabilization */
+/* v5.0.5 Stable Recovery: scoped complete card and throttled stabilization */
 function renderExerciseCompleteState(){
   try{
     const m=typeof meta==="function"?meta():null;
@@ -1672,7 +1685,7 @@ function fullStabilizationRun(){ if(window.__v404TooSoon&&window.__v404TooSoon('
 
 
 
-/* v5.0.4 Team ID Hard Fix */
+/* v5.0.5 Migration Recovery Fix */
 function v403DayExercises(dayName){
   try{return (PROGRAM||[]).filter(p=>p[0]===dayName);}catch(e){return [];}
 }
@@ -1748,7 +1761,7 @@ function v403Run(){ if(window.__v404TooSoon&&window.__v404TooSoon('v403Run',900)
 }
 
 
-/* ===== v5.0.4 Complete Analytics / Export / Coach ===== */
+/* ===== v5.0.5 Complete Analytics / Export / Coach ===== */
 function v5SafeLogs(){try{return Array.isArray(logs)?logs:[]}catch(e){return []}}
 function v5Date(){return $("date")?.value || (typeof today==="function"?today():new Date().toISOString().slice(0,10))}
 function v5Volume(x){return Number(x.weight||0)*Number(x.reps||0)}
@@ -1849,7 +1862,7 @@ function v5EnhanceCalendar(){
   }catch(e){}
 }
 function v5ExportJson(){
-  const payload={version:"v5.0.4",exportedAt:new Date().toISOString(),logs:v5SafeLogs()};
+  const payload={version:"v5.0.5",exportedAt:new Date().toISOString(),logs:v5SafeLogs()};
   const text=JSON.stringify(payload,null,2);
   if($("v5BackupText")) $("v5BackupText").value=text;
   try{navigator.clipboard&&navigator.clipboard.writeText(text)}catch(e){}
@@ -1893,7 +1906,7 @@ window.addEventListener('load',()=>{setTimeout(()=>{try{v430RestoreDraft();v430R
 
 
 
-/* ===== v5.0.4 Feature Functions ===== */
+/* ===== v5.0.5 Feature Functions ===== */
 function v430SafeLogs(){try{return Array.isArray(logs)?logs:[]}catch(e){return []}}
 function v430CurrentExercise(){return $("exercise")?$("exercise").value:""}
 function v430Today(){return (typeof today==="function"?today():(new Date()).toISOString().slice(0,10))}
@@ -1972,7 +1985,7 @@ window.addEventListener('load',function(){setTimeout(function(){try{bindLegacyMi
 
 
 
-/* ===== v5.0.4 MIGRATION_BUTTON_FIX_CODE ===== */
+/* ===== v5.0.5 MIGRATION_BUTTON_FIX_CODE ===== */
 function v503UpdateTeamStatus(){
   try{
     const st=$("teamSaveStatus");
@@ -2049,3 +2062,59 @@ function v503BindCriticalButtons(){
 
 
 window.addEventListener('load',function(){setTimeout(v503BindCriticalButtons,300);setTimeout(v503BindCriticalButtons,1200);});
+
+
+/* ===== v5.0.5 MANUAL_IMPORT_CODE ===== */
+function parseManualLogsPayload(text){
+  const parsed = JSON.parse(text);
+  if(Array.isArray(parsed)) return parsed;
+  if(parsed.logs && Array.isArray(parsed.logs)) return parsed.logs;
+  if(parsed.data && Array.isArray(parsed.data)) return parsed.data;
+  throw new Error("JSON ต้องเป็น array หรือ object ที่มี logs:[]");
+}
+
+async function manualImportLogsToUser(){
+  const box = $("legacyMigrationBox");
+  try{
+    if(!user) return alert("กรุณา Login ก่อน");
+    if(!teamId) return alert("กรุณา Save Team ID ก่อน");
+    const text = $("manualMigrationText") ? $("manualMigrationText").value.trim() : "";
+    if(!text) return alert("กรุณาวาง JSON backup/export ก่อน");
+
+    const rows = parseManualLogsPayload(text);
+    const ok = confirm("ยืนยัน import logs จำนวน " + rows.length + " records เข้าบัญชีนี้?");
+    if(!ok) return;
+
+    if(box){box.className="msg info";box.innerHTML="Manual importing...";}
+    let imported=0;
+    for(const row of rows){
+      const clean = {...row};
+      delete clean.id;
+      await addDoc(collection(db, scopedWorkoutsCollection()), cleanForFirestore({
+        ...clean,
+        importedManual:true,
+        importedAt:new Date().toISOString(),
+        teamLabel:activeTeamLabel(),
+        userScope:activeUserKey(),
+        ownerUid:user.uid,
+        ownerEmail:user.email
+      }));
+      imported++;
+      if(box && imported % 20 === 0) box.innerHTML = "Manual importing... " + imported + "/" + rows.length;
+    }
+
+    if(box){box.className="msg ok";box.innerHTML="Manual Import สำเร็จ ✅<br>Import แล้ว " + imported + " records";}
+    setTimeout(sync,800);
+  }catch(e){
+    if(box){box.className="msg err";box.innerHTML="Manual Import error: " + e.message;}
+    alert("Manual Import error: " + e.message);
+  }
+}
+
+function bindManualImport(){
+  const btn = $("manualMigrationBtn");
+  if(btn && btn.dataset.v505ManualBound !== "1"){
+    btn.dataset.v505ManualBound = "1";
+    btn.onclick = manualImportLogsToUser;
+  }
+}
