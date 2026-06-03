@@ -1,24 +1,23 @@
-# QA REPORT v5.0.2 Legacy Log Migration
+# QA REPORT v5.0.3 Migration Button Fix
 
-✅ Version v5.0.2
-✅ getDocs imported
+✅ Version v5.0.3
+✅ Team status UI
+✅ Save Team fallback
+✅ Migration fallback click
+✅ Critical button binder
+✅ Runtime guard
 ✅ Migration UI
-✅ Check legacy function
-✅ Migrate function
-✅ Reads legacy path
-✅ Writes scoped path
-✅ Migration metadata
-✅ Manual confirm
+✅ Migration logic preserved
 ✅ Save preserved
 ✅ Runtime JS syntax
 ✅ Module JS syntax
 ✅ No duplicate functions
 
 Manual QA Required:
-1. Login with your Google account.
-2. Enter your old Team ID.
-3. Check Legacy Log Migration card.
-4. If it detects old records, click Migrate Legacy Logs.
-5. Confirm.
-6. Old logs should appear again under the new user-isolated path.
-7. Test with another Google account using same Team ID; logs must remain separated.
+1. Login with Google.
+2. Enter Team ID.
+3. Click Save Team ID. Status must show saved team.
+4. Click ตรวจ / ย้าย Log เก่า.
+5. If old logs exist, migration button must become active.
+6. Click Migrate Legacy Logs and confirm.
+7. Old logs should appear again.

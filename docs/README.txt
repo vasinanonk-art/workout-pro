@@ -1,1 +1,1 @@
-Workout PRO v5.0.2 Legacy Log Migration
+Workout PRO v5.0.3 Migration Button Fix

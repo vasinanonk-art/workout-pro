@@ -2,9 +2,9 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-const VERSION="v5.0.2", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
+const VERSION="v5.0.3", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
 
-/* ===== v5.0.2 Legacy Log Migration ===== */
+/* ===== v5.0.3 Migration Button Fix ===== */
 function safeKeyPart(v){
   return String(v || "default").trim().replace(/[^\w\-@.]/g, "_").slice(0,80) || "default";
 }
@@ -866,7 +866,7 @@ function cleanForFirestore(obj){
 
 async function saveSet(){try{$("saveDebug").className="msg";$("saveDebug").textContent="กำลังบันทึก...";if(!user)return alert("Login ก่อน");if(!teamId)return alert("ใส่ Team ID ก่อน");if(!validateDate())return;let m=meta(),ad=activeDay(),st=nextState(),wk=autoWeek();if(st.restLock)return alert("ยังพักไม่ครบ 2 วัน");if(!canSaveCurrentExerciseAdaptive())return alert("ท่านี้ยังไม่สามารถบันทึกได้: อาจเป็นคนละ Day หรือครบเซตแล้ว");let raw=parseFloat($("weight").value),reps=parseInt($("reps").value),rir=parseInt($("rir").value||2);if(!raw||!reps)return alert("กรอก Weight และ Reps");let rememberedAlt=altMemoryForPlanned(m[2]);let persistentAlt=(typeof autoApplyPersistentAlternative==="function"?autoApplyPersistentAlternative():null);let effectiveAlt=selectedAlt||persistentAlt||rememberedAlt;let computedSetNo=canonicalSetState(m[2]).next;let w=toKg(raw,$("unit").value),ex=effectiveAlt?effectiveAlt.name:m[2];await addDoc(collection(db, scopedWorkoutsCollection()),cleanForFirestore({date:$("date").value,week:wk,autoWeek:wk,day:m[0],focus:m[1],exercise:ex,plannedExercise:m[2],isAlternative:!!effectiveAlt,alternativePattern:effectiveAlt?effectiveAlt.pattern:"",alternativeQuery:(effectiveAlt&&effectiveAlt.query)?effectiveAlt.query:"",targetSets:m[3],setNo:computedSetNo,muscle:m[5],weight:w,reps,rir,volume:w*reps,note:$("note").value||"",sleepHours:parseFloat($("sleepHours")?.value||7),soreness:parseInt($("soreness")?.value||2),stress:parseInt($("stress")?.value||2),tempo:$("tempo")?.value||"",repQuality:$("repQuality")?.value||"",biasMode:$("biasMode")?.value||"auto",effectiveReps:effectiveRepsForSet({reps,rir}),userId:user.uid,userName:user.displayName||user.email,userEmail:user.email,teamLabel:activeTeamLabel(),userScope:activeUserKey(),ownerUid:user.uid,ownerEmail:user.email,appVersion:VERSION,createdAt:serverTimestamp()})); if(typeof exSessionAfterSave==="function") exSessionMarkSavedLocal(m[2]); applyCanonicalSetDisplay(m[2]);selectedAlt=null;$("weight").value="";$("reps").value="";$("rir").value=2;$("note").value="";$("saveDebug").className="msg ok";$("saveDebug").textContent="บันทึกสำเร็จ ✅";startRest();setTimeout(sync,600);setTimeout(v403Run,250);setTimeout(fullStabilizationRun,950);setTimeout(coachCoreRun,950);setTimeout(authDebugGuardRun,950);setTimeout(permissionSafeRun,900);setTimeout(plateauLiveRecompute,900);setTimeout(stableRenderAllPanels,700)}catch(e){$("saveDebug").className="msg err";$("saveDebug").textContent="Save error: "+e.message;alert("Save error: "+e.message)}}
 
-/* ===== v5.0.2 LEGACY_MIGRATION_CODE ===== */
+/* ===== v5.0.3 LEGACY_MIGRATION_CODE ===== */
 let legacyMigrationState = { checked:false, count:0, docs:[] };
 
 async function checkLegacyLogsForMigration(){
@@ -877,7 +877,7 @@ async function checkLegacyLogsForMigration(){
     if(!user || !teamId){
       box.className = "msg info";
       box.innerHTML = "Login และใส่ Team ID ก่อน จึงจะตรวจ log เก่าได้";
-      btn.disabled = true;
+      btn.disabled = false;
       return;
     }
 
@@ -1372,7 +1372,7 @@ function renderDashboard(){try{$("kVol").textContent=logs.reduce((a,b)=>a+(+b.vo
 function fmt(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}function dayForDate(d){let a=logs.filter(x=>x.date===d);if(!a.length)return null;let c={};a.forEach(x=>c[x.day]=(c[x.day]||0)+1);return Object.entries(c).sort((a,b)=>b[1]-a[1])[0][0]}function renderCalendar(){let grid=$("calGrid");grid.innerHTML="";let names=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];$("monthTitle").textContent=names[calDate.getMonth()]+" "+calDate.getFullYear();["อา","จ","อ","พ","พฤ","ศ","ส"].forEach(h=>grid.innerHTML+=`<div class="calHead">${h}</div>`);let first=new Date(calDate.getFullYear(),calDate.getMonth(),1),last=new Date(calDate.getFullYear(),calDate.getMonth()+1,0).getDate();for(let i=0;i<first.getDay();i++)grid.innerHTML+=`<div class="calDay empty"></div>`;for(let d=1;d<=last;d++){let key=fmt(new Date(calDate.getFullYear(),calDate.getMonth(),d)),a=logs.filter(x=>x.date===key),day=dayForDate(key),sel=key===selectedDate?" sel":"",tod=key===today()?" today":"";grid.innerHTML+=`<div class="calDay${sel}${tod}" data-date="${key}"><b>${d}</b><br><span class="calTag ${a.length?'partial':'rest'}">${day||'Rest'}</span>${a.length?`<div class="small">${a.length} sets</div>`:""}</div>`}grid.querySelectorAll(".calDay[data-date]").forEach(el=>el.onclick=()=>{selectedDate=el.dataset.date;$("date").value=selectedDate;sync();document.querySelector('[data-page="log"]').click()})}function renderDaySummary(d){let a=logs.filter(x=>x.date===d);$("dayTitle").textContent="Daily Summary: "+d;if(!a.length){$("daySummary").innerHTML="ยังไม่มีข้อมูล";return}let by={};a.forEach(x=>{if(!by[x.exercise])by[x.exercise]=[];by[x.exercise].push(x)});$("daySummary").innerHTML=Object.entries(by).map(([ex,arr])=>{let max=arr.reduce((m,x)=>+x.weight>+m.weight?x:m,arr[0]);return `<div class="item"><h3>${ex}</h3><div class="meta">Sets: ${arr.length}<br>Max: ${fromKg(max.weight,$("unit").value)} ${$("unit").value} × ${max.reps}${max.isAlternative?`<br>แทน: ${max.plannedExercise}`:""}</div></div>`}).join("")}
 $("prevM").onclick=()=>{calDate=new Date(calDate.getFullYear(),calDate.getMonth()-1,1);renderCalendar()};$("nextM").onclick=()=>{calDate=new Date(calDate.getFullYear(),calDate.getMonth()+1,1);renderCalendar()};
 function renderSafe(){try{renderDashboard();renderCoach();renderCalendar();renderDaySummary(selectedDate)}catch(e){$("chartStatus").textContent="Render fallback: "+e.message}}
-/* v5.0.2 Legacy Log Migration
+/* v5.0.3 Migration Button Fix
    This code is intentionally inside the Firebase module script so it can access logs / PROGRAM / $ safely.
 */
 const COACH_MOVEMENT_GROUPS = {
@@ -1491,7 +1491,7 @@ function coachCoreStatusPanel(){
   const p=document.createElement("div");
   p.id="coachCoreStatusPanel";
   p.className="card";
-  p.innerHTML='<h3>Coach Core Stabilization</h3><div class="msg ok">v5.0.2<br>Module-scoped logs access: FIXED<br>Plateau: productive trend + full exercise list<br>History Remap: movement guard<br>Alternative: auto apply guard</div>';
+  p.innerHTML='<h3>Coach Core Stabilization</h3><div class="msg ok">v5.0.3<br>Module-scoped logs access: FIXED<br>Plateau: productive trend + full exercise list<br>History Remap: movement guard<br>Alternative: auto apply guard</div>';
   setup.appendChild(p);
 }
 function coachCoreRun(){ if(window.__v404TooSoon&&window.__v404TooSoon('coachCoreRun',1200)) return; 
@@ -1606,7 +1606,7 @@ function syncAlternativeNameDisplay(){
 window.addEventListener("load",function(){setTimeout(fullStabilizationRun,800);});
 
 
-/* v5.0.2 Stable Recovery: scoped complete card and throttled stabilization */
+/* v5.0.3 Stable Recovery: scoped complete card and throttled stabilization */
 function renderExerciseCompleteState(){
   try{
     const m=typeof meta==="function"?meta():null;
@@ -1672,7 +1672,7 @@ function fullStabilizationRun(){ if(window.__v404TooSoon&&window.__v404TooSoon('
 
 
 
-/* v5.0.2 Legacy Log Migration */
+/* v5.0.3 Migration Button Fix */
 function v403DayExercises(dayName){
   try{return (PROGRAM||[]).filter(p=>p[0]===dayName);}catch(e){return [];}
 }
@@ -1748,7 +1748,7 @@ function v403Run(){ if(window.__v404TooSoon&&window.__v404TooSoon('v403Run',900)
 }
 
 
-/* ===== v5.0.2 Complete Analytics / Export / Coach ===== */
+/* ===== v5.0.3 Complete Analytics / Export / Coach ===== */
 function v5SafeLogs(){try{return Array.isArray(logs)?logs:[]}catch(e){return []}}
 function v5Date(){return $("date")?.value || (typeof today==="function"?today():new Date().toISOString().slice(0,10))}
 function v5Volume(x){return Number(x.weight||0)*Number(x.reps||0)}
@@ -1849,7 +1849,7 @@ function v5EnhanceCalendar(){
   }catch(e){}
 }
 function v5ExportJson(){
-  const payload={version:"v5.0.2",exportedAt:new Date().toISOString(),logs:v5SafeLogs()};
+  const payload={version:"v5.0.3",exportedAt:new Date().toISOString(),logs:v5SafeLogs()};
   const text=JSON.stringify(payload,null,2);
   if($("v5BackupText")) $("v5BackupText").value=text;
   try{navigator.clipboard&&navigator.clipboard.writeText(text)}catch(e){}
@@ -1893,7 +1893,7 @@ window.addEventListener('load',()=>{setTimeout(()=>{try{v430RestoreDraft();v430R
 
 
 
-/* ===== v5.0.2 Feature Functions ===== */
+/* ===== v5.0.3 Feature Functions ===== */
 function v430SafeLogs(){try{return Array.isArray(logs)?logs:[]}catch(e){return []}}
 function v430CurrentExercise(){return $("exercise")?$("exercise").value:""}
 function v430Today(){return (typeof today==="function"?today():(new Date()).toISOString().slice(0,10))}
@@ -1969,3 +1969,83 @@ window.addEventListener('load',()=>{setTimeout(v5RenderAll,1200);});
 
 
 window.addEventListener('load',function(){setTimeout(function(){try{bindLegacyMigration();checkLegacyLogsForMigration();}catch(e){}},1200);});
+
+
+
+/* ===== v5.0.3 MIGRATION_BUTTON_FIX_CODE ===== */
+function v503UpdateTeamStatus(){
+  try{
+    const st=$("teamSaveStatus");
+    if(!st) return;
+    st.className=teamId?"msg ok":"msg info";
+    st.innerHTML=teamId
+      ? "Team ID saved: <b>"+teamId+"</b><br><span class='small'>ข้อมูลจะแยกตาม Google Account</span>"
+      : "Team ID ยังไม่บันทึก";
+  }catch(e){}
+}
+
+function v503SaveTeamId(){
+  try{
+    const input=$("teamId");
+    if(!input) return alert("ไม่พบช่อง Team ID");
+    const val=String(input.value||"").trim();
+    if(!val){
+      const st=$("teamSaveStatus");
+      if(st){st.className="msg warn";st.innerHTML="กรุณาใส่ Team ID ก่อน";}
+      return alert("กรุณาใส่ Team ID ก่อน");
+    }
+    teamId=val;
+    localStorage.setItem("teamId",teamId);
+    v503UpdateTeamStatus();
+    if($("userLine")) $("userLine").textContent=(user?(user.displayName||user.email):"Not login")+" / Team: "+teamId+" / "+VERSION;
+    try{subscribe();}catch(e){console.warn("subscribe after save team",e);}
+    setTimeout(function(){try{bindLegacyMigration();checkLegacyLogsForMigration();}catch(e){}},500);
+  }catch(e){
+    alert("Save Team ID error: "+e.message);
+  }
+}
+
+function v503MigrationClick(){
+  try{
+    bindLegacyMigration();
+    if(!user){
+      const box=$("legacyMigrationBox");
+      if(box){box.className="msg warn";box.innerHTML="กรุณา Login ก่อนตรวจ Log เก่า";}
+      return alert("กรุณา Login ก่อน");
+    }
+    if(!teamId){
+      const input=$("teamId");
+      if(input && input.value.trim()){
+        v503SaveTeamId();
+      }else{
+        const box=$("legacyMigrationBox");
+        if(box){box.className="msg warn";box.innerHTML="กรุณาใส่และ Save Team ID ก่อน";}
+        return alert("กรุณาใส่และ Save Team ID ก่อน");
+      }
+    }
+    checkLegacyLogsForMigration();
+  }catch(e){
+    alert("Migration check error: "+e.message);
+  }
+}
+
+function v503BindCriticalButtons(){
+  try{
+    const saveBtn=$("saveTeamBtn");
+    if(saveBtn && saveBtn.dataset.v503Bound!=="1"){
+      saveBtn.dataset.v503Bound="1";
+      saveBtn.disabled=false;
+      saveBtn.onclick=v503SaveTeamId;
+    }
+    const migBtn=$("legacyMigrationBtn");
+    if(migBtn && migBtn.dataset.v503Bound!=="1"){
+      migBtn.dataset.v503Bound="1";
+      migBtn.disabled=false;
+      migBtn.onclick=v503MigrationClick;
+    }
+    v503UpdateTeamStatus();
+  }catch(e){console.warn("v503BindCriticalButtons",e)}
+}
+
+
+window.addEventListener('load',function(){setTimeout(v503BindCriticalButtons,300);setTimeout(v503BindCriticalButtons,1200);});

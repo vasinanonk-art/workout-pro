@@ -1,4 +1,4 @@
 App: Workout PRO
-Version: v5.0.2
-Build: Legacy Log Migration
+Version: v5.0.3
+Build: Migration Button Fix
 Updated: 2026-06-03

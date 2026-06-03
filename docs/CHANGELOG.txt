@@ -1,15 +1,13 @@
-# v5.0.2 Legacy Log Migration
+# v5.0.3 Migration Button Fix
 
-Added:
-- Detects old logs from legacy path:
-  teams/{teamId}/workouts
-- Migrates legacy logs into isolated user path:
-  teams/{teamLabel}/users/{userUid}/workouts
-- Manual confirmation required.
-- Migration copies only; it does not delete old logs.
-- Adds migratedFromLegacy, legacyId, migratedAt, ownerUid, ownerEmail metadata.
+Fixed:
+- Save Team ID button could fail to bind/click after v5.0.2.
+- Legacy Migration button could remain disabled and not clickable.
+- Added robust fallback binder for Save Team ID and Migration Check.
+- Migration button now gives clear guidance if user is not logged in or Team ID is missing.
 
 Preserved:
-- v5.0.1 user isolation fix
+- v5.0.2 legacy migration logic
+- v5.0.1 user isolation path
 - Login / Firestore / Save / Delete
 - Dashboard / Log / Calendar / Coach / Program / Guide / Donate
