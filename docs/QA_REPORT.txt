@@ -1,35 +1,33 @@
-# QA REPORT v4.2.0 Stable Performance QA
+# QA REPORT v4.3.0 Full Feature Pack
 
-✅ Version v4.2.0
-✅ Index references CSS
-✅ Index references runtime
-✅ Index references module
-✅ Local date helper preserved
-✅ Page scoped renderPage
-✅ Tab no full renderAll
-✅ Post-save timeout storm removed
-✅ Runtime simplified
+✅ Version v4.3.0
+✅ Feature UI ids
+✅ Feature functions
+✅ Navigation cache
+✅ Horizontal footer
 ✅ Save preserved
 ✅ Login preserved
-✅ Firestore path preserved
+✅ Firestore preserved
 ✅ Coach preserved
-✅ Plateau preserved
 ✅ Log preserved
 ✅ Calendar preserved
 ✅ Program preserved
 ✅ Guide preserved
 ✅ Donate preserved
-✅ Unlock preserved
 ✅ Runtime JS syntax
 ✅ Module JS syntax
 ✅ No duplicate functions
 
-Manual QA after deploy:
-1. Header shows v4.2.0.
+Manual QA Required:
+1. Header shows v4.3.0.
 2. Login with Google.
-3. Tap Setup/Dash/Coach/Calendar/Log/Program/Guide/Donate; page should switch immediately.
-4. Dashboard/Coach charts may render after the page opens, but tab must not freeze.
-5. Open Log: date must be today by local device timezone.
-6. Save one test set; recent list updates.
-7. Complete an exercise/day; complete card must stay only on Log.
-8. Test Unlock/Skip override; event is stored in localStorage `workoutSkipEvents`.
+3. Switch all tabs; target response < 500ms.
+4. Log date must be current local date.
+5. Draft fields restore after refresh.
+6. Save set clears draft and updates recent list.
+7. Auto Resume card returns to Log/exercise.
+8. PR/Volume/Recovery dashboards show data after login.
+9. Deload button stores workoutDeloadMode=ON.
+10. Exercise Database updates when exercise changes.
+11. AI Daily Summary appears after daily logs.
+12. Existing Coach/Plateau/Calendar/Program/Guide/Donate still render.

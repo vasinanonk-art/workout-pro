@@ -1,21 +1,5 @@
-# v4.2.0 Stable Performance QA
+# v4.3.0 Full Feature Pack
 
-Fixed / Refactored:
-- Tab switching no longer calls full `renderAll()` for every page change.
-- Added page-scoped rendering via `renderPage(page)`.
-- Dashboard, Coach, Calendar, Log, Program, Guide now render only when opened.
-- Reduced post-save timeout storm to one Log-only refresh.
-- Removed heavy runtime UI injectors and duplicate tab runtime.
-- Kept local date fix from v4.1.1.
-- Exercise Complete remains scoped to Log.
-- Skip / Unlock override preserved.
+Added all 10 requested features: Auto Resume, Draft Save, PR Dashboard, Volume Dashboard, Recovery Dashboard, Deload Detection, Navigation Speed Cache, horizontal footer, Exercise Database, AI Daily Coach Summary.
 
-Preserved:
-- Login / Firebase / Firestore paths.
-- Save set schema.
-- Logs / History.
-- Calendar.
-- Coach / Plateau.
-- Alternative / History Priority.
-- Program / Guide / Donate.
-- Modular structure.
+Preserved Login / Firestore / Save / Log / Calendar / Coach / Plateau / Alternative / Program / Guide / Donate.

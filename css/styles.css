@@ -38,8 +38,11 @@ button,.btn,.card,.msg{transition:none!important}
 .page{contain:layout paint style}
 .page:not(.active){display:none!important}
 
-/* v4.2.0 performance */
-.page{contain:layout paint style;}
-.page:not(.active){display:none!important;}
-button,.btn,.card,.msg{transition:none!important;}
-canvas{contain:strict;}
+
+/* ===== v4.3.0 Full Feature Pack ===== */
+.tabs{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;gap:8px!important;padding:8px 10px calc(8px + env(safe-area-inset-bottom))!important;white-space:nowrap!important;-webkit-overflow-scrolling:touch!important}
+.tabs .tab{flex:0 0 auto!important;min-width:72px!important;border-radius:18px!important}
+#v430ResumeBtn,#v430ApplyDeloadBtn,#v430CopySummaryBtn{width:100%;margin-top:8px}
+.v430Grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.v430Mini{background:rgba(2,6,23,.48);border:1px solid rgba(148,163,184,.18);border-radius:14px;padding:10px}
+@media(max-width:560px){.v430Grid{grid-template-columns:1fr}.tabs .tab{min-width:68px}}
