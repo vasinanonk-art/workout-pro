@@ -2,7 +2,30 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-const VERSION="v4.3.2", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
+const VERSION="v5.0.1", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
+
+/* ===== v5.0.1 User Isolation Fix ===== */
+function safeKeyPart(v){
+  return String(v || "default").trim().replace(/[^\w\-@.]/g, "_").slice(0,80) || "default";
+}
+function activeTeamLabel(){
+  return safeKeyPart(teamId || "Default-Team");
+}
+function activeUserKey(){
+  try{
+    if(user && user.uid) return "user_" + safeKeyPart(user.uid);
+  }catch(e){}
+  return "guest_" + activeTeamLabel();
+}
+function scopedWorkoutsCollection(){
+  // New isolated path: users with the same Team ID no longer share logs.
+  return "teams/" + activeTeamLabel() + "/users/" + activeUserKey() + "/workouts";
+}
+function legacySharedWorkoutsCollection(){
+  // Old shared path kept only as a reference. Do not write here.
+  return "teams/" + activeTeamLabel() + "/workouts";
+}
+
 const PROGRAM=[
 ["Day 1","Push","Barbell Bench Press",4,"5-8","Chest","heavy"],["Day 1","Push","Incline Dumbbell Press",3,"8-12","Chest","standard"],["Day 1","Push","Seated Shoulder Press",3,"8-12","Shoulder","standard"],["Day 1","Push","Dumbbell Lateral Raise",4,"12-15","Shoulder","quick"],["Day 1","Push","Cable Triceps Pushdown",3,"10-15","Triceps","quick"],
 ["Day 2","Pull","Lat Pulldown",4,"8-12","Back","standard"],["Day 2","Pull","Barbell Row",4,"6-10","Back","heavy"],["Day 2","Pull","Seated Cable Row",3,"10-12","Back","standard"],["Day 2","Pull","Face Pull",3,"12-15","Rear Delt","quick"],["Day 2","Pull","Dumbbell Curl",3,"10-15","Biceps","quick"],
@@ -841,8 +864,8 @@ function cleanForFirestore(obj){
   );
 }
 
-async function saveSet(){try{$("saveDebug").className="msg";$("saveDebug").textContent="กำลังบันทึก...";if(!user)return alert("Login ก่อน");if(!teamId)return alert("ใส่ Team ID ก่อน");if(!validateDate())return;let m=meta(),ad=activeDay(),st=nextState(),wk=autoWeek();if(st.restLock)return alert("ยังพักไม่ครบ 2 วัน");if(!canSaveCurrentExerciseAdaptive())return alert("ท่านี้ยังไม่สามารถบันทึกได้: อาจเป็นคนละ Day หรือครบเซตแล้ว");let raw=parseFloat($("weight").value),reps=parseInt($("reps").value),rir=parseInt($("rir").value||2);if(!raw||!reps)return alert("กรอก Weight และ Reps");let rememberedAlt=altMemoryForPlanned(m[2]);let persistentAlt=(typeof autoApplyPersistentAlternative==="function"?autoApplyPersistentAlternative():null);let effectiveAlt=selectedAlt||persistentAlt||rememberedAlt;let computedSetNo=canonicalSetState(m[2]).next;let w=toKg(raw,$("unit").value),ex=effectiveAlt?effectiveAlt.name:m[2];await addDoc(collection(db,`teams/${teamId}/workouts`),cleanForFirestore({date:$("date").value,week:wk,autoWeek:wk,day:m[0],focus:m[1],exercise:ex,plannedExercise:m[2],isAlternative:!!effectiveAlt,alternativePattern:effectiveAlt?effectiveAlt.pattern:"",alternativeQuery:(effectiveAlt&&effectiveAlt.query)?effectiveAlt.query:"",targetSets:m[3],setNo:computedSetNo,muscle:m[5],weight:w,reps,rir,volume:w*reps,note:$("note").value||"",sleepHours:parseFloat($("sleepHours")?.value||7),soreness:parseInt($("soreness")?.value||2),stress:parseInt($("stress")?.value||2),tempo:$("tempo")?.value||"",repQuality:$("repQuality")?.value||"",biasMode:$("biasMode")?.value||"auto",effectiveReps:effectiveRepsForSet({reps,rir}),userId:user.uid,userName:user.displayName||user.email,userEmail:user.email,appVersion:VERSION,createdAt:serverTimestamp()})); if(typeof exSessionAfterSave==="function") exSessionMarkSavedLocal(m[2]); applyCanonicalSetDisplay(m[2]);selectedAlt=null;$("weight").value="";$("reps").value="";$("rir").value=2;$("note").value="";$("saveDebug").className="msg ok";$("saveDebug").textContent="บันทึกสำเร็จ ✅";startRest();setTimeout(sync,600);setTimeout(v403Run,250);setTimeout(fullStabilizationRun,950);setTimeout(coachCoreRun,950);setTimeout(authDebugGuardRun,950);setTimeout(permissionSafeRun,900);setTimeout(plateauLiveRecompute,900);setTimeout(stableRenderAllPanels,700)}catch(e){$("saveDebug").className="msg err";$("saveDebug").textContent="Save error: "+e.message;alert("Save error: "+e.message)}}
-function subscribe(){if(unsub)unsub();if(!teamId)return;unsub=onSnapshot(query(collection(db,`teams/${teamId}/workouts`),orderBy("createdAt","desc")),s=>{logs=s.docs.map(d=>({id:d.id,...d.data()}));$("debug").className="msg ok";$("debug").textContent=`โหลดข้อมูลแล้ว ${logs.length} sets • ${VERSION}`;renderAll()},e=>{$("debug").className="msg err";$("debug").textContent=e.message})}
+async function saveSet(){try{$("saveDebug").className="msg";$("saveDebug").textContent="กำลังบันทึก...";if(!user)return alert("Login ก่อน");if(!teamId)return alert("ใส่ Team ID ก่อน");if(!validateDate())return;let m=meta(),ad=activeDay(),st=nextState(),wk=autoWeek();if(st.restLock)return alert("ยังพักไม่ครบ 2 วัน");if(!canSaveCurrentExerciseAdaptive())return alert("ท่านี้ยังไม่สามารถบันทึกได้: อาจเป็นคนละ Day หรือครบเซตแล้ว");let raw=parseFloat($("weight").value),reps=parseInt($("reps").value),rir=parseInt($("rir").value||2);if(!raw||!reps)return alert("กรอก Weight และ Reps");let rememberedAlt=altMemoryForPlanned(m[2]);let persistentAlt=(typeof autoApplyPersistentAlternative==="function"?autoApplyPersistentAlternative():null);let effectiveAlt=selectedAlt||persistentAlt||rememberedAlt;let computedSetNo=canonicalSetState(m[2]).next;let w=toKg(raw,$("unit").value),ex=effectiveAlt?effectiveAlt.name:m[2];await addDoc(collection(db, scopedWorkoutsCollection()),cleanForFirestore({date:$("date").value,week:wk,autoWeek:wk,day:m[0],focus:m[1],exercise:ex,plannedExercise:m[2],isAlternative:!!effectiveAlt,alternativePattern:effectiveAlt?effectiveAlt.pattern:"",alternativeQuery:(effectiveAlt&&effectiveAlt.query)?effectiveAlt.query:"",targetSets:m[3],setNo:computedSetNo,muscle:m[5],weight:w,reps,rir,volume:w*reps,note:$("note").value||"",sleepHours:parseFloat($("sleepHours")?.value||7),soreness:parseInt($("soreness")?.value||2),stress:parseInt($("stress")?.value||2),tempo:$("tempo")?.value||"",repQuality:$("repQuality")?.value||"",biasMode:$("biasMode")?.value||"auto",effectiveReps:effectiveRepsForSet({reps,rir}),userId:user.uid,userName:user.displayName||user.email,userEmail:user.email,teamLabel:activeTeamLabel(),userScope:activeUserKey(),ownerUid:user.uid,ownerEmail:user.email,appVersion:VERSION,createdAt:serverTimestamp()})); if(typeof exSessionAfterSave==="function") exSessionMarkSavedLocal(m[2]); applyCanonicalSetDisplay(m[2]);selectedAlt=null;$("weight").value="";$("reps").value="";$("rir").value=2;$("note").value="";$("saveDebug").className="msg ok";$("saveDebug").textContent="บันทึกสำเร็จ ✅";startRest();setTimeout(sync,600);setTimeout(v403Run,250);setTimeout(fullStabilizationRun,950);setTimeout(coachCoreRun,950);setTimeout(authDebugGuardRun,950);setTimeout(permissionSafeRun,900);setTimeout(plateauLiveRecompute,900);setTimeout(stableRenderAllPanels,700)}catch(e){$("saveDebug").className="msg err";$("saveDebug").textContent="Save error: "+e.message;alert("Save error: "+e.message)}}
+function subscribe(){if(unsub)unsub();if(!teamId)return;unsub=onSnapshot(query(collection(db, scopedWorkoutsCollection()),orderBy("createdAt","desc")),s=>{logs=s.docs.map(d=>({id:d.id,...d.data()}));$("debug").className="msg ok";$("debug").textContent=`โหลดข้อมูลแล้ว ${logs.length} sets • ${VERSION} • Isolated User Data`;renderAll()},e=>{$("debug").className="msg err";$("debug").textContent=e.message})}
 onAuthStateChanged(auth,u=>{user=u;$("authState").textContent=u?`Login: ${u.displayName||u.email}`:"ยังไม่ได้ login";$("userLine").textContent=u?`${u.displayName||u.email} / Team: ${teamId||"-"} / ${VERSION}`:`Clean QA • ${VERSION}`;if(u&&teamId)subscribe()});
 $("loginBtn").onclick=()=>signInWithPopup(auth,new GoogleAuthProvider()).catch(e=>alert(e.message));$("logoutBtn").onclick=()=>signOut(auth);$("saveTeamBtn").onclick=()=>{teamId=$("teamId").value.trim();localStorage.setItem("teamId",teamId);subscribe()};
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));$(b.dataset.page).classList.add("active");document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));b.classList.add("active");renderAll()});
@@ -902,7 +925,7 @@ document.addEventListener("keydown",(e)=>{
 });
 
 function startRest(){let sec=+$("restSec").value||75;localStorage.setItem("restEnd",Date.now()+sec*1000);tick();clearInterval(timer);timer=setInterval(tick,1000)}function stopRest(){clearInterval(timer);timer=null;localStorage.removeItem("restEnd");$("timer").textContent="00:00"}function tick(){let end=+localStorage.getItem("restEnd")||0;if(!end)return;let r=Math.max(0,Math.ceil((end-Date.now())/1000));$("timer").textContent=String(Math.floor(r/60)).padStart(2,"0")+":"+String(r%60).padStart(2,"0");if(r<=0)stopRest()}$("startRest").onclick=startRest;$("stopRest").onclick=stopRest;$("add30").onclick=()=>{let e=+localStorage.getItem("restEnd")||Date.now();localStorage.setItem("restEnd",e+30000);tick()};if(localStorage.getItem("restEnd")){tick();timer=setInterval(tick,1000)}
-function renderRecent(){$("recent").innerHTML=logs.slice(0,20).map(x=>`<div class="item"><h3>Week ${x.week||x.autoWeek} • Set ${x.setNo}/${x.targetSets} • ${x.exercise}</h3><div class="meta">${x.date} • ${x.day}<br>${fromKg(x.weight,$("unit").value)} ${$("unit").value} × ${x.reps} • Vol ${(+x.volume||0).toFixed(0)} kg${x.isAlternative?`<br>แทน: ${x.plannedExercise}`:""}</div><button class="red" onclick="deleteLog('${x.id}')">ลบ</button></div>`).join("")||"<p class='small'>ยังไม่มีข้อมูล</p>"}window.deleteLog=async id=>{if(confirm("ลบเซตนี้?"))await deleteDoc(doc(db,`teams/${teamId}/workouts`,id))};
+function renderRecent(){$("recent").innerHTML=logs.slice(0,20).map(x=>`<div class="item"><h3>Week ${x.week||x.autoWeek} • Set ${x.setNo}/${x.targetSets} • ${x.exercise}</h3><div class="meta">${x.date} • ${x.day}<br>${fromKg(x.weight,$("unit").value)} ${$("unit").value} × ${x.reps} • Vol ${(+x.volume||0).toFixed(0)} kg${x.isAlternative?`<br>แทน: ${x.plannedExercise}`:""}</div><button class="red" onclick="deleteLog('${x.id}')">ลบ</button></div>`).join("")||"<p class='small'>ยังไม่มีข้อมูล</p>"}window.deleteLog=async id=>{if(confirm("ลบเซตนี้?"))await deleteDoc(doc(db, scopedWorkoutsCollection(), id))};
 function renderProgram(){$("programList").innerHTML=PROGRAM.map(p=>`<div class="item"><h3>${p[0]} • ${p[2]}</h3><div class="meta">${p[3]} sets × ${p[4]} • ${p[5]}</div></div>`).join("")}function renderGuide(){$("guideList").innerHTML=PROGRAM.map(p=>`<div class="item"><h3>${p[2]}</h3><div class="meta">Day: ${p[0]} • Muscle: ${p[5]} • Reps: ${p[4]}</div></div>`).join("")}
 
 function recentLogs(days){
@@ -1225,7 +1248,7 @@ function renderDashboard(){try{$("kVol").textContent=logs.reduce((a,b)=>a+(+b.vo
 function fmt(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}function dayForDate(d){let a=logs.filter(x=>x.date===d);if(!a.length)return null;let c={};a.forEach(x=>c[x.day]=(c[x.day]||0)+1);return Object.entries(c).sort((a,b)=>b[1]-a[1])[0][0]}function renderCalendar(){let grid=$("calGrid");grid.innerHTML="";let names=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];$("monthTitle").textContent=names[calDate.getMonth()]+" "+calDate.getFullYear();["อา","จ","อ","พ","พฤ","ศ","ส"].forEach(h=>grid.innerHTML+=`<div class="calHead">${h}</div>`);let first=new Date(calDate.getFullYear(),calDate.getMonth(),1),last=new Date(calDate.getFullYear(),calDate.getMonth()+1,0).getDate();for(let i=0;i<first.getDay();i++)grid.innerHTML+=`<div class="calDay empty"></div>`;for(let d=1;d<=last;d++){let key=fmt(new Date(calDate.getFullYear(),calDate.getMonth(),d)),a=logs.filter(x=>x.date===key),day=dayForDate(key),sel=key===selectedDate?" sel":"",tod=key===today()?" today":"";grid.innerHTML+=`<div class="calDay${sel}${tod}" data-date="${key}"><b>${d}</b><br><span class="calTag ${a.length?'partial':'rest'}">${day||'Rest'}</span>${a.length?`<div class="small">${a.length} sets</div>`:""}</div>`}grid.querySelectorAll(".calDay[data-date]").forEach(el=>el.onclick=()=>{selectedDate=el.dataset.date;$("date").value=selectedDate;sync();document.querySelector('[data-page="log"]').click()})}function renderDaySummary(d){let a=logs.filter(x=>x.date===d);$("dayTitle").textContent="Daily Summary: "+d;if(!a.length){$("daySummary").innerHTML="ยังไม่มีข้อมูล";return}let by={};a.forEach(x=>{if(!by[x.exercise])by[x.exercise]=[];by[x.exercise].push(x)});$("daySummary").innerHTML=Object.entries(by).map(([ex,arr])=>{let max=arr.reduce((m,x)=>+x.weight>+m.weight?x:m,arr[0]);return `<div class="item"><h3>${ex}</h3><div class="meta">Sets: ${arr.length}<br>Max: ${fromKg(max.weight,$("unit").value)} ${$("unit").value} × ${max.reps}${max.isAlternative?`<br>แทน: ${max.plannedExercise}`:""}</div></div>`}).join("")}
 $("prevM").onclick=()=>{calDate=new Date(calDate.getFullYear(),calDate.getMonth()-1,1);renderCalendar()};$("nextM").onclick=()=>{calDate=new Date(calDate.getFullYear(),calDate.getMonth()+1,1);renderCalendar()};
 function renderSafe(){try{renderDashboard();renderCoach();renderCalendar();renderDaySummary(selectedDate)}catch(e){$("chartStatus").textContent="Render fallback: "+e.message}}
-/* v4.3.2 UI Polish Pack
+/* v5.0.1 User Isolation Fix
    This code is intentionally inside the Firebase module script so it can access logs / PROGRAM / $ safely.
 */
 const COACH_MOVEMENT_GROUPS = {
@@ -1344,7 +1367,7 @@ function coachCoreStatusPanel(){
   const p=document.createElement("div");
   p.id="coachCoreStatusPanel";
   p.className="card";
-  p.innerHTML='<h3>Coach Core Stabilization</h3><div class="msg ok">v4.3.2<br>Module-scoped logs access: FIXED<br>Plateau: productive trend + full exercise list<br>History Remap: movement guard<br>Alternative: auto apply guard</div>';
+  p.innerHTML='<h3>Coach Core Stabilization</h3><div class="msg ok">v5.0.1<br>Module-scoped logs access: FIXED<br>Plateau: productive trend + full exercise list<br>History Remap: movement guard<br>Alternative: auto apply guard</div>';
   setup.appendChild(p);
 }
 function coachCoreRun(){ if(window.__v404TooSoon&&window.__v404TooSoon('coachCoreRun',1200)) return; 
@@ -1459,7 +1482,7 @@ function syncAlternativeNameDisplay(){
 window.addEventListener("load",function(){setTimeout(fullStabilizationRun,800);});
 
 
-/* v4.3.2 Stable Recovery: scoped complete card and throttled stabilization */
+/* v5.0.1 Stable Recovery: scoped complete card and throttled stabilization */
 function renderExerciseCompleteState(){
   try{
     const m=typeof meta==="function"?meta():null;
@@ -1525,7 +1548,7 @@ function fullStabilizationRun(){ if(window.__v404TooSoon&&window.__v404TooSoon('
 
 
 
-/* v4.3.2 UI Polish Pack */
+/* v5.0.1 User Isolation Fix */
 function v403DayExercises(dayName){
   try{return (PROGRAM||[]).filter(p=>p[0]===dayName);}catch(e){return [];}
 }
@@ -1600,7 +1623,144 @@ function v403Run(){ if(window.__v404TooSoon&&window.__v404TooSoon('v403Run',900)
   try{v403RenderUnlockPanel();}catch(e){}
 }
 
-function renderAll(){setTimeout(v430RenderAllFeaturePanels,120); if(window.__v404TabSwitching){return;} setTimeout(v403Run,80);setTimeout(plateauLiveRecompute,120);setTimeout(renderPlateauDetectionSafe,120);bindAutoPersistentAlternative();autoApplyPersistentAlternative();bindStableRenderTriggers();setTimeout(stableRenderAllPanels,80);bindCanonicalExerciseSwitch(); if($('exercise')) applyCanonicalSetDisplay($('exercise').value);exSessionBindDropdown(); if($('exercise')) exSessionRestore($('exercise').value);calSyncBind();calSyncUpdateStatus();exSessionBindDropdown(); if($('exercise')) exSessionRestore($('exercise').value);historySummaryForCurrent();bindPersistentAltButtons();if(typeof renderMediaPanel==="function")renderMediaPanel();bindAiCoachButtons();renderRecent();renderProgram();renderGuide();renderDashboard();renderCoach();renderCalendar();renderDaySummary(selectedDate);sync()}
+
+/* ===== v5.0.1 Complete Analytics / Export / Coach ===== */
+function v5SafeLogs(){try{return Array.isArray(logs)?logs:[]}catch(e){return []}}
+function v5Date(){return $("date")?.value || (typeof today==="function"?today():new Date().toISOString().slice(0,10))}
+function v5Volume(x){return Number(x.weight||0)*Number(x.reps||0)}
+function v5PlannedExercise(x){return x.plannedExercise||x.exercise||""}
+function v5MuscleFor(ex){
+  try{const p=(PROGRAM||[]).find(r=>r[2]===ex);return p?p[5]:"Other"}catch(e){return "Other"}
+}
+function v5DailyLogs(date=v5Date()){return v5SafeLogs().filter(x=>x.date===date)}
+function v5DrawBars(canvasId, rows, opts={}){
+  const cv=$(canvasId); if(!cv||!cv.getContext) return;
+  const ctx=cv.getContext("2d"), w=cv.width, h=cv.height;
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle="#020617"; ctx.fillRect(0,0,w,h);
+  const shown=rows.slice(0,opts.limit||8), max=Math.max(1,...shown.map(r=>Number(r[1]||0)));
+  const gap=(w-80)/Math.max(1,shown.length), barW=Math.max(24,Math.min(54,gap*.42));
+  ctx.textAlign="center";
+  shown.forEach(([label,value],i)=>{
+    const x=40+i*gap, bh=(h-78)*(Number(value||0)/max), y=h-46-bh;
+    const grad=ctx.createLinearGradient(0,y,0,h-46);
+    grad.addColorStop(0, opts.c1||"#60a5fa");
+    grad.addColorStop(1, opts.c2||"#8b5cf6");
+    ctx.fillStyle=grad; ctx.fillRect(x,y,barW,bh);
+    ctx.font="14px sans-serif"; ctx.fillStyle="#93c5fd"; ctx.fillText(Math.round(value),x+barW/2,Math.max(18,y-8));
+    ctx.font="16px sans-serif"; ctx.fillStyle="#e5e7eb"; ctx.fillText(String(label).slice(0,9),x+barW/2,h-16);
+  });
+}
+function v5RenderMuscleBalance(){
+  try{
+    const map={};
+    v5SafeLogs().forEach(x=>{const m=v5MuscleFor(v5PlannedExercise(x)); map[m]=(map[m]||0)+v5Volume(x);});
+    const rows=Object.entries(map).sort((a,b)=>b[1]-a[1]);
+    v5DrawBars("v5MuscleChart", rows, {limit:8,c1:"#22c55e",c2:"#60a5fa"});
+    const el=$("v5MuscleInsight");
+    if(el){
+      if(!rows.length){el.className="msg info";el.innerHTML="ยังไม่มีข้อมูล Muscle Balance";return;}
+      const top=rows[0], low=rows[rows.length-1];
+      el.className="msg ok";
+      el.innerHTML=`มากสุด: <b>${top[0]}</b> ${Math.round(top[1])} kg • น้อยสุด: <b>${low[0]}</b> ${Math.round(low[1])} kg`;
+    }
+  }catch(e){console.warn("v5RenderMuscleBalance",e)}
+}
+function v5RenderPRBoard(){
+  try{
+    const el=$("v5PRBoard"); if(!el) return;
+    const best={};
+    v5SafeLogs().forEach(x=>{
+      const ex=v5PlannedExercise(x); if(!ex) return;
+      const score=v5Volume(x);
+      if(!best[ex]||score>best[ex].score) best[ex]={...x,score};
+    });
+    const rows=Object.entries(best).sort((a,b)=>b[1].score-a[1].score).slice(0,10);
+    if(!rows.length){el.innerHTML="ยังไม่มีข้อมูล PR";return;}
+    el.innerHTML=rows.map(([ex,x])=>`<div class="v5-pr-card"><b>${ex}</b><span>${Number(x.weight||0).toFixed(1)} kg × ${x.reps||0} reps</span><small>${x.date||""}</small></div>`).join("");
+  }catch(e){console.warn("v5RenderPRBoard",e)}
+}
+function v5RecoveryFrom(x={}){
+  const sleep=Number(x.sleepHours||$("sleepHours")?.value||7);
+  const soreness=Number(x.soreness||$("soreness")?.value||2);
+  const stress=Number(x.stress||$("stress")?.value||2);
+  const recovery=Math.max(0,Math.min(100,Math.round((sleep/8)*55+(6-soreness)*5+(6-stress)*5)));
+  const fatigue=Math.max(0,Math.min(100,100-recovery+Math.round((soreness+stress)*4)));
+  return {sleep,soreness,stress,recovery,fatigue};
+}
+function v5RenderRecoveryTrend(){
+  try{
+    const byDate={};
+    v5SafeLogs().forEach(x=>{if(x.date)byDate[x.date]=x;});
+    const rows=Object.entries(byDate).sort((a,b)=>a[0].localeCompare(b[0])).slice(-14).map(([d,x])=>[d.slice(5),v5RecoveryFrom(x).recovery]);
+    v5DrawBars("v5RecoveryChart",rows,{limit:14,c1:"#38bdf8",c2:"#22c55e"});
+    v5DrawBars("v5CoachTrend",rows,{limit:14,c1:"#a78bfa",c2:"#60a5fa"});
+    const last=rows[rows.length-1];
+    if($("v5RecoveryInsight")) $("v5RecoveryInsight").innerHTML=last?`Recovery ล่าสุด: <b>${last[1]}</b>`:"ยังไม่มีข้อมูล Recovery";
+    if($("v5CoachTrendText")) $("v5CoachTrendText").innerHTML=last?`Trend ล่าสุด: <b>${last[1]}</b> / 100`:"ยังไม่มีข้อมูล trend";
+  }catch(e){console.warn("v5RenderRecoveryTrend",e)}
+}
+function v5RenderLogSummary(){
+  try{
+    const el=$("v5LogSummary"); if(!el) return;
+    const rows=v5DailyLogs();
+    if(!rows.length){el.className="msg info";el.innerHTML="ยังไม่มีข้อมูลวันนี้";return;}
+    const vol=rows.reduce((a,x)=>a+v5Volume(x),0);
+    const exs=[...new Set(rows.map(v5PlannedExercise))].filter(Boolean);
+    el.className="msg ok";
+    el.innerHTML=`วันนี้: <b>${rows.length}</b> sets • Volume <b>${Math.round(vol)}</b> kg<br>Exercises: ${exs.join(", ")}`;
+  }catch(e){console.warn("v5RenderLogSummary",e)}
+}
+function v5EnhanceCalendar(){
+  try{
+    const doneDates=new Set(v5SafeLogs().map(x=>x.date).filter(Boolean));
+    document.querySelectorAll("#calGrid > *").forEach(cell=>{
+      const text=(cell.textContent||"").trim();
+      const n=parseInt(text,10);
+      if(!n||!calMonth) return;
+      const d=new Date(calMonth.getFullYear(),calMonth.getMonth(),n);
+      const key=keyD?keyD(d):d.toISOString().slice(0,10);
+      cell.classList.toggle("completed",doneDates.has(key));
+    });
+  }catch(e){}
+}
+function v5ExportJson(){
+  const payload={version:"v5.0.1",exportedAt:new Date().toISOString(),logs:v5SafeLogs()};
+  const text=JSON.stringify(payload,null,2);
+  if($("v5BackupText")) $("v5BackupText").value=text;
+  try{navigator.clipboard&&navigator.clipboard.writeText(text)}catch(e){}
+}
+function v5ExportCsv(){
+  const cols=["date","week","day","exercise","plannedExercise","weight","unit","reps","rir","volume","note"];
+  const rows=[cols.join(",")].concat(v5SafeLogs().map(x=>cols.map(c=>JSON.stringify(c==="volume"?v5Volume(x):(x[c]??""))).join(",")));
+  const text=rows.join("\n");
+  if($("v5BackupText")) $("v5BackupText").value=text;
+  try{navigator.clipboard&&navigator.clipboard.writeText(text)}catch(e){}
+}
+function v5BackupLocal(){
+  const text=JSON.stringify({logs:v5SafeLogs(),backupAt:new Date().toISOString()},null,2);
+  localStorage.setItem("workoutV5LocalBackup",text);
+  if($("v5BackupText")) $("v5BackupText").value=text;
+}
+function v5RestoreLocal(){
+  const text=$("v5BackupText")?.value || localStorage.getItem("workoutV5LocalBackup") || "";
+  if(!text){alert("ไม่มี backup payload");return;}
+  localStorage.setItem("workoutV5RestorePayload",text);
+  alert("เก็บ payload สำหรับ restore แล้ว: ขั้นต่อไปต้องทำ import เข้า Firestore แบบปลอดภัย");
+}
+function v5BindExport(){
+  [["v5ExportJsonBtn",v5ExportJson],["v5ExportCsvBtn",v5ExportCsv],["v5BackupLocalBtn",v5BackupLocal],["v5RestoreLocalBtn",v5RestoreLocal]].forEach(([id,fn])=>{const b=$(id);if(b&&!b.dataset.v5Bound){b.dataset.v5Bound="1";b.onclick=fn;}});
+}
+function v5RenderAll(){
+  v5RenderMuscleBalance();
+  v5RenderPRBoard();
+  v5RenderRecoveryTrend();
+  v5RenderLogSummary();
+  v5EnhanceCalendar();
+  v5BindExport();
+}
+
+function renderAll(){setTimeout(v5RenderAll,180);setTimeout(v430RenderAllFeaturePanels,120); if(window.__v404TabSwitching){return;} setTimeout(v403Run,80);setTimeout(plateauLiveRecompute,120);setTimeout(renderPlateauDetectionSafe,120);bindAutoPersistentAlternative();autoApplyPersistentAlternative();bindStableRenderTriggers();setTimeout(stableRenderAllPanels,80);bindCanonicalExerciseSwitch(); if($('exercise')) applyCanonicalSetDisplay($('exercise').value);exSessionBindDropdown(); if($('exercise')) exSessionRestore($('exercise').value);calSyncBind();calSyncUpdateStatus();exSessionBindDropdown(); if($('exercise')) exSessionRestore($('exercise').value);historySummaryForCurrent();bindPersistentAltButtons();if(typeof renderMediaPanel==="function")renderMediaPanel();bindAiCoachButtons();renderRecent();renderProgram();renderGuide();renderDashboard();renderCoach();renderCalendar();renderDaySummary(selectedDate);sync()}
 updateDateStatus();renderAll();
 
 document.addEventListener("DOMContentLoaded",()=>bindAiCoachButtons());
@@ -1609,7 +1769,7 @@ window.addEventListener('load',()=>{setTimeout(()=>{try{v430RestoreDraft();v430R
 
 
 
-/* ===== v4.3.2 Feature Functions ===== */
+/* ===== v5.0.1 Feature Functions ===== */
 function v430SafeLogs(){try{return Array.isArray(logs)?logs:[]}catch(e){return []}}
 function v430CurrentExercise(){return $("exercise")?$("exercise").value:""}
 function v430Today(){return (typeof today==="function"?today():(new Date()).toISOString().slice(0,10))}
@@ -1679,3 +1839,6 @@ function v430RenderDeload(){try{const el=$("v430DeloadBox");if(!el)return;const 
 function v430ExerciseDb(){try{const ex=v430CurrentExercise();const el=$("v430ExerciseDb");if(!el)return;const media=(typeof MEDIA_DB!=="undefined"&&MEDIA_DB[ex])?MEDIA_DB[ex]:{query:`${ex} proper form`,cue:"ตรวจ form ให้ตรงกับท่า คุม ROM และไม่มีจุดเจ็บ"};const alts=(ALT&&ALT[ex])?ALT[ex].map(a=>a[0]).join(", "):"ไม่มี alternative";el.innerHTML=`<b>${ex||"-"}</b><br>Cue: ${media.cue}<br>Search: ${media.query}<br>Alternative: ${alts}<br><span class="small">Mistake: อย่าเหวี่ยงน้ำหนัก / อย่าฝืนจุดเจ็บ / คุมช่วงลง</span>`;}catch(e){console.warn("v430ExerciseDb",e)}}
 function v430AiSummary(){try{const el=$("v430AiSummary");if(!el)return;const d=$("date")?.value||v430Today();const rows=v430SafeLogs().filter(x=>x.date===d);if(!rows.length){el.className="msg info";el.innerHTML="ยังไม่มี log วันนี้";return;}const vol=rows.reduce((a,x)=>a+Number(x.weight||0)*Number(x.reps||0),0);const exs=[...new Set(rows.map(x=>x.exercise))].filter(Boolean);const s=v430RecoveryScoreFrom(rows[rows.length-1]||{});el.className="msg ok";el.innerHTML=`วันนี้บันทึก ${rows.length} sets<br>Volume รวม ${Math.round(vol)} kg<br>ท่าที่เล่น: ${exs.join(", ")}<br>Recovery ${s.rec} / Fatigue ${s.fatigue}<br>คำแนะนำ: ${s.fatigue>60?"คุม RIR 2–3 และอย่าเพิ่มน้ำหนัก":"เพิ่ม reps ก่อน แล้วค่อยเพิ่มน้ำหนักเมื่อถึง ceiling"}`;const btn=$("v430CopySummaryBtn");if(btn&&!btn.dataset.v430Bound){btn.dataset.v430Bound="1";btn.onclick=()=>navigator.clipboard&&navigator.clipboard.writeText(el.innerText);}}catch(e){console.warn("v430AiSummary",e)}}
 function v430RenderAllFeaturePanels(){v430RenderResume();v430BindDraftSave();v430RenderPRDashboard();v430RenderVolumeDashboard();v430RenderRecoveryDashboard();v430RenderDeload();v430ExerciseDb();v430AiSummary();}
+
+
+window.addEventListener('load',()=>{setTimeout(v5RenderAll,1200);});

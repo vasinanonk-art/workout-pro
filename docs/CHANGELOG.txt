@@ -1,12 +1,20 @@
-# v4.3.2 UI Polish Pack
+# v5.0.1 User Isolation Fix
 
-Fixed:
-- Alternative buttons are full-width, same height, and clearer.
-- Program page now has a distinct weekly timeline layout.
-- Guide page now has a distinct coaching guide card layout.
+Critical Fix:
+- Firestore workout data is now scoped by Google user UID.
+- Team ID is now a group/label, not the primary data owner.
+- Users with the same Team ID will no longer see each other's workout logs.
+
+New Firestore path:
+- teams/{teamLabel}/users/{userUid}/workouts
+
+Old shared path:
+- teams/{teamId}/workouts
+- Not deleted.
+- Not written to by this build.
 
 Preserved:
-- v4.3.1 chart visibility fix
-- v4.3.0 feature pack
-- Login / Firestore / Save
-- Log / Calendar / Coach / Program / Guide / Donate
+- Existing Team ID UI
+- Login / Save set
+- Dashboard / Log / Calendar / Coach / Program / Guide / Donate
+- v5.0 dashboards and export tools

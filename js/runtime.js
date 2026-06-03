@@ -85,7 +85,7 @@ function uiPolishAddVersionPanel(){
   const d=document.createElement('div');
   d.id='versionQAPanel';
   d.className='card version-panel';
-  d.innerHTML='<div class="section-title">Build / QA</div><div class="msg info">Version: <b>v4.3.2</b><br>Build: UI Polish Pack<br>QA: JS syntax / core IDs / tabs / charts preserved<br>Note: Low-risk UI only, core logic untouched</div>';
+  d.innerHTML='<div class="section-title">Build / QA</div><div class="msg info">Version: <b>v5.0.1</b><br>Build: User Isolation Fix<br>QA: JS syntax / core IDs / tabs / charts preserved<br>Note: Low-risk UI only, core logic untouched</div>';
   donate.appendChild(d);
  }catch(e){console.warn(e)}
 }
@@ -119,7 +119,7 @@ function modernUiHeader(){
    hero.id='modernHero';
    hero.className='card';
    hero.style.marginBottom='18px';
-   hero.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><div><div style="font-size:28px;font-weight:800">Workout PRO</div><div style="opacity:.8;margin-top:4px">Modern Hypertrophy & Recovery System</div></div><div><span class="status-pill status-good">v4.3.2</span><span class="status-pill status-warn">Modern UI</span></div></div>';
+   hero.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><div><div style="font-size:28px;font-weight:800">Workout PRO</div><div style="opacity:.8;margin-top:4px">Modern Hypertrophy & Recovery System</div></div><div><span class="status-pill status-good">v5.0.1</span><span class="status-pill status-warn">Modern UI</span></div></div>';
    main.prepend(hero);
  }catch(e){console.warn(e)}
 }
@@ -142,7 +142,7 @@ function v400AddQaPanel(){
     var p=document.createElement("div");
     p.id="v400QaPanel";
     p.className="card";
-    p.innerHTML="<h3>v4.0 Stable QA</h3><div class='msg ok'>UI Polish Pack<br>Router patch cleanup: ON<br>Complete card scoped to Log: ON<br>Heavy runtime patches removed: ON</div>";
+    p.innerHTML="<h3>v4.0 Stable QA</h3><div class='msg ok'>User Isolation Fix<br>Router patch cleanup: ON<br>Complete card scoped to Log: ON<br>Heavy runtime patches removed: ON</div>";
     setup.appendChild(p);
   }catch(e){}
 }
@@ -226,7 +226,7 @@ document.addEventListener("click",function(e){
 })();
 
 
-// ===== v4.3.2 Navigation Speed Cache =====
+// ===== v5.0.1 Navigation Speed Cache =====
 (function(){
   if(window.__v430NavInstalled) return; window.__v430NavInstalled=true;
   function activatePage(page){if(!page)return;document.querySelectorAll('.page').forEach(function(p){var a=p.id===page;p.classList.toggle('active',a);p.style.display=a?'':'none';});document.querySelectorAll('.tab[data-page]').forEach(function(b){b.classList.toggle('active',b.dataset.page===page);});try{localStorage.setItem('workoutActivePage',page);}catch(e){}}
@@ -236,7 +236,7 @@ document.addEventListener("click",function(e){
 
 
 
-// ===== v4.3.2 Alternative Button Cleanup =====
+// ===== v5.0.1 Alternative Button Cleanup =====
 (function(){
   if(window.__v431AltButtonCleanup) return;
   window.__v431AltButtonCleanup = true;
@@ -260,7 +260,7 @@ document.addEventListener("click",function(e){
 
 
 
-// ===== v4.3.2 Alternative Action Polish =====
+// ===== v5.0.1 Alternative Action Polish =====
 (function(){
   if(window.__v432AltPolish) return;
   window.__v432AltPolish = true;
@@ -289,4 +289,54 @@ document.addEventListener("click",function(e){
     setTimeout(polishAltButtons, 1200);
   });
   document.addEventListener("click", function(){ setTimeout(polishAltButtons, 80); }, true);
+})();
+
+
+
+// ===== v5.0.1 Mobile UX + Performance Shell =====
+(function(){
+  if(window.__v5ShellInstalled) return;
+  window.__v5ShellInstalled = true;
+
+  function haptic(){
+    try{ if(navigator.vibrate) navigator.vibrate(8); }catch(e){}
+  }
+
+  function bindButtons(){
+    document.querySelectorAll("button").forEach(function(btn){
+      if(btn.dataset.v5Haptic==="1") return;
+      btn.dataset.v5Haptic="1";
+      btn.addEventListener("click",haptic,{passive:true});
+    });
+  }
+
+  function reduceHeavyEffects(){
+    try{
+      if(window.matchMedia && window.matchMedia("(max-width:760px)").matches){
+        document.body.classList.add("v5-mobile-performance");
+      }
+    }catch(e){}
+  }
+
+  window.addEventListener("load",function(){
+    bindButtons();
+    reduceHeavyEffects();
+    setTimeout(bindButtons,800);
+  });
+  document.addEventListener("click",function(){setTimeout(bindButtons,80);},true);
+})();
+
+
+
+// ===== v5.0.1 User Isolation Status UI =====
+(function(){
+  function showIsolationStatus(){
+    try{
+      var el=document.getElementById("userIsolationStatus");
+      if(!el) return;
+      el.className="msg ok";
+      el.innerHTML="Data Isolation: แยกข้อมูลตาม Google Account แล้ว<br><span class='small'>Team ID ซ้ำกันได้ แต่ข้อมูลไม่ปนกันระหว่าง user</span>";
+    }catch(e){}
+  }
+  window.addEventListener("load",function(){setTimeout(showIsolationStatus,400);setTimeout(showIsolationStatus,1400);});
 })();

@@ -1,16 +1,25 @@
-# QA REPORT v4.3.2 UI Polish Pack
+# QA REPORT v5.0.1 User Isolation Fix
 
-✅ Version v4.3.2
-✅ Alt button full-width CSS
-✅ Alt label runtime
-✅ Program timeline
-✅ Guide cards
+✅ Version v5.0.1
+✅ User scope helper
+✅ Scoped path includes users
+✅ Save uses scoped collection
+✅ Subscribe uses scoped collection
+✅ Delete uses scoped collection
+✅ No old raw Firestore path remains
+✅ Owner metadata
+✅ Isolation UI
 ✅ Save preserved
+✅ Login preserved
+✅ Firestore preserved
 ✅ Runtime JS syntax
 ✅ Module JS syntax
+✅ No duplicate functions
 
-Manual QA:
-1. Alternative buttons are full-width and no small floating button remains.
-2. Program page looks like weekly timeline, not a generic list only.
-3. Guide page looks like coaching guide cards, not the same as Program.
-4. Save/Login/Log/Coach still work.
+Manual QA Required:
+1. Login with User A, Team ID = Beer-Team, save 1 set.
+2. Login with User B, Team ID = Beer-Team.
+3. User B must NOT see User A logs.
+4. User B saves 1 set.
+5. Login back User A; User A must see only User A logs.
+6. Dashboard/Calendar/Coach still load.

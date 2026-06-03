@@ -1,1 +1,1 @@
-Workout PRO v4.3.2 UI Polish Pack
+Workout PRO v5.0.1 User Isolation Fix

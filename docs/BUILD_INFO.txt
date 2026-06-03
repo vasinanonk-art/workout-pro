@@ -1,4 +1,4 @@
 App: Workout PRO
-Version: v4.3.2
-Build: UI Polish Pack
+Version: v5.0.1
+Build: User Isolation Fix
 Updated: 2026-06-03
