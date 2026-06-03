@@ -1,16 +1,13 @@
-# v5.0.8 Migration Binding Hard Fix
+# v5.0.9 Sync Null Guard Fix
 
 Fixed:
-- Migration button still did not trigger the migration check.
-- Exposes module functions to window:
-  - window.checkLegacyLogsForMigration
-  - window.migrateLegacyLogsToUser
-  - window.bindLegacyMigration
-- Runtime captures Migration button click directly.
-- If module is not ready, the migration box shows a clear error instead of staying silent.
+- sync() crashed on missing DOM elements such as kWeek, lockStatus, setStatus, exercise, saveBtn.
+- Rewrote sync() to use safe DOM setters.
+- This prevents renderAll from stopping before Migration module is exposed.
 
 Preserved:
-- v5.0.7 Migration UI cleanup
-- v5.0.6 Null Guard Fix
-- v5.0.4 Team ID Hard Fix
+- v5.0.8 Migration Binding Hard Fix
+- v5.0.7 Migration UI Cleanup
+- v5.0.6 applyMeta null guard
+- v5.0.4 Team ID hard save
 - v5.0.1 User Isolation

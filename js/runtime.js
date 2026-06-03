@@ -85,7 +85,7 @@ function uiPolishAddVersionPanel(){
   const d=document.createElement('div');
   d.id='versionQAPanel';
   d.className='card version-panel';
-  d.innerHTML='<div class="section-title">Build / QA</div><div class="msg info">Version: <b>v5.0.8</b><br>Build: Migration Binding Hard Fix<br>QA: JS syntax / core IDs / tabs / charts preserved<br>Note: Low-risk UI only, core logic untouched</div>';
+  d.innerHTML='<div class="section-title">Build / QA</div><div class="msg info">Version: <b>v5.0.9</b><br>Build: Sync Null Guard Fix<br>QA: JS syntax / core IDs / tabs / charts preserved<br>Note: Low-risk UI only, core logic untouched</div>';
   donate.appendChild(d);
  }catch(e){console.warn(e)}
 }
@@ -119,7 +119,7 @@ function modernUiHeader(){
    hero.id='modernHero';
    hero.className='card';
    hero.style.marginBottom='18px';
-   hero.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><div><div style="font-size:28px;font-weight:800">Workout PRO</div><div style="opacity:.8;margin-top:4px">Modern Hypertrophy & Recovery System</div></div><div><span class="status-pill status-good">v5.0.8</span><span class="status-pill status-warn">Modern UI</span></div></div>';
+   hero.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><div><div style="font-size:28px;font-weight:800">Workout PRO</div><div style="opacity:.8;margin-top:4px">Modern Hypertrophy & Recovery System</div></div><div><span class="status-pill status-good">v5.0.9</span><span class="status-pill status-warn">Modern UI</span></div></div>';
    main.prepend(hero);
  }catch(e){console.warn(e)}
 }
@@ -142,7 +142,7 @@ function v400AddQaPanel(){
     var p=document.createElement("div");
     p.id="v400QaPanel";
     p.className="card";
-    p.innerHTML="<h3>v4.0 Stable QA</h3><div class='msg ok'>Migration Binding Hard Fix<br>Router patch cleanup: ON<br>Complete card scoped to Log: ON<br>Heavy runtime patches removed: ON</div>";
+    p.innerHTML="<h3>v4.0 Stable QA</h3><div class='msg ok'>Sync Null Guard Fix<br>Router patch cleanup: ON<br>Complete card scoped to Log: ON<br>Heavy runtime patches removed: ON</div>";
     setup.appendChild(p);
   }catch(e){}
 }
@@ -226,7 +226,7 @@ document.addEventListener("click",function(e){
 })();
 
 
-// ===== v5.0.8 Navigation Speed Cache =====
+// ===== v5.0.9 Navigation Speed Cache =====
 (function(){
   if(window.__v430NavInstalled) return; window.__v430NavInstalled=true;
   function activatePage(page){if(!page)return;document.querySelectorAll('.page').forEach(function(p){var a=p.id===page;p.classList.toggle('active',a);p.style.display=a?'':'none';});document.querySelectorAll('.tab[data-page]').forEach(function(b){b.classList.toggle('active',b.dataset.page===page);});try{localStorage.setItem('workoutActivePage',page);}catch(e){}}
@@ -236,7 +236,7 @@ document.addEventListener("click",function(e){
 
 
 
-// ===== v5.0.8 Alternative Button Cleanup =====
+// ===== v5.0.9 Alternative Button Cleanup =====
 (function(){
   if(window.__v431AltButtonCleanup) return;
   window.__v431AltButtonCleanup = true;
@@ -260,7 +260,7 @@ document.addEventListener("click",function(e){
 
 
 
-// ===== v5.0.8 Alternative Action Polish =====
+// ===== v5.0.9 Alternative Action Polish =====
 (function(){
   if(window.__v432AltPolish) return;
   window.__v432AltPolish = true;
@@ -293,7 +293,7 @@ document.addEventListener("click",function(e){
 
 
 
-// ===== v5.0.8 Mobile UX + Performance Shell =====
+// ===== v5.0.9 Mobile UX + Performance Shell =====
 (function(){
   if(window.__v5ShellInstalled) return;
   window.__v5ShellInstalled = true;
@@ -328,7 +328,7 @@ document.addEventListener("click",function(e){
 
 
 
-// ===== v5.0.8 User Isolation Status UI =====
+// ===== v5.0.9 User Isolation Status UI =====
 (function(){
   function showIsolationStatus(){
     try{
@@ -343,7 +343,7 @@ document.addEventListener("click",function(e){
 
 
 
-// ===== v5.0.8 Migration Button Runtime Guard =====
+// ===== v5.0.9 Migration Button Runtime Guard =====
 (function(){
   function guardButtons(){
     try{
@@ -358,7 +358,7 @@ document.addEventListener("click",function(e){
 
 
 
-// ===== v5.0.8 Migration Binding Hard Fix =====
+// ===== v5.0.9 Sync Null Guard Fix =====
 (function(){
   if(window.__v504TeamHardFix) return;
   window.__v504TeamHardFix = true;
@@ -440,13 +440,13 @@ document.addEventListener("click",function(e){
 
 
 
-// ===== v5.0.8 Runtime Error Guard =====
+// ===== v5.0.9 Runtime Error Guard =====
 (function(){
   if(window.__v506ErrorGuard) return;
   window.__v506ErrorGuard = true;
   window.addEventListener("error", function(e){
     try{
-      console.warn("v5.0.8 guarded runtime error:", e.message);
+      console.warn("v5.0.9 guarded runtime error:", e.message);
       var mig=document.getElementById("legacyMigrationBtn");
       if(mig) mig.disabled=false;
       var save=document.getElementById("saveTeamBtn");
@@ -457,7 +457,7 @@ document.addEventListener("click",function(e){
 
 
 
-// ===== v5.0.8 Migration Binding Runtime Hard Fix =====
+// ===== v5.0.9 Migration Binding Runtime Hard Fix =====
 (function(){
   if(window.__v508MigrationHardBind) return;
   window.__v508MigrationHardBind = true;
@@ -507,4 +507,25 @@ document.addEventListener("click",function(e){
 
   window.addEventListener("DOMContentLoaded", function(){setTimeout(hardBind,50);});
   window.addEventListener("load", function(){setTimeout(hardBind,150);setTimeout(hardBind,1000);setTimeout(hardBind,2500);});
+})();
+
+
+
+// ===== v5.0.9 Sync Error Guard =====
+(function(){
+  if(window.__v509SyncGuard) return;
+  window.__v509SyncGuard = true;
+  window.addEventListener("error", function(e){
+    try{
+      if(String(e.message||"").includes("Cannot set properties of null")){
+        var box=document.getElementById("legacyMigrationBox");
+        if(box){
+          box.className="msg warn";
+          box.innerHTML="พบ DOM null error แต่ runtime guard กันไว้แล้ว<br><span class='small'>ลองกด ตรวจสอบ Log เก่า อีกครั้ง</span>";
+        }
+        var btn=document.getElementById("legacyMigrationBtn");
+        if(btn) btn.disabled=false;
+      }
+    }catch(_){}
+  });
 })();

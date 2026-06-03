@@ -1,4 +1,4 @@
 App: Workout PRO
-Version: v5.0.8
-Build: Migration Binding Hard Fix
+Version: v5.0.9
+Build: Sync Null Guard Fix
 Updated: 2026-06-03
