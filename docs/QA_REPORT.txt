@@ -1,20 +1,21 @@
-# QA REPORT v5.0.5 Migration Recovery Fix
+# QA REPORT v5.0.7 Migration UI Cleanup
 
-✅ Version v5.0.5
-✅ Manual UI
-✅ Recovery migration code
-✅ Manual import code
-✅ Shows legacy path
-✅ Writes scoped path
-✅ Manual import metadata
-✅ getDocs imported
-✅ Team hard fix preserved
+✅ Version v5.0.7
+✅ Manual Import UI removed
+✅ Manual Import functions removed
+✅ Migration UI remains
+✅ Migration functions preserved
+✅ Null guard preserved
+✅ Team hard save preserved
+✅ User isolation preserved
 ✅ Runtime JS syntax
 ✅ Module JS syntax
+✅ No duplicate functions
 
 Manual QA:
-1. Save Team ID; app reloads and keeps Team ID.
-2. Click ตรวจ Log เก่า / Migrate.
-3. App must show exact legacy path or error.
-4. If records found, click Migrate Legacy Logs.
-5. If not possible, paste JSON backup/export and click Manual Import Logs.
+1. Setup page must not show Manual Import JSON textarea/button.
+2. Save Team ID still works and reloads.
+3. Click ตรวจสอบ Log เก่า.
+4. Migration box must show legacy path / record count / permission error.
+5. If records found, button should change to ย้ายข้อมูลทั้งหมด.
+6. Console must not show applyMeta null error.

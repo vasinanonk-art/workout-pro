@@ -1,17 +1,17 @@
-# v5.0.5 Migration Recovery Fix
+# v5.0.7 Migration UI Cleanup
 
-Fixed:
-- Migration could still fail or appear inactive.
-- Migration check now shows exact legacy path being checked.
-- If Firestore Rules block legacy read, app shows the real error.
-- Added Manual Import JSON fallback to recover logs even if auto migration cannot read the old path.
-
-How to recover:
-1. Try ตรวจ Log เก่า / Migrate first.
-2. If legacy path cannot be read, paste JSON export/backup into Manual Import.
-3. Click Manual Import Logs.
+Changed:
+- Removed Manual Import JSON UI.
+- Removed Manual Import JSON functions.
+- Migration Tool now focuses only on Firestore legacy-to-user migration.
+- Cleaner Setup screen.
+- Migration button copy improved:
+  - ตรวจสอบ Log เก่า
+  - ย้ายข้อมูลทั้งหมด
 
 Preserved:
+- v5.0.6 Null Guard Fix
+- v5.0.5 migration recovery logic for Firestore legacy path
 - v5.0.4 Team ID hard save
 - v5.0.1 user isolation
-- Login / Save / Dashboard / Log / Calendar / Coach
+- Login / Firestore / Save / Dashboard / Log / Calendar / Coach

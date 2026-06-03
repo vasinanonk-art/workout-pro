@@ -1,4 +1,4 @@
 App: Workout PRO
-Version: v5.0.5
-Build: Migration Recovery Fix
+Version: v5.0.7
+Build: Migration UI Cleanup
 Updated: 2026-06-03
