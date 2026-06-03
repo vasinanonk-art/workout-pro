@@ -1,21 +1,21 @@
-# QA REPORT v5.0.7 Migration UI Cleanup
+# QA REPORT v5.0.8 Migration Binding Hard Fix
 
-✅ Version v5.0.7
-✅ Manual Import UI removed
-✅ Manual Import functions removed
-✅ Migration UI remains
+✅ Version v5.0.8
+✅ Button type button
+✅ Window expose
+✅ Module bind function
+✅ Runtime hard bind
 ✅ Migration functions preserved
 ✅ Null guard preserved
 ✅ Team hard save preserved
-✅ User isolation preserved
 ✅ Runtime JS syntax
 ✅ Module JS syntax
 ✅ No duplicate functions
 
 Manual QA:
-1. Setup page must not show Manual Import JSON textarea/button.
-2. Save Team ID still works and reloads.
-3. Click ตรวจสอบ Log เก่า.
-4. Migration box must show legacy path / record count / permission error.
-5. If records found, button should change to ย้ายข้อมูลทั้งหมด.
-6. Console must not show applyMeta null error.
+1. Open Setup.
+2. Click ตรวจสอบ Log เก่า.
+3. Migration box must immediately change text to:
+   - กำลังเรียก Migration Function...
+   - then legacy path / count / permission error
+4. If it says module not ready, check Console for app.module.js error.

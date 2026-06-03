@@ -1,17 +1,16 @@
-# v5.0.7 Migration UI Cleanup
+# v5.0.8 Migration Binding Hard Fix
 
-Changed:
-- Removed Manual Import JSON UI.
-- Removed Manual Import JSON functions.
-- Migration Tool now focuses only on Firestore legacy-to-user migration.
-- Cleaner Setup screen.
-- Migration button copy improved:
-  - ตรวจสอบ Log เก่า
-  - ย้ายข้อมูลทั้งหมด
+Fixed:
+- Migration button still did not trigger the migration check.
+- Exposes module functions to window:
+  - window.checkLegacyLogsForMigration
+  - window.migrateLegacyLogsToUser
+  - window.bindLegacyMigration
+- Runtime captures Migration button click directly.
+- If module is not ready, the migration box shows a clear error instead of staying silent.
 
 Preserved:
+- v5.0.7 Migration UI cleanup
 - v5.0.6 Null Guard Fix
-- v5.0.5 migration recovery logic for Firestore legacy path
-- v5.0.4 Team ID hard save
-- v5.0.1 user isolation
-- Login / Firestore / Save / Dashboard / Log / Calendar / Coach
+- v5.0.4 Team ID Hard Fix
+- v5.0.1 User Isolation
