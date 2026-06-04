@@ -1,4 +1,4 @@
-# Workout PRO v5.2.1 Local Date Fix
+# Workout PRO v5.2.2 Target Sets Default Fix
 
 Push this folder to GitHub. Cloudflare will auto deploy.
 

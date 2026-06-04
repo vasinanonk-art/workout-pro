@@ -1,10 +1,10 @@
-# QA REPORT v5.2.1 Local Date Fix
+# QA REPORT v5.2.2 Target Sets Default Fix
 
-✅ Version v5.2.1
-✅ Local date helper exists
-✅ Runtime local date helper
-✅ No new Date date-only UTC default
-✅ Full UTC timestamps preserved
+✅ Version v5.2.2
+✅ Target helper exists
+✅ Target binding exists
+✅ Target fallback preserves override
+✅ Local date fix preserved
 ✅ Backup tool preserved
 ✅ Save callback fix preserved
 ✅ Calendar fix preserved
@@ -16,9 +16,9 @@
 
 Manual QA:
 1. Deploy through GitHub/Cloudflare.
-2. Hard refresh and confirm v5.2.1.
-3. At Thailand time after midnight, Log Workout date must show today's local date.
-4. Save one workout set and confirm date is local date, not previous UTC day.
-5. Confirm createdAt/exportedAt remain full ISO timestamps.
-6. Calendar old-date click still works.
-7. Backup export still works.
+2. Hard refresh and confirm v5.2.2.
+3. Open Log Workout.
+4. Select exercise; Target Sets must auto-fill from Program.
+5. Clear Target Sets and blur; it must refill default.
+6. Override Target Sets with valid number; Save should use override.
+7. Save/Calendar/Backup still work.

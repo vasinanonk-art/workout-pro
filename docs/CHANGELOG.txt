@@ -1,16 +1,15 @@
-# v5.2.1 Local Date Fix
+# v5.2.2 Target Sets Default Fix
 
 Fixed:
-- Log Workout default date showed previous day after midnight in Thailand.
-- Replaced date-only UTC usage:
-  new Date().toISOString().slice(0,10)
-  with local browser date helper.
-- Kept createdAt / updatedAt / exportedAt as UTC timestamps.
+- Target Sets could appear blank.
+- Target Sets now auto-fills from Program/Table.
+- User can still override target sets for special cases.
+- Empty or invalid Target Sets falls back to Program default.
+- Save/target logic uses default if field is blank.
 
 Preserved:
-- v5.2.0 Backup Export Tool
-- v5.1.5 Post Save Safe Callback Fix
-- Calendar Month Safe Fix
-- Migration completed flow
-- User isolation
-- Firestore save flow
+- v5.2.1 Local Date Fix
+- Backup Export Tool
+- Post-save callback fix
+- Calendar fix
+- Migration/User isolation
