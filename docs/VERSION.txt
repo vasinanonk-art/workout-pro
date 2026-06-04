@@ -1,3 +1,3 @@
 Workout PRO
-Version: v5.1.4
-Build: Save Popup Final Fix
+Version: v5.1.5
+Build: Post Save Safe Callback Fix

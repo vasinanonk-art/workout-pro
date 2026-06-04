@@ -1,10 +1,9 @@
-# v5.1.4 Save Popup Final Fix
+# v5.1.5 Post Save Safe Callback Fix
 
 Fixed:
-- Save completed but still showed popup: "Can't find variable: authDebugGuardRun".
-- Added authDebugGuardRun in app.module.js.
-- Replaced raw setTimeout(authDebugGuardRun,950) with guarded call.
-- Added runtime fallback.
+- Save completed but popup appeared for missing post-save callbacks, including permissionSafeRun.
+- Wrapped post-save setTimeout callbacks safely using typeof guards.
+- Added runtime no-op fallbacks for post-save optional callbacks.
 
 Preserved:
 - Calendar Month Safe Fix
