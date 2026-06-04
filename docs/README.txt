@@ -1,1 +1,1 @@
-Workout PRO v5.1.5 Post Save Safe Callback Fix
+Workout PRO v5.2.0 Backup Export Tool

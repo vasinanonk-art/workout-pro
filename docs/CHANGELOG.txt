@@ -1,13 +1,20 @@
-# v5.1.5 Post Save Safe Callback Fix
+# v5.2.0 Backup Export Tool
 
-Fixed:
-- Save completed but popup appeared for missing post-save callbacks, including permissionSafeRun.
-- Wrapped post-save setTimeout callbacks safely using typeof guards.
-- Added runtime no-op fallbacks for post-save optional callbacks.
+Added:
+- Backup page
+- Export JSON Backup
+- Export CSV
+- Copy Backup Summary
+- Backup QA status
+
+Safety:
+- Read-only export tool.
+- Does not write to Firestore.
+- Does not touch Save, Calendar, Migration, User Isolation, Day Lock, or Progression logic.
 
 Preserved:
+- v5.1.5 post-save safe callback fix
 - Calendar Month Safe Fix
-- Migration completed flow
+- Completed migration data
 - User isolation
 - Firestore save flow
-- Dashboard and Log rendering

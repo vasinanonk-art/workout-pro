@@ -1,22 +1,25 @@
-# QA REPORT v5.1.5 Post Save Safe Callback Fix
+# QA REPORT v5.2.0 Backup Export Tool
 
-✅ Version v5.1.5
-✅ Post-save safe marker
-✅ No raw unsafe post-save callback timeout
-✅ Runtime fallback
-✅ permissionSafeRun guarded
+✅ Version v5.2.0
+✅ Backup page exists
+✅ Export JSON button
+✅ Export CSV button
+✅ Copy Summary button
+✅ Read-only export
+✅ No backup Firestore writes
+✅ Save callback fix preserved
 ✅ Calendar fix preserved
 ✅ Migration preserved
 ✅ User isolation preserved
-✅ Firestore save preserved
 ✅ Runtime JS syntax
 ✅ Module JS syntax
 
 Manual QA:
 1. Deploy through GitHub/Cloudflare.
-2. Hard refresh and confirm v5.1.5.
-3. Save one workout set.
-4. Confirm no popup for permissionSafeRun/authDebugGuardRun/etc.
-5. Confirm saved set appears in Log.
-6. Refresh and confirm saved set remains.
-7. Calendar old-date click still works.
+2. Hard refresh and confirm v5.2.0.
+3. Open Backup page.
+4. Export JSON.
+5. Export CSV.
+6. Copy Backup Summary.
+7. Save one workout set and confirm no popup.
+8. Calendar old-date click still works.

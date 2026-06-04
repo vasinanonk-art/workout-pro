@@ -3,7 +3,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* ===== v5.1.5 Post Save Safe Callback Fix ===== */
+/* ===== v5.2.0 Backup Export Tool ===== */
 function setTextSafe(id, value){
   const el = document.getElementById(id);
   if(el) el.textContent = value;
@@ -32,9 +32,9 @@ function valueSafe(id, fallback=""){
   return el ? el.value : fallback;
 }
 
-const VERSION="v5.1.5", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
+const VERSION="v5.2.0", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
 
-/* ===== v5.1.5 Post Save Safe Callback Fix ===== */
+/* ===== v5.2.0 Backup Export Tool ===== */
 function safeKeyPart(v){
   return String(v || "default").trim().replace(/[^\w\-@.]/g, "_").slice(0,80) || "default";
 }
@@ -999,7 +999,7 @@ function cleanForFirestore(obj){
 }
 
 
-/* ===== v5.1.5 SAVE_AUTH_GUARD_FIX ===== */
+/* ===== v5.2.0 SAVE_AUTH_GUARD_FIX ===== */
 
 function runAuthDebugGuardSafe(){
   try{
@@ -1020,8 +1020,8 @@ function authDebugGuardRun(){
 
 async function saveSet(){try{$("saveDebug").className="msg";$("saveDebug").textContent="กำลังบันทึก...";if(!user)return alert("Login ก่อน");if(!teamId)return alert("ใส่ Team ID ก่อน");if(!validateDate())return;let m=meta(),ad=activeDay(),st=nextState(),wk=autoWeek();if(st.restLock)return alert("ยังพักไม่ครบ 2 วัน");if(!canSaveCurrentExerciseAdaptive())return alert("ท่านี้ยังไม่สามารถบันทึกได้: อาจเป็นคนละ Day หรือครบเซตแล้ว");let raw=parseFloat($("weight").value),reps=parseInt($("reps").value),rir=parseInt($("rir").value||2);if(!raw||!reps)return alert("กรอก Weight และ Reps");let rememberedAlt=altMemoryForPlanned(m[2]);let persistentAlt=(typeof autoApplyPersistentAlternative==="function"?autoApplyPersistentAlternative():null);let effectiveAlt=selectedAlt||persistentAlt||rememberedAlt;let computedSetNo=canonicalSetState(m[2]).next;let w=toKg(raw,$("unit").value),ex=effectiveAlt?effectiveAlt.name:m[2];await addDoc(collection(db, scopedWorkoutsCollection()),cleanForFirestore({date:$("date").value,week:wk,autoWeek:wk,day:m[0],focus:m[1],exercise:ex,plannedExercise:m[2],isAlternative:!!effectiveAlt,alternativePattern:effectiveAlt?effectiveAlt.pattern:"",alternativeQuery:(effectiveAlt&&effectiveAlt.query)?effectiveAlt.query:"",targetSets:m[3],setNo:computedSetNo,muscle:m[5],weight:w,reps,rir,volume:w*reps,note:$("note").value||"",sleepHours:parseFloat($("sleepHours")?.value||7),soreness:parseInt($("soreness")?.value||2),stress:parseInt($("stress")?.value||2),tempo:$("tempo")?.value||"",repQuality:$("repQuality")?.value||"",biasMode:$("biasMode")?.value||"auto",effectiveReps:effectiveRepsForSet({reps,rir}),userId:user.uid,userName:user.displayName||user.email,userEmail:user.email,teamLabel:activeTeamLabel(),userScope:activeUserKey(),ownerUid:user.uid,ownerEmail:user.email,appVersion:VERSION,createdAt:serverTimestamp()})); if(typeof exSessionAfterSave==="function") exSessionMarkSavedLocal(m[2]); applyCanonicalSetDisplay(m[2]);selectedAlt=null;$("weight").value="";$("reps").value="";$("rir").value=2;$("note").value="";$("saveDebug").className="msg ok";$("saveDebug").textContent="บันทึกสำเร็จ ✅";startRest();setTimeout(sync,600);setTimeout(function(){try{ if(typeof v403Run==="function"){ v403Run(); } else if(typeof window!=="undefined" && typeof window.v403Run==="function"){ window.v403Run(); } }catch(_){} },250);setTimeout(function(){try{ if(typeof fullStabilizationRun==="function"){ fullStabilizationRun(); } else if(typeof window!=="undefined" && typeof window.fullStabilizationRun==="function"){ window.fullStabilizationRun(); } }catch(_){} },950);setTimeout(function(){try{ if(typeof coachCoreRun==="function"){ coachCoreRun(); } else if(typeof window!=="undefined" && typeof window.coachCoreRun==="function"){ window.coachCoreRun(); } }catch(_){} },950);setTimeout(function(){try{ if(typeof runAuthDebugGuardSafe==="function"){ runAuthDebugGuardSafe(); } else if(typeof window!=="undefined" && typeof window.runAuthDebugGuardSafe==="function"){ window.runAuthDebugGuardSafe(); } }catch(_){} },950);setTimeout(function(){try{ if(typeof permissionSafeRun==="function"){ permissionSafeRun(); } else if(typeof window!=="undefined" && typeof window.permissionSafeRun==="function"){ window.permissionSafeRun(); } }catch(_){} },900);setTimeout(function(){try{ if(typeof plateauLiveRecompute==="function"){ plateauLiveRecompute(); } else if(typeof window!=="undefined" && typeof window.plateauLiveRecompute==="function"){ window.plateauLiveRecompute(); } }catch(_){} },900);setTimeout(function(){try{ if(typeof stableRenderAllPanels==="function"){ stableRenderAllPanels(); } else if(typeof window!=="undefined" && typeof window.stableRenderAllPanels==="function"){ window.stableRenderAllPanels(); } }catch(_){} },700)}catch(e){$("saveDebug").className="msg err";$("saveDebug").textContent="Save error: "+e.message;alert("Save error: "+e.message)}}
 
-/* ===== v5.1.5 LEGACY_MIGRATION_CODE ===== */
-/* ===== v5.1.5 MIGRATION_RECOVERY_CODE ===== */
+/* ===== v5.2.0 LEGACY_MIGRATION_CODE ===== */
+/* ===== v5.2.0 MIGRATION_RECOVERY_CODE ===== */
 
 
 
@@ -1029,7 +1029,7 @@ async function saveSet(){try{$("saveDebug").className="msg";$("saveDebug").textC
 
 
 
-/* ===== v5.1.5 FULL_QA_MIGRATION_CHAIN ===== */
+/* ===== v5.2.0 FULL_QA_MIGRATION_CHAIN ===== */
 let legacyMigrationState = { checked:false, count:0, docs:[] };
 window.__legacyMigrationReadyToMigrate = false;
 
@@ -1214,7 +1214,7 @@ function bindLegacyMigration(){
   window.__migrationModuleReady = true;
 }
 
-function subscribe(){if(unsub)unsub();if(!teamId)return;unsub=onSnapshot(query(collection(db, scopedWorkoutsCollection()),orderBy("createdAt","desc")),s=>{logs=s.docs.map(d=>({id:d.id,...d.data()}));$("debug").className="msg ok";$("debug").textContent=`โหลดข้อมูลแล้ว ${logs.length} sets • ${VERSION} • Isolated User Data`;renderAll();bindLegacyMigration();setTimeout(function(){try{bindCalendarStayFixV512();bindCalendarGoLogV512();}catch(e){}},50);if(logs.length===0)setTimeout(checkLegacyLogsForMigration,400)},e=>{$("debug").className="msg err";$("debug").textContent=e.message})}
+function subscribe(){if(unsub)unsub();if(!teamId)return;unsub=onSnapshot(query(collection(db, scopedWorkoutsCollection()),orderBy("createdAt","desc")),s=>{logs=s.docs.map(d=>({id:d.id,...d.data()}));$("debug").className="msg ok";$("debug").textContent=`โหลดข้อมูลแล้ว ${logs.length} sets • ${VERSION} • Isolated User Data`;renderAll();bindLegacyMigration();setTimeout(function(){try{bindBackupExportToolV520();}catch(e){}},100);setTimeout(function(){try{bindCalendarStayFixV512();bindCalendarGoLogV512();}catch(e){}},50);if(logs.length===0)setTimeout(checkLegacyLogsForMigration,400)},e=>{$("debug").className="msg err";$("debug").textContent=e.message})}
 onAuthStateChanged(auth,u=>{user=u;$("authState").textContent=u?`Login: ${u.displayName||u.email}`:"ยังไม่ได้ login";$("userLine").textContent=u?`${u.displayName||u.email} / Team: ${teamId||"-"} / ${VERSION}`:`Clean QA • ${VERSION}`;if(u&&teamId)subscribe()});
 $("loginBtn").onclick=()=>signInWithPopup(auth,new GoogleAuthProvider()).catch(e=>alert(e.message));$("logoutBtn").onclick=()=>signOut(auth);$("saveTeamBtn").onclick=()=>{teamId=$("teamId").value.trim();localStorage.setItem("teamId",teamId);subscribe()};
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));$(b.dataset.page).classList.add("active");document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));b.classList.add("active");renderAll()});
@@ -1597,7 +1597,7 @@ function renderDashboard(){try{$("kVol").textContent=logs.reduce((a,b)=>a+(+b.vo
 function fmt(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}function dayForDate(d){let a=logs.filter(x=>x.date===d);if(!a.length)return null;let c={};a.forEach(x=>c[x.day]=(c[x.day]||0)+1);return Object.entries(c).sort((a,b)=>b[1]-a[1])[0][0]}function renderCalendar(){let grid=$("calGrid");grid.innerHTML="";let names=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];$("monthTitle").textContent=names[calDate.getMonth()]+" "+calDate.getFullYear();["อา","จ","อ","พ","พฤ","ศ","ส"].forEach(h=>grid.innerHTML+=`<div class="calHead">${h}</div>`);let first=new Date(calDate.getFullYear(),calDate.getMonth(),1),last=new Date(calDate.getFullYear(),calDate.getMonth()+1,0).getDate();for(let i=0;i<first.getDay();i++)grid.innerHTML+=`<div class="calDay empty"></div>`;for(let d=1;d<=last;d++){let key=fmt(new Date(calDate.getFullYear(),calDate.getMonth(),d)),a=logs.filter(x=>x.date===key),day=dayForDate(key),sel=key===selectedDate?" sel":"",tod=key===today()?" today":"";grid.innerHTML+=`<div class="calDay${sel}${tod}" data-date="${key}"><b>${d}</b><br><span class="calTag ${a.length?'partial':'rest'}">${day||'Rest'}</span>${a.length?`<div class="small">${a.length} sets</div>`:""}</div>`}grid.querySelectorAll(".calDay[data-date]").forEach(el=>el.onclick=()=>{selectedDate=el.dataset.date;$("date").value=selectedDate;sync();document.querySelector('[data-page="log"]').click()})}function renderDaySummary(d){let a=logs.filter(x=>x.date===d);$("dayTitle").textContent="Daily Summary: "+d;if(!a.length){$("daySummary").innerHTML="ยังไม่มีข้อมูล";return}let by={};a.forEach(x=>{if(!by[x.exercise])by[x.exercise]=[];by[x.exercise].push(x)});$("daySummary").innerHTML=Object.entries(by).map(([ex,arr])=>{let max=arr.reduce((m,x)=>+x.weight>+m.weight?x:m,arr[0]);return `<div class="item"><h3>${ex}</h3><div class="meta">Sets: ${arr.length}<br>Max: ${fromKg(max.weight,$("unit").value)} ${$("unit").value} × ${max.reps}${max.isAlternative?`<br>แทน: ${max.plannedExercise}`:""}</div></div>`}).join("")}
 $("prevM").onclick=()=>{calDate=new Date(calDate.getFullYear(),calDate.getMonth()-1,1);renderCalendar()};$("nextM").onclick=()=>{calDate=new Date(calDate.getFullYear(),calDate.getMonth()+1,1);renderCalendar()};
 function renderSafe(){try{renderDashboard();renderCoach();renderCalendar();renderDaySummary(selectedDate)}catch(e){$("chartStatus").textContent="Render fallback: "+e.message}}
-/* v5.1.5 Post Save Safe Callback Fix
+/* v5.2.0 Backup Export Tool
    This code is intentionally inside the Firebase module script so it can access logs / PROGRAM / $ safely.
 */
 const COACH_MOVEMENT_GROUPS = {
@@ -1716,7 +1716,7 @@ function coachCoreStatusPanel(){
   const p=document.createElement("div");
   p.id="coachCoreStatusPanel";
   p.className="card";
-  p.innerHTML='<h3>Coach Core Stabilization</h3><div class="msg ok">v5.1.5<br>Module-scoped logs access: FIXED<br>Plateau: productive trend + full exercise list<br>History Remap: movement guard<br>Alternative: auto apply guard</div>';
+  p.innerHTML='<h3>Coach Core Stabilization</h3><div class="msg ok">v5.2.0<br>Module-scoped logs access: FIXED<br>Plateau: productive trend + full exercise list<br>History Remap: movement guard<br>Alternative: auto apply guard</div>';
   setup.appendChild(p);
 }
 function coachCoreRun(){ if(window.__v404TooSoon&&window.__v404TooSoon('coachCoreRun',1200)) return; 
@@ -1831,7 +1831,7 @@ function syncAlternativeNameDisplay(){
 window.addEventListener("load",function(){setTimeout(function(){try{ if(typeof fullStabilizationRun==="function"){ fullStabilizationRun(); } else if(typeof window!=="undefined" && typeof window.fullStabilizationRun==="function"){ window.fullStabilizationRun(); } }catch(_){} },800);});
 
 
-/* v5.1.5 Stable Recovery: scoped complete card and throttled stabilization */
+/* v5.2.0 Stable Recovery: scoped complete card and throttled stabilization */
 function renderExerciseCompleteState(){
   try{
     const m=typeof meta==="function"?meta():null;
@@ -1897,7 +1897,7 @@ function fullStabilizationRun(){ if(window.__v404TooSoon&&window.__v404TooSoon('
 
 
 
-/* v5.1.5 Post Save Safe Callback Fix */
+/* v5.2.0 Backup Export Tool */
 function v403DayExercises(dayName){
   try{return (PROGRAM||[]).filter(p=>p[0]===dayName);}catch(e){return [];}
 }
@@ -1973,7 +1973,7 @@ function v403Run(){ if(window.__v404TooSoon&&window.__v404TooSoon('v403Run',900)
 }
 
 
-/* ===== v5.1.5 Complete Analytics / Export / Coach ===== */
+/* ===== v5.2.0 Complete Analytics / Export / Coach ===== */
 function v5SafeLogs(){try{return Array.isArray(logs)?logs:[]}catch(e){return []}}
 function v5Date(){return $("date")?.value || (typeof today==="function"?today():new Date().toISOString().slice(0,10))}
 function v5Volume(x){return Number(x.weight||0)*Number(x.reps||0)}
@@ -2074,7 +2074,7 @@ function v5EnhanceCalendar(){
   }catch(e){}
 }
 function v5ExportJson(){
-  const payload={version:"v5.1.5",exportedAt:new Date().toISOString(),logs:v5SafeLogs()};
+  const payload={version:"v5.2.0",exportedAt:new Date().toISOString(),logs:v5SafeLogs()};
   const text=JSON.stringify(payload,null,2);
   if($("v5BackupText")) $("v5BackupText").value=text;
   try{navigator.clipboard&&navigator.clipboard.writeText(text)}catch(e){}
@@ -2118,7 +2118,7 @@ window.addEventListener('load',()=>{setTimeout(()=>{try{v430RestoreDraft();v430R
 
 
 
-/* ===== v5.1.5 Feature Functions ===== */
+/* ===== v5.2.0 Feature Functions ===== */
 function v430SafeLogs(){try{return Array.isArray(logs)?logs:[]}catch(e){return []}}
 function v430CurrentExercise(){return $("exercise")?$("exercise").value:""}
 function v430Today(){return (typeof today==="function"?today():(new Date()).toISOString().slice(0,10))}
@@ -2197,7 +2197,7 @@ window.addEventListener('load',function(){setTimeout(function(){try{bindLegacyMi
 
 
 
-/* ===== v5.1.5 MIGRATION_BUTTON_FIX_CODE ===== */
+/* ===== v5.2.0 MIGRATION_BUTTON_FIX_CODE ===== */
 function v503UpdateTeamStatus(){
   try{
     const st=$("teamSaveStatus");
@@ -2276,7 +2276,7 @@ function v503BindCriticalButtons(){
 window.addEventListener('load',function(){setTimeout(v503BindCriticalButtons,300);setTimeout(v503BindCriticalButtons,1200);});
 
 
-/* ===== v5.1.5 MANUAL_IMPORT_CODE ===== */
+/* ===== v5.2.0 MANUAL_IMPORT_CODE ===== */
 
 
 
@@ -2285,19 +2285,19 @@ window.addEventListener('load',function(){setTimeout(v503BindCriticalButtons,300
 
 
 
-/* ===== v5.1.5 MIGRATION_BINDING_HARD_FIX_CODE ===== */
+/* ===== v5.2.0 MIGRATION_BINDING_HARD_FIX_CODE ===== */
 
 
 
 
 
-/* ===== v5.1.5 MIGRATION_CONFIRM_FLOW_FIX_CODE ===== */
+/* ===== v5.2.0 MIGRATION_CONFIRM_FLOW_FIX_CODE ===== */
 
 
 
 
 
-/* ===== v5.1.5 MIGRATION_SINGLE_HANDLER_FIX_CODE ===== */
+/* ===== v5.2.0 MIGRATION_SINGLE_HANDLER_FIX_CODE ===== */
 
 
 
@@ -2307,7 +2307,7 @@ window.addEventListener('load',function(){setTimeout(bindLegacyMigration,120);se
 
 
 
-/* ===== v5.1.5 CALENDAR_MONTH_SAFE_FIX_CODE ===== */
+/* ===== v5.2.0 CALENDAR_MONTH_SAFE_FIX_CODE ===== */
 var calendarSelectedDateV512 = window.calendarSelectedDateV512 || null;
 
 function calendarSafeKeyV512(d){
@@ -2448,4 +2448,198 @@ window.addEventListener('load',function(){setTimeout(function(){try{bindCalendar
 try{ window.authDebugGuardRun = authDebugGuardRun; }catch(_){}
 
 
-/* ===== v5.1.5 POST_SAVE_SAFE_CALLBACK_FIX: post-save callbacks wrapped safely ===== */
+/* ===== v5.2.0 POST_SAVE_SAFE_CALLBACK_FIX: post-save callbacks wrapped safely ===== */
+
+
+
+/* ===== v5.2.0 BACKUP_EXPORT_TOOL ===== */
+function backupSafeLogsV520(){
+  try{
+    if(Array.isArray(logs)) return logs.slice();
+  }catch(_){}
+  return [];
+}
+
+function backupActiveUserV520(){
+  try{
+    return {
+      uid: user && user.uid ? user.uid : null,
+      email: user && user.email ? user.email : null,
+      displayName: user && user.displayName ? user.displayName : null
+    };
+  }catch(_){
+    return {uid:null,email:null,displayName:null};
+  }
+}
+
+function backupTeamV520(){
+  try{
+    return {
+      teamId: typeof teamId !== "undefined" ? teamId : localStorage.getItem("teamId"),
+      teamLabel: typeof activeTeamLabel === "function" ? activeTeamLabel() : null,
+      userScope: typeof activeUserKey === "function" ? activeUserKey() : null
+    };
+  }catch(_){
+    return {teamId:localStorage.getItem("teamId"),teamLabel:null,userScope:null};
+  }
+}
+
+function backupSummaryV520(){
+  const rows = backupSafeLogsV520();
+  const sorted = rows.slice().sort((a,b)=>String(a.date||"").localeCompare(String(b.date||"")));
+  const totalVolume = rows.reduce((a,x)=>a + (Number(x.weight||0) * Number(x.reps||0)), 0);
+  const exercises = [...new Set(rows.map(x=>x.plannedExercise || x.exercise).filter(Boolean))];
+  const dates = [...new Set(rows.map(x=>x.date).filter(Boolean))].sort();
+  return {
+    version: typeof VERSION !== "undefined" ? VERSION : "v5.2.0",
+    exportedAt: new Date().toISOString(),
+    totalSets: rows.length,
+    totalVolume: Math.round(totalVolume),
+    firstLogDate: dates[0] || null,
+    lastLogDate: dates[dates.length-1] || null,
+    uniqueTrainingDays: dates.length,
+    uniqueExercises: exercises.length,
+    team: backupTeamV520(),
+    user: backupActiveUserV520()
+  };
+}
+
+function backupPayloadV520(){
+  return {
+    app: "Workout PRO",
+    backupType: "workout-pro-json-backup",
+    schemaVersion: "1.0",
+    summary: backupSummaryV520(),
+    logs: backupSafeLogsV520(),
+    localSettings: {
+      teamId: localStorage.getItem("teamId"),
+      workoutTeamIdSavedAt: localStorage.getItem("workoutTeamIdSavedAt")
+    }
+  };
+}
+
+function backupDownloadV520(filename, content, mime){
+  const blob = new Blob([content], {type:mime || "application/octet-stream"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{try{URL.revokeObjectURL(url);a.remove();}catch(_){}},300);
+}
+
+function backupCsvEscapeV520(v){
+  const s = String(v ?? "");
+  if(/[",\n]/.test(s)) return '"' + s.replace(/"/g,'""') + '"';
+  return s;
+}
+
+function backupCsvV520(){
+  const rows = backupSafeLogsV520();
+  const fields = ["date","week","autoWeek","day","exercise","plannedExercise","set","weight","reps","rir","volume","createdAt","ownerEmail","ownerUid","teamLabel","userScope"];
+  const lines = [fields.join(",")];
+  rows.forEach(r=>{
+    lines.push(fields.map(f=>backupCsvEscapeV520(r[f])).join(","));
+  });
+  return lines.join("\n");
+}
+
+function backupFilenameV520(ext){
+  const s = backupSummaryV520();
+  const team = (s.team.teamLabel || s.team.teamId || "team").replace(/[^a-zA-Z0-9_-]+/g,"_");
+  const date = new Date().toISOString().slice(0,19).replace(/[:T]/g,"-");
+  return `workout-pro-${team}-${date}.${ext}`;
+}
+
+function renderBackupSummaryV520(){
+  const s = backupSummaryV520();
+  const box = document.getElementById("backupSummaryBox");
+  const qa = document.getElementById("backupQaBox");
+  const status = document.getElementById("backupStatus");
+  const setText = (id,val)=>{const el=document.getElementById(id); if(el) el.textContent=val;};
+
+  setText("backupKpiSets", s.totalSets);
+  setText("backupKpiVolume", s.totalVolume);
+  setText("backupKpiFirst", s.firstLogDate || "-");
+  setText("backupKpiLast", s.lastLogDate || "-");
+
+  if(box){
+    box.className = s.totalSets ? "msg ok" : "msg warn";
+    box.innerHTML = `Logs: <b>${s.totalSets}</b> sets<br>Volume: <b>${s.totalVolume}</b><br>Days: <b>${s.uniqueTrainingDays}</b><br>Exercises: <b>${s.uniqueExercises}</b>`;
+  }
+  if(qa){
+    const checks = [
+      ["User login", !!s.user.uid],
+      ["Team ID", !!(s.team.teamId || s.team.teamLabel)],
+      ["Logs loaded", s.totalSets > 0],
+      ["Date range", !!s.firstLogDate && !!s.lastLogDate],
+      ["Export safe mode", true]
+    ];
+    qa.className = checks.every(x=>x[1]) ? "msg ok" : "msg warn";
+    qa.innerHTML = checks.map(([k,v])=>`${v?"✅":"⚠️"} ${k}`).join("<br>");
+  }
+  if(status){
+    status.className = "msg info";
+    status.innerHTML = `พร้อม Export • ${s.totalSets} sets • ${s.exportedAt}`;
+  }
+  return s;
+}
+
+function exportJsonBackupV520(){
+  try{
+    const payload = backupPayloadV520();
+    renderBackupSummaryV520();
+    backupDownloadV520(backupFilenameV520("json"), JSON.stringify(payload,null,2), "application/json;charset=utf-8");
+    const status = document.getElementById("backupStatus");
+    if(status){status.className="msg ok";status.innerHTML="Export JSON สำเร็จ ✅";}
+  }catch(e){
+    alert("Export JSON error: " + e.message);
+  }
+}
+
+function exportCsvBackupV520(){
+  try{
+    renderBackupSummaryV520();
+    backupDownloadV520(backupFilenameV520("csv"), backupCsvV520(), "text/csv;charset=utf-8");
+    const status = document.getElementById("backupStatus");
+    if(status){status.className="msg ok";status.innerHTML="Export CSV สำเร็จ ✅";}
+  }catch(e){
+    alert("Export CSV error: " + e.message);
+  }
+}
+
+async function copyBackupSummaryV520(){
+  try{
+    const s = renderBackupSummaryV520();
+    const text = [
+      "Workout PRO Backup Summary",
+      `Version: ${s.version}`,
+      `ExportedAt: ${s.exportedAt}`,
+      `Sets: ${s.totalSets}`,
+      `Volume: ${s.totalVolume}`,
+      `FirstLog: ${s.firstLogDate || "-"}`,
+      `LastLog: ${s.lastLogDate || "-"}`,
+      `Team: ${s.team.teamLabel || s.team.teamId || "-"}`,
+      `User: ${s.user.email || "-"}`
+    ].join("\n");
+    await navigator.clipboard.writeText(text);
+    const status = document.getElementById("backupStatus");
+    if(status){status.className="msg ok";status.innerHTML="Copy Summary สำเร็จ ✅";}
+  }catch(e){
+    alert("Copy summary error: " + e.message);
+  }
+}
+
+function bindBackupExportToolV520(){
+  const j = document.getElementById("exportJsonBtn");
+  const c = document.getElementById("exportCsvBtn");
+  const s = document.getElementById("copyBackupSummaryBtn");
+  if(j && j.dataset.v520Bound !== "1"){j.dataset.v520Bound="1";j.onclick=exportJsonBackupV520;}
+  if(c && c.dataset.v520Bound !== "1"){c.dataset.v520Bound="1";c.onclick=exportCsvBackupV520;}
+  if(s && s.dataset.v520Bound !== "1"){s.dataset.v520Bound="1";s.onclick=copyBackupSummaryV520;}
+  renderBackupSummaryV520();
+}
+
+
+window.addEventListener('load',function(){setTimeout(function(){try{bindBackupExportToolV520();}catch(e){}},500);setTimeout(function(){try{bindBackupExportToolV520();}catch(e){}},1500);});

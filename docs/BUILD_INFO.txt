@@ -1,4 +1,4 @@
 App: Workout PRO
-Version: v5.1.5
-Build: Post Save Safe Callback Fix
+Version: v5.2.0
+Build: Backup Export Tool
 Updated: 2026-06-04
