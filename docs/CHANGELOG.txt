@@ -1,15 +1,14 @@
-# v5.1.2 Calendar Month Safe Fix
-
-Built from v5.1.0 stable migration base.
+# v5.1.4 Save Popup Final Fix
 
 Fixed:
-- Calendar click crashed with ReferenceError: calMonth is not defined.
-- Calendar no longer depends on global calMonth.
-- Clicking old date should stay on Calendar.
-- Log page should not become blank after Calendar click.
+- Save completed but still showed popup: "Can't find variable: authDebugGuardRun".
+- Added authDebugGuardRun in app.module.js.
+- Replaced raw setTimeout(authDebugGuardRun,950) with guarded call.
+- Added runtime fallback.
 
 Preserved:
-- v5.1.0 migration stable build
-- Completed migration data
+- Calendar Month Safe Fix
+- Migration completed flow
 - User isolation
-- Dashboard
+- Firestore save flow
+- Dashboard and Log rendering

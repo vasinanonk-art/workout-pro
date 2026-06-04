@@ -39,7 +39,7 @@ button,.btn,.card,.msg{transition:none!important}
 .page:not(.active){display:none!important}
 
 
-/* ===== v5.1.2 Calendar Month Safe Fix ===== */
+/* ===== v5.1.4 Save Popup Final Fix ===== */
 .tabs{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;gap:8px!important;padding:8px 10px calc(8px + env(safe-area-inset-bottom))!important;white-space:nowrap!important;-webkit-overflow-scrolling:touch!important}
 .tabs .tab{flex:0 0 auto!important;min-width:72px!important;border-radius:18px!important}
 #v430ResumeBtn,#v430ApplyDeloadBtn,#v430CopySummaryBtn{width:100%;margin-top:8px}
@@ -49,7 +49,7 @@ button,.btn,.card,.msg{transition:none!important}
 
 
 
-/* ===== v5.1.2 Calendar Month Safe Fix ===== */
+/* ===== v5.1.4 Save Popup Final Fix ===== */
 button.v432-alt-action,
 button.v431-alt-cancel-clean,
 #savePersistentAltBtn,
@@ -118,13 +118,13 @@ button.v431-alt-cancel-clean,
 
 
 
-/* ===== v5.1.2 Calendar Month Safe Fix UI ===== */
+/* ===== v5.1.4 Save Popup Final Fix UI ===== */
 #legacyMigrationBtn:disabled{opacity:.45!important;cursor:not-allowed!important}
 #legacyMigrationBox{border-color:rgba(245,158,11,.28)!important}
 
 
 
-/* ===== v5.1.2 Calendar Month Safe Fix ===== */
+/* ===== v5.1.4 Save Popup Final Fix ===== */
 .calendar-day-detail{display:grid;gap:8px;margin-top:12px}
 .cal-log-row{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid rgba(148,163,184,.22);border-radius:14px;background:rgba(2,6,23,.42)}
 .cal-log-row span{color:#cbd5e1}

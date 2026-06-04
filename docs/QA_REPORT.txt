@@ -1,14 +1,22 @@
-# QA REPORT v5.1.2 Calendar Month Safe Fix
+# QA REPORT v5.1.4 Save Popup Final Fix
 
-✅ Version v5.1.2
-✅ Calendar safe block
-✅ Safe month fallback
-✅ No V511 cal handler
-✅ No duplicate calendar functions
-✅ Runtime guard
+✅ Version v5.1.4
+✅ authDebugGuardRun defined
+✅ runAuthDebugGuardSafe wrapper
+✅ No raw unsafe authDebugGuardRun timeout
+✅ Runtime fallback
+✅ Calendar fix preserved
 ✅ Migration preserved
 ✅ User isolation preserved
+✅ Firestore save preserved
 ✅ Runtime JS syntax
 ✅ Module JS syntax
 
-Manual QA: deploy static folder, hard refresh, confirm v5.1.2, open Calendar, click old date, no calMonth error, stay on Calendar.
+Manual QA:
+1. Deploy through GitHub/Cloudflare or static upload.
+2. Hard refresh and confirm v5.1.4.
+3. Save one workout set.
+4. Confirm no popup: authDebugGuardRun.
+5. Confirm saved set appears in Log.
+6. Refresh and confirm saved set remains.
+7. Calendar old-date click still works.

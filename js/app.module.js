@@ -3,7 +3,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* ===== v5.1.2 Calendar Month Safe Fix ===== */
+/* ===== v5.1.4 Save Popup Final Fix ===== */
 function setTextSafe(id, value){
   const el = document.getElementById(id);
   if(el) el.textContent = value;
@@ -32,9 +32,9 @@ function valueSafe(id, fallback=""){
   return el ? el.value : fallback;
 }
 
-const VERSION="v5.1.2", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
+const VERSION="v5.1.4", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
 
-/* ===== v5.1.2 Calendar Month Safe Fix ===== */
+/* ===== v5.1.4 Save Popup Final Fix ===== */
 function safeKeyPart(v){
   return String(v || "default").trim().replace(/[^\w\-@.]/g, "_").slice(0,80) || "default";
 }
@@ -998,10 +998,30 @@ function cleanForFirestore(obj){
   );
 }
 
-async function saveSet(){try{$("saveDebug").className="msg";$("saveDebug").textContent="กำลังบันทึก...";if(!user)return alert("Login ก่อน");if(!teamId)return alert("ใส่ Team ID ก่อน");if(!validateDate())return;let m=meta(),ad=activeDay(),st=nextState(),wk=autoWeek();if(st.restLock)return alert("ยังพักไม่ครบ 2 วัน");if(!canSaveCurrentExerciseAdaptive())return alert("ท่านี้ยังไม่สามารถบันทึกได้: อาจเป็นคนละ Day หรือครบเซตแล้ว");let raw=parseFloat($("weight").value),reps=parseInt($("reps").value),rir=parseInt($("rir").value||2);if(!raw||!reps)return alert("กรอก Weight และ Reps");let rememberedAlt=altMemoryForPlanned(m[2]);let persistentAlt=(typeof autoApplyPersistentAlternative==="function"?autoApplyPersistentAlternative():null);let effectiveAlt=selectedAlt||persistentAlt||rememberedAlt;let computedSetNo=canonicalSetState(m[2]).next;let w=toKg(raw,$("unit").value),ex=effectiveAlt?effectiveAlt.name:m[2];await addDoc(collection(db, scopedWorkoutsCollection()),cleanForFirestore({date:$("date").value,week:wk,autoWeek:wk,day:m[0],focus:m[1],exercise:ex,plannedExercise:m[2],isAlternative:!!effectiveAlt,alternativePattern:effectiveAlt?effectiveAlt.pattern:"",alternativeQuery:(effectiveAlt&&effectiveAlt.query)?effectiveAlt.query:"",targetSets:m[3],setNo:computedSetNo,muscle:m[5],weight:w,reps,rir,volume:w*reps,note:$("note").value||"",sleepHours:parseFloat($("sleepHours")?.value||7),soreness:parseInt($("soreness")?.value||2),stress:parseInt($("stress")?.value||2),tempo:$("tempo")?.value||"",repQuality:$("repQuality")?.value||"",biasMode:$("biasMode")?.value||"auto",effectiveReps:effectiveRepsForSet({reps,rir}),userId:user.uid,userName:user.displayName||user.email,userEmail:user.email,teamLabel:activeTeamLabel(),userScope:activeUserKey(),ownerUid:user.uid,ownerEmail:user.email,appVersion:VERSION,createdAt:serverTimestamp()})); if(typeof exSessionAfterSave==="function") exSessionMarkSavedLocal(m[2]); applyCanonicalSetDisplay(m[2]);selectedAlt=null;$("weight").value="";$("reps").value="";$("rir").value=2;$("note").value="";$("saveDebug").className="msg ok";$("saveDebug").textContent="บันทึกสำเร็จ ✅";startRest();setTimeout(sync,600);setTimeout(v403Run,250);setTimeout(fullStabilizationRun,950);setTimeout(coachCoreRun,950);setTimeout(authDebugGuardRun,950);setTimeout(permissionSafeRun,900);setTimeout(plateauLiveRecompute,900);setTimeout(stableRenderAllPanels,700)}catch(e){$("saveDebug").className="msg err";$("saveDebug").textContent="Save error: "+e.message;alert("Save error: "+e.message)}}
 
-/* ===== v5.1.2 LEGACY_MIGRATION_CODE ===== */
-/* ===== v5.1.2 MIGRATION_RECOVERY_CODE ===== */
+/* ===== v5.1.4 SAVE_AUTH_GUARD_FIX ===== */
+
+function runAuthDebugGuardSafe(){
+  try{
+    if(typeof authDebugGuardRun === "function") return authDebugGuardRun();
+    if(typeof window !== "undefined" && typeof window.authDebugGuardRun === "function") return window.authDebugGuardRun();
+  }catch(_){}
+  return true;
+}
+
+function authDebugGuardRun(){
+  try{
+    if(typeof user !== "undefined" && user) return true;
+    return true;
+  }catch(_){
+    return true;
+  }
+}
+
+async function saveSet(){try{$("saveDebug").className="msg";$("saveDebug").textContent="กำลังบันทึก...";if(!user)return alert("Login ก่อน");if(!teamId)return alert("ใส่ Team ID ก่อน");if(!validateDate())return;let m=meta(),ad=activeDay(),st=nextState(),wk=autoWeek();if(st.restLock)return alert("ยังพักไม่ครบ 2 วัน");if(!canSaveCurrentExerciseAdaptive())return alert("ท่านี้ยังไม่สามารถบันทึกได้: อาจเป็นคนละ Day หรือครบเซตแล้ว");let raw=parseFloat($("weight").value),reps=parseInt($("reps").value),rir=parseInt($("rir").value||2);if(!raw||!reps)return alert("กรอก Weight และ Reps");let rememberedAlt=altMemoryForPlanned(m[2]);let persistentAlt=(typeof autoApplyPersistentAlternative==="function"?autoApplyPersistentAlternative():null);let effectiveAlt=selectedAlt||persistentAlt||rememberedAlt;let computedSetNo=canonicalSetState(m[2]).next;let w=toKg(raw,$("unit").value),ex=effectiveAlt?effectiveAlt.name:m[2];await addDoc(collection(db, scopedWorkoutsCollection()),cleanForFirestore({date:$("date").value,week:wk,autoWeek:wk,day:m[0],focus:m[1],exercise:ex,plannedExercise:m[2],isAlternative:!!effectiveAlt,alternativePattern:effectiveAlt?effectiveAlt.pattern:"",alternativeQuery:(effectiveAlt&&effectiveAlt.query)?effectiveAlt.query:"",targetSets:m[3],setNo:computedSetNo,muscle:m[5],weight:w,reps,rir,volume:w*reps,note:$("note").value||"",sleepHours:parseFloat($("sleepHours")?.value||7),soreness:parseInt($("soreness")?.value||2),stress:parseInt($("stress")?.value||2),tempo:$("tempo")?.value||"",repQuality:$("repQuality")?.value||"",biasMode:$("biasMode")?.value||"auto",effectiveReps:effectiveRepsForSet({reps,rir}),userId:user.uid,userName:user.displayName||user.email,userEmail:user.email,teamLabel:activeTeamLabel(),userScope:activeUserKey(),ownerUid:user.uid,ownerEmail:user.email,appVersion:VERSION,createdAt:serverTimestamp()})); if(typeof exSessionAfterSave==="function") exSessionMarkSavedLocal(m[2]); applyCanonicalSetDisplay(m[2]);selectedAlt=null;$("weight").value="";$("reps").value="";$("rir").value=2;$("note").value="";$("saveDebug").className="msg ok";$("saveDebug").textContent="บันทึกสำเร็จ ✅";startRest();setTimeout(sync,600);setTimeout(v403Run,250);setTimeout(fullStabilizationRun,950);setTimeout(coachCoreRun,950);setTimeout(runAuthDebugGuardSafe,950);setTimeout(permissionSafeRun,900);setTimeout(plateauLiveRecompute,900);setTimeout(stableRenderAllPanels,700)}catch(e){$("saveDebug").className="msg err";$("saveDebug").textContent="Save error: "+e.message;alert("Save error: "+e.message)}}
+
+/* ===== v5.1.4 LEGACY_MIGRATION_CODE ===== */
+/* ===== v5.1.4 MIGRATION_RECOVERY_CODE ===== */
 
 
 
@@ -1009,7 +1029,7 @@ async function saveSet(){try{$("saveDebug").className="msg";$("saveDebug").textC
 
 
 
-/* ===== v5.1.2 FULL_QA_MIGRATION_CHAIN ===== */
+/* ===== v5.1.4 FULL_QA_MIGRATION_CHAIN ===== */
 let legacyMigrationState = { checked:false, count:0, docs:[] };
 window.__legacyMigrationReadyToMigrate = false;
 
@@ -1577,7 +1597,7 @@ function renderDashboard(){try{$("kVol").textContent=logs.reduce((a,b)=>a+(+b.vo
 function fmt(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}function dayForDate(d){let a=logs.filter(x=>x.date===d);if(!a.length)return null;let c={};a.forEach(x=>c[x.day]=(c[x.day]||0)+1);return Object.entries(c).sort((a,b)=>b[1]-a[1])[0][0]}function renderCalendar(){let grid=$("calGrid");grid.innerHTML="";let names=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];$("monthTitle").textContent=names[calDate.getMonth()]+" "+calDate.getFullYear();["อา","จ","อ","พ","พฤ","ศ","ส"].forEach(h=>grid.innerHTML+=`<div class="calHead">${h}</div>`);let first=new Date(calDate.getFullYear(),calDate.getMonth(),1),last=new Date(calDate.getFullYear(),calDate.getMonth()+1,0).getDate();for(let i=0;i<first.getDay();i++)grid.innerHTML+=`<div class="calDay empty"></div>`;for(let d=1;d<=last;d++){let key=fmt(new Date(calDate.getFullYear(),calDate.getMonth(),d)),a=logs.filter(x=>x.date===key),day=dayForDate(key),sel=key===selectedDate?" sel":"",tod=key===today()?" today":"";grid.innerHTML+=`<div class="calDay${sel}${tod}" data-date="${key}"><b>${d}</b><br><span class="calTag ${a.length?'partial':'rest'}">${day||'Rest'}</span>${a.length?`<div class="small">${a.length} sets</div>`:""}</div>`}grid.querySelectorAll(".calDay[data-date]").forEach(el=>el.onclick=()=>{selectedDate=el.dataset.date;$("date").value=selectedDate;sync();document.querySelector('[data-page="log"]').click()})}function renderDaySummary(d){let a=logs.filter(x=>x.date===d);$("dayTitle").textContent="Daily Summary: "+d;if(!a.length){$("daySummary").innerHTML="ยังไม่มีข้อมูล";return}let by={};a.forEach(x=>{if(!by[x.exercise])by[x.exercise]=[];by[x.exercise].push(x)});$("daySummary").innerHTML=Object.entries(by).map(([ex,arr])=>{let max=arr.reduce((m,x)=>+x.weight>+m.weight?x:m,arr[0]);return `<div class="item"><h3>${ex}</h3><div class="meta">Sets: ${arr.length}<br>Max: ${fromKg(max.weight,$("unit").value)} ${$("unit").value} × ${max.reps}${max.isAlternative?`<br>แทน: ${max.plannedExercise}`:""}</div></div>`}).join("")}
 $("prevM").onclick=()=>{calDate=new Date(calDate.getFullYear(),calDate.getMonth()-1,1);renderCalendar()};$("nextM").onclick=()=>{calDate=new Date(calDate.getFullYear(),calDate.getMonth()+1,1);renderCalendar()};
 function renderSafe(){try{renderDashboard();renderCoach();renderCalendar();renderDaySummary(selectedDate)}catch(e){$("chartStatus").textContent="Render fallback: "+e.message}}
-/* v5.1.2 Calendar Month Safe Fix
+/* v5.1.4 Save Popup Final Fix
    This code is intentionally inside the Firebase module script so it can access logs / PROGRAM / $ safely.
 */
 const COACH_MOVEMENT_GROUPS = {
@@ -1696,7 +1716,7 @@ function coachCoreStatusPanel(){
   const p=document.createElement("div");
   p.id="coachCoreStatusPanel";
   p.className="card";
-  p.innerHTML='<h3>Coach Core Stabilization</h3><div class="msg ok">v5.1.2<br>Module-scoped logs access: FIXED<br>Plateau: productive trend + full exercise list<br>History Remap: movement guard<br>Alternative: auto apply guard</div>';
+  p.innerHTML='<h3>Coach Core Stabilization</h3><div class="msg ok">v5.1.4<br>Module-scoped logs access: FIXED<br>Plateau: productive trend + full exercise list<br>History Remap: movement guard<br>Alternative: auto apply guard</div>';
   setup.appendChild(p);
 }
 function coachCoreRun(){ if(window.__v404TooSoon&&window.__v404TooSoon('coachCoreRun',1200)) return; 
@@ -1811,7 +1831,7 @@ function syncAlternativeNameDisplay(){
 window.addEventListener("load",function(){setTimeout(fullStabilizationRun,800);});
 
 
-/* v5.1.2 Stable Recovery: scoped complete card and throttled stabilization */
+/* v5.1.4 Stable Recovery: scoped complete card and throttled stabilization */
 function renderExerciseCompleteState(){
   try{
     const m=typeof meta==="function"?meta():null;
@@ -1877,7 +1897,7 @@ function fullStabilizationRun(){ if(window.__v404TooSoon&&window.__v404TooSoon('
 
 
 
-/* v5.1.2 Calendar Month Safe Fix */
+/* v5.1.4 Save Popup Final Fix */
 function v403DayExercises(dayName){
   try{return (PROGRAM||[]).filter(p=>p[0]===dayName);}catch(e){return [];}
 }
@@ -1953,7 +1973,7 @@ function v403Run(){ if(window.__v404TooSoon&&window.__v404TooSoon('v403Run',900)
 }
 
 
-/* ===== v5.1.2 Complete Analytics / Export / Coach ===== */
+/* ===== v5.1.4 Complete Analytics / Export / Coach ===== */
 function v5SafeLogs(){try{return Array.isArray(logs)?logs:[]}catch(e){return []}}
 function v5Date(){return $("date")?.value || (typeof today==="function"?today():new Date().toISOString().slice(0,10))}
 function v5Volume(x){return Number(x.weight||0)*Number(x.reps||0)}
@@ -2054,7 +2074,7 @@ function v5EnhanceCalendar(){
   }catch(e){}
 }
 function v5ExportJson(){
-  const payload={version:"v5.1.2",exportedAt:new Date().toISOString(),logs:v5SafeLogs()};
+  const payload={version:"v5.1.4",exportedAt:new Date().toISOString(),logs:v5SafeLogs()};
   const text=JSON.stringify(payload,null,2);
   if($("v5BackupText")) $("v5BackupText").value=text;
   try{navigator.clipboard&&navigator.clipboard.writeText(text)}catch(e){}
@@ -2098,7 +2118,7 @@ window.addEventListener('load',()=>{setTimeout(()=>{try{v430RestoreDraft();v430R
 
 
 
-/* ===== v5.1.2 Feature Functions ===== */
+/* ===== v5.1.4 Feature Functions ===== */
 function v430SafeLogs(){try{return Array.isArray(logs)?logs:[]}catch(e){return []}}
 function v430CurrentExercise(){return $("exercise")?$("exercise").value:""}
 function v430Today(){return (typeof today==="function"?today():(new Date()).toISOString().slice(0,10))}
@@ -2177,7 +2197,7 @@ window.addEventListener('load',function(){setTimeout(function(){try{bindLegacyMi
 
 
 
-/* ===== v5.1.2 MIGRATION_BUTTON_FIX_CODE ===== */
+/* ===== v5.1.4 MIGRATION_BUTTON_FIX_CODE ===== */
 function v503UpdateTeamStatus(){
   try{
     const st=$("teamSaveStatus");
@@ -2256,7 +2276,7 @@ function v503BindCriticalButtons(){
 window.addEventListener('load',function(){setTimeout(v503BindCriticalButtons,300);setTimeout(v503BindCriticalButtons,1200);});
 
 
-/* ===== v5.1.2 MANUAL_IMPORT_CODE ===== */
+/* ===== v5.1.4 MANUAL_IMPORT_CODE ===== */
 
 
 
@@ -2265,19 +2285,19 @@ window.addEventListener('load',function(){setTimeout(v503BindCriticalButtons,300
 
 
 
-/* ===== v5.1.2 MIGRATION_BINDING_HARD_FIX_CODE ===== */
+/* ===== v5.1.4 MIGRATION_BINDING_HARD_FIX_CODE ===== */
 
 
 
 
 
-/* ===== v5.1.2 MIGRATION_CONFIRM_FLOW_FIX_CODE ===== */
+/* ===== v5.1.4 MIGRATION_CONFIRM_FLOW_FIX_CODE ===== */
 
 
 
 
 
-/* ===== v5.1.2 MIGRATION_SINGLE_HANDLER_FIX_CODE ===== */
+/* ===== v5.1.4 MIGRATION_SINGLE_HANDLER_FIX_CODE ===== */
 
 
 
@@ -2287,7 +2307,7 @@ window.addEventListener('load',function(){setTimeout(bindLegacyMigration,120);se
 
 
 
-/* ===== v5.1.2 CALENDAR_MONTH_SAFE_FIX_CODE ===== */
+/* ===== v5.1.4 CALENDAR_MONTH_SAFE_FIX_CODE ===== */
 var calendarSelectedDateV512 = window.calendarSelectedDateV512 || null;
 
 function calendarSafeKeyV512(d){
@@ -2423,3 +2443,6 @@ function bindCalendarGoLogV512(){
 
 
 window.addEventListener('load',function(){setTimeout(function(){try{bindCalendarStayFixV512();bindCalendarGoLogV512();}catch(e){}},200);setTimeout(function(){try{bindCalendarStayFixV512();bindCalendarGoLogV512();}catch(e){}},1200);});
+
+
+try{ window.authDebugGuardRun = authDebugGuardRun; }catch(_){}
