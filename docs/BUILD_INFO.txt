@@ -1,4 +1,4 @@
 App: Workout PRO
-Version: v5.2.0
-Build: Backup Export Tool
-Updated: 2026-06-04
+Version: v5.2.1
+Build: Local Date Fix
+Updated: 2026-06-05

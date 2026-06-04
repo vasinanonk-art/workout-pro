@@ -1,1 +1,1 @@
-Workout PRO v5.2.0 Backup Export Tool
+Workout PRO v5.2.1 Local Date Fix
