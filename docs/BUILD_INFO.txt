@@ -1,4 +1,4 @@
 App: Workout PRO
-Version: v5.2.2
-Build: Target Sets Default Fix
+Version: v5.2.3
+Build: Date Input Sanity Fix
 Updated: 2026-06-05

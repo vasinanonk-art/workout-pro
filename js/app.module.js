@@ -1,5 +1,5 @@
 
-/* ===== v5.2.2 LOCAL_DATE_FIX ===== */
+/* ===== v5.2.3 LOCAL_DATE_FIX ===== */
 function localDateKeyV521(d){
   const x = d instanceof Date ? d : new Date();
   return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}-${String(x.getDate()).padStart(2,"0")}`;
@@ -13,7 +13,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/* ===== v5.2.2 Target Sets Default Fix ===== */
+/* ===== v5.2.3 Date Input Sanity Fix ===== */
 function setTextSafe(id, value){
   const el = document.getElementById(id);
   if(el) el.textContent = value;
@@ -42,9 +42,9 @@ function valueSafe(id, fallback=""){
   return el ? el.value : fallback;
 }
 
-const VERSION="v5.2.2", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
+const VERSION="v5.2.3", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
 
-/* ===== v5.2.2 Target Sets Default Fix ===== */
+/* ===== v5.2.3 Date Input Sanity Fix ===== */
 function safeKeyPart(v){
   return String(v || "default").trim().replace(/[^\w\-@.]/g, "_").slice(0,80) || "default";
 }
@@ -1009,7 +1009,7 @@ function cleanForFirestore(obj){
 }
 
 
-/* ===== v5.2.2 SAVE_AUTH_GUARD_FIX ===== */
+/* ===== v5.2.3 SAVE_AUTH_GUARD_FIX ===== */
 
 function runAuthDebugGuardSafe(){
   try{
@@ -1030,8 +1030,8 @@ function authDebugGuardRun(){
 
 async function saveSet(){try{$("saveDebug").className="msg";$("saveDebug").textContent="กำลังบันทึก...";if(!user)return alert("Login ก่อน");if(!teamId)return alert("ใส่ Team ID ก่อน");if(!validateDate())return;let m=meta(),ad=activeDay(),st=nextState(),wk=autoWeek();if(st.restLock)return alert("ยังพักไม่ครบ 2 วัน");if(!canSaveCurrentExerciseAdaptive())return alert("ท่านี้ยังไม่สามารถบันทึกได้: อาจเป็นคนละ Day หรือครบเซตแล้ว");let raw=parseFloat($("weight").value),reps=parseInt($("reps").value),rir=parseInt($("rir").value||2);if(!raw||!reps)return alert("กรอก Weight และ Reps");let rememberedAlt=altMemoryForPlanned(m[2]);let persistentAlt=(typeof autoApplyPersistentAlternative==="function"?autoApplyPersistentAlternative():null);let effectiveAlt=selectedAlt||persistentAlt||rememberedAlt;let computedSetNo=canonicalSetState(m[2]).next;let w=toKg(raw,$("unit").value),ex=effectiveAlt?effectiveAlt.name:m[2];await addDoc(collection(db, scopedWorkoutsCollection()),cleanForFirestore({date:$("date").value,week:wk,autoWeek:wk,day:m[0],focus:m[1],exercise:ex,plannedExercise:m[2],isAlternative:!!effectiveAlt,alternativePattern:effectiveAlt?effectiveAlt.pattern:"",alternativeQuery:(effectiveAlt&&effectiveAlt.query)?effectiveAlt.query:"",targetSets:m[3],setNo:computedSetNo,muscle:m[5],weight:w,reps,rir,volume:w*reps,note:$("note").value||"",sleepHours:parseFloat($("sleepHours")?.value||7),soreness:parseInt($("soreness")?.value||2),stress:parseInt($("stress")?.value||2),tempo:$("tempo")?.value||"",repQuality:$("repQuality")?.value||"",biasMode:$("biasMode")?.value||"auto",effectiveReps:effectiveRepsForSet({reps,rir}),userId:user.uid,userName:user.displayName||user.email,userEmail:user.email,teamLabel:activeTeamLabel(),userScope:activeUserKey(),ownerUid:user.uid,ownerEmail:user.email,appVersion:VERSION,createdAt:serverTimestamp()})); if(typeof exSessionAfterSave==="function") exSessionMarkSavedLocal(m[2]); applyCanonicalSetDisplay(m[2]);selectedAlt=null;$("weight").value="";$("reps").value="";$("rir").value=2;$("note").value="";$("saveDebug").className="msg ok";$("saveDebug").textContent="บันทึกสำเร็จ ✅";startRest();setTimeout(sync,600);setTimeout(function(){try{ if(typeof v403Run==="function"){ v403Run(); } else if(typeof window!=="undefined" && typeof window.v403Run==="function"){ window.v403Run(); } }catch(_){} },250);setTimeout(function(){try{ if(typeof fullStabilizationRun==="function"){ fullStabilizationRun(); } else if(typeof window!=="undefined" && typeof window.fullStabilizationRun==="function"){ window.fullStabilizationRun(); } }catch(_){} },950);setTimeout(function(){try{ if(typeof coachCoreRun==="function"){ coachCoreRun(); } else if(typeof window!=="undefined" && typeof window.coachCoreRun==="function"){ window.coachCoreRun(); } }catch(_){} },950);setTimeout(function(){try{ if(typeof runAuthDebugGuardSafe==="function"){ runAuthDebugGuardSafe(); } else if(typeof window!=="undefined" && typeof window.runAuthDebugGuardSafe==="function"){ window.runAuthDebugGuardSafe(); } }catch(_){} },950);setTimeout(function(){try{ if(typeof permissionSafeRun==="function"){ permissionSafeRun(); } else if(typeof window!=="undefined" && typeof window.permissionSafeRun==="function"){ window.permissionSafeRun(); } }catch(_){} },900);setTimeout(function(){try{ if(typeof plateauLiveRecompute==="function"){ plateauLiveRecompute(); } else if(typeof window!=="undefined" && typeof window.plateauLiveRecompute==="function"){ window.plateauLiveRecompute(); } }catch(_){} },900);setTimeout(function(){try{ if(typeof stableRenderAllPanels==="function"){ stableRenderAllPanels(); } else if(typeof window!=="undefined" && typeof window.stableRenderAllPanels==="function"){ window.stableRenderAllPanels(); } }catch(_){} },700)}catch(e){$("saveDebug").className="msg err";$("saveDebug").textContent="Save error: "+e.message;alert("Save error: "+e.message)}}
 
-/* ===== v5.2.2 LEGACY_MIGRATION_CODE ===== */
-/* ===== v5.2.2 MIGRATION_RECOVERY_CODE ===== */
+/* ===== v5.2.3 LEGACY_MIGRATION_CODE ===== */
+/* ===== v5.2.3 MIGRATION_RECOVERY_CODE ===== */
 
 
 
@@ -1039,7 +1039,7 @@ async function saveSet(){try{$("saveDebug").className="msg";$("saveDebug").textC
 
 
 
-/* ===== v5.2.2 FULL_QA_MIGRATION_CHAIN ===== */
+/* ===== v5.2.3 FULL_QA_MIGRATION_CHAIN ===== */
 let legacyMigrationState = { checked:false, count:0, docs:[] };
 window.__legacyMigrationReadyToMigrate = false;
 
@@ -1607,7 +1607,7 @@ function renderDashboard(){try{$("kVol").textContent=logs.reduce((a,b)=>a+(+b.vo
 function fmt(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}function dayForDate(d){let a=logs.filter(x=>x.date===d);if(!a.length)return null;let c={};a.forEach(x=>c[x.day]=(c[x.day]||0)+1);return Object.entries(c).sort((a,b)=>b[1]-a[1])[0][0]}function renderCalendar(){let grid=$("calGrid");grid.innerHTML="";let names=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];$("monthTitle").textContent=names[calDate.getMonth()]+" "+calDate.getFullYear();["อา","จ","อ","พ","พฤ","ศ","ส"].forEach(h=>grid.innerHTML+=`<div class="calHead">${h}</div>`);let first=new Date(calDate.getFullYear(),calDate.getMonth(),1),last=new Date(calDate.getFullYear(),calDate.getMonth()+1,0).getDate();for(let i=0;i<first.getDay();i++)grid.innerHTML+=`<div class="calDay empty"></div>`;for(let d=1;d<=last;d++){let key=fmt(new Date(calDate.getFullYear(),calDate.getMonth(),d)),a=logs.filter(x=>x.date===key),day=dayForDate(key),sel=key===selectedDate?" sel":"",tod=key===today()?" today":"";grid.innerHTML+=`<div class="calDay${sel}${tod}" data-date="${key}"><b>${d}</b><br><span class="calTag ${a.length?'partial':'rest'}">${day||'Rest'}</span>${a.length?`<div class="small">${a.length} sets</div>`:""}</div>`}grid.querySelectorAll(".calDay[data-date]").forEach(el=>el.onclick=()=>{selectedDate=el.dataset.date;$("date").value=selectedDate;sync();document.querySelector('[data-page="log"]').click()})}function renderDaySummary(d){let a=logs.filter(x=>x.date===d);$("dayTitle").textContent="Daily Summary: "+d;if(!a.length){$("daySummary").innerHTML="ยังไม่มีข้อมูล";return}let by={};a.forEach(x=>{if(!by[x.exercise])by[x.exercise]=[];by[x.exercise].push(x)});$("daySummary").innerHTML=Object.entries(by).map(([ex,arr])=>{let max=arr.reduce((m,x)=>+x.weight>+m.weight?x:m,arr[0]);return `<div class="item"><h3>${ex}</h3><div class="meta">Sets: ${arr.length}<br>Max: ${fromKg(max.weight,$("unit").value)} ${$("unit").value} × ${max.reps}${max.isAlternative?`<br>แทน: ${max.plannedExercise}`:""}</div></div>`}).join("")}
 $("prevM").onclick=()=>{calDate=new Date(calDate.getFullYear(),calDate.getMonth()-1,1);renderCalendar()};$("nextM").onclick=()=>{calDate=new Date(calDate.getFullYear(),calDate.getMonth()+1,1);renderCalendar()};
 function renderSafe(){try{renderDashboard();renderCoach();renderCalendar();renderDaySummary(selectedDate)}catch(e){$("chartStatus").textContent="Render fallback: "+e.message}}
-/* v5.2.2 Target Sets Default Fix
+/* v5.2.3 Date Input Sanity Fix
    This code is intentionally inside the Firebase module script so it can access logs / PROGRAM / $ safely.
 */
 const COACH_MOVEMENT_GROUPS = {
@@ -1726,7 +1726,7 @@ function coachCoreStatusPanel(){
   const p=document.createElement("div");
   p.id="coachCoreStatusPanel";
   p.className="card";
-  p.innerHTML='<h3>Coach Core Stabilization</h3><div class="msg ok">v5.2.2<br>Module-scoped logs access: FIXED<br>Plateau: productive trend + full exercise list<br>History Remap: movement guard<br>Alternative: auto apply guard</div>';
+  p.innerHTML='<h3>Coach Core Stabilization</h3><div class="msg ok">v5.2.3<br>Module-scoped logs access: FIXED<br>Plateau: productive trend + full exercise list<br>History Remap: movement guard<br>Alternative: auto apply guard</div>';
   setup.appendChild(p);
 }
 function coachCoreRun(){ if(window.__v404TooSoon&&window.__v404TooSoon('coachCoreRun',1200)) return; 
@@ -1841,7 +1841,7 @@ function syncAlternativeNameDisplay(){
 window.addEventListener("load",function(){setTimeout(function(){try{ if(typeof fullStabilizationRun==="function"){ fullStabilizationRun(); } else if(typeof window!=="undefined" && typeof window.fullStabilizationRun==="function"){ window.fullStabilizationRun(); } }catch(_){} },800);});
 
 
-/* v5.2.2 Stable Recovery: scoped complete card and throttled stabilization */
+/* v5.2.3 Stable Recovery: scoped complete card and throttled stabilization */
 function renderExerciseCompleteState(){
   try{
     const m=typeof meta==="function"?meta():null;
@@ -1907,7 +1907,7 @@ function fullStabilizationRun(){ if(window.__v404TooSoon&&window.__v404TooSoon('
 
 
 
-/* v5.2.2 Target Sets Default Fix */
+/* v5.2.3 Date Input Sanity Fix */
 function v403DayExercises(dayName){
   try{return (PROGRAM||[]).filter(p=>p[0]===dayName);}catch(e){return [];}
 }
@@ -1983,7 +1983,7 @@ function v403Run(){ if(window.__v404TooSoon&&window.__v404TooSoon('v403Run',900)
 }
 
 
-/* ===== v5.2.2 Complete Analytics / Export / Coach ===== */
+/* ===== v5.2.3 Complete Analytics / Export / Coach ===== */
 function v5SafeLogs(){try{return Array.isArray(logs)?logs:[]}catch(e){return []}}
 function v5Date(){return $("date")?.value || (typeof today==="function"?today():todayLocalV521())}
 function v5Volume(x){return Number(x.weight||0)*Number(x.reps||0)}
@@ -2084,7 +2084,7 @@ function v5EnhanceCalendar(){
   }catch(e){}
 }
 function v5ExportJson(){
-  const payload={version:"v5.2.2",exportedAt:new Date().toISOString(),logs:v5SafeLogs()};
+  const payload={version:"v5.2.3",exportedAt:new Date().toISOString(),logs:v5SafeLogs()};
   const text=JSON.stringify(payload,null,2);
   if($("v5BackupText")) $("v5BackupText").value=text;
   try{navigator.clipboard&&navigator.clipboard.writeText(text)}catch(e){}
@@ -2128,7 +2128,7 @@ window.addEventListener('load',()=>{setTimeout(()=>{try{v430RestoreDraft();v430R
 
 
 
-/* ===== v5.2.2 Feature Functions ===== */
+/* ===== v5.2.3 Feature Functions ===== */
 function v430SafeLogs(){try{return Array.isArray(logs)?logs:[]}catch(e){return []}}
 function v430CurrentExercise(){return $("exercise")?$("exercise").value:""}
 function v430Today(){return (typeof today==='function'?today():todayLocalV521())}
@@ -2207,7 +2207,7 @@ window.addEventListener('load',function(){setTimeout(function(){try{bindLegacyMi
 
 
 
-/* ===== v5.2.2 MIGRATION_BUTTON_FIX_CODE ===== */
+/* ===== v5.2.3 MIGRATION_BUTTON_FIX_CODE ===== */
 function v503UpdateTeamStatus(){
   try{
     const st=$("teamSaveStatus");
@@ -2286,7 +2286,7 @@ function v503BindCriticalButtons(){
 window.addEventListener('load',function(){setTimeout(v503BindCriticalButtons,300);setTimeout(v503BindCriticalButtons,1200);});
 
 
-/* ===== v5.2.2 MANUAL_IMPORT_CODE ===== */
+/* ===== v5.2.3 MANUAL_IMPORT_CODE ===== */
 
 
 
@@ -2295,19 +2295,19 @@ window.addEventListener('load',function(){setTimeout(v503BindCriticalButtons,300
 
 
 
-/* ===== v5.2.2 MIGRATION_BINDING_HARD_FIX_CODE ===== */
+/* ===== v5.2.3 MIGRATION_BINDING_HARD_FIX_CODE ===== */
 
 
 
 
 
-/* ===== v5.2.2 MIGRATION_CONFIRM_FLOW_FIX_CODE ===== */
+/* ===== v5.2.3 MIGRATION_CONFIRM_FLOW_FIX_CODE ===== */
 
 
 
 
 
-/* ===== v5.2.2 MIGRATION_SINGLE_HANDLER_FIX_CODE ===== */
+/* ===== v5.2.3 MIGRATION_SINGLE_HANDLER_FIX_CODE ===== */
 
 
 
@@ -2317,7 +2317,7 @@ window.addEventListener('load',function(){setTimeout(bindLegacyMigration,120);se
 
 
 
-/* ===== v5.2.2 CALENDAR_MONTH_SAFE_FIX_CODE ===== */
+/* ===== v5.2.3 CALENDAR_MONTH_SAFE_FIX_CODE ===== */
 var calendarSelectedDateV512 = window.calendarSelectedDateV512 || null;
 
 function calendarSafeKeyV512(d){
@@ -2458,11 +2458,11 @@ window.addEventListener('load',function(){setTimeout(function(){try{bindCalendar
 try{ window.authDebugGuardRun = authDebugGuardRun; }catch(_){}
 
 
-/* ===== v5.2.2 POST_SAVE_SAFE_CALLBACK_FIX: post-save callbacks wrapped safely ===== */
+/* ===== v5.2.3 POST_SAVE_SAFE_CALLBACK_FIX: post-save callbacks wrapped safely ===== */
 
 
 
-/* ===== v5.2.2 BACKUP_EXPORT_TOOL ===== */
+/* ===== v5.2.3 BACKUP_EXPORT_TOOL ===== */
 function backupSafeLogsV520(){
   try{
     if(Array.isArray(logs)) return logs.slice();
@@ -2501,7 +2501,7 @@ function backupSummaryV520(){
   const exercises = [...new Set(rows.map(x=>x.plannedExercise || x.exercise).filter(Boolean))];
   const dates = [...new Set(rows.map(x=>x.date).filter(Boolean))].sort();
   return {
-    version: typeof VERSION !== "undefined" ? VERSION : "v5.2.2",
+    version: typeof VERSION !== "undefined" ? VERSION : "v5.2.3",
     exportedAt: new Date().toISOString(),
     totalSets: rows.length,
     totalVolume: Math.round(totalVolume),
@@ -2656,7 +2656,7 @@ window.addEventListener('load',function(){setTimeout(function(){try{bindBackupEx
 
 
 
-/* ===== v5.2.2 TARGET_SETS_DEFAULT_FIX ===== */
+/* ===== v5.2.3 TARGET_SETS_DEFAULT_FIX ===== */
 function targetSetsInputV522(){
   return document.getElementById("targetSets") ||
          document.getElementById("targetSet") ||
@@ -2798,4 +2798,96 @@ try{
 window.addEventListener("load", function(){
   setTimeout(function(){try{bindTargetSetsDefaultV522();}catch(e){}},300);
   setTimeout(function(){try{bindTargetSetsDefaultV522();}catch(e){}},1200);
+});
+
+
+
+/* ===== v5.2.3 DATE_INPUT_SANITY_FIX ===== */
+function strictLocalDateKeyV523(d){
+  const x = d instanceof Date && !isNaN(d) ? d : new Date();
+  return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}-${String(x.getDate()).padStart(2,"0")}`;
+}
+
+function isValidDateKeyV523(v){
+  if(typeof v !== "string") return false;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  const [y,m,d] = v.split("-").map(Number);
+  if(y < 2000 || y > 2100) return false;
+  const dt = new Date(y, m-1, d);
+  return dt.getFullYear() === y && dt.getMonth() === m-1 && dt.getDate() === d;
+}
+
+function normalizeDateKeyV523(v){
+  if(isValidDateKeyV523(v)) return v;
+
+  // Accept common dd/mm/yyyy only as recovery, not normal flow.
+  if(typeof v === "string"){
+    const m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if(m){
+      const dd = Number(m[1]), mm = Number(m[2]), yy = Number(m[3]);
+      const key = `${yy}-${String(mm).padStart(2,"0")}-${String(dd).padStart(2,"0")}`;
+      if(isValidDateKeyV523(key)) return key;
+    }
+  }
+  return strictLocalDateKeyV523(new Date());
+}
+
+function sanitizeDateInputV523(forceToday){
+  const el = document.getElementById("date");
+  if(!el) return strictLocalDateKeyV523(new Date());
+  const before = el.value;
+  const next = forceToday ? strictLocalDateKeyV523(new Date()) : normalizeDateKeyV523(before);
+  if(before !== next){
+    el.value = next;
+    try{ selectedDate = next; }catch(_){}
+  }
+  return next;
+}
+
+function bindDateInputSanityV523(){
+  const el = document.getElementById("date");
+  if(!el) return;
+  sanitizeDateInputV523(false);
+  if(el.dataset.v523Bound === "1") return;
+  el.dataset.v523Bound = "1";
+  el.addEventListener("change", function(){
+    sanitizeDateInputV523(false);
+    try{ if(typeof updateDateStatus === "function") updateDateStatus(); }catch(_){}
+  });
+  el.addEventListener("blur", function(){
+    sanitizeDateInputV523(false);
+    try{ if(typeof updateDateStatus === "function") updateDateStatus(); }catch(_){}
+  });
+}
+
+// Patch today/local date helpers to always return strict local key.
+try{
+  todayLocalV521 = function(){ return strictLocalDateKeyV523(new Date()); };
+}catch(_){}
+try{
+  localDateKeyV521 = function(d){ return strictLocalDateKeyV523(d instanceof Date ? d : new Date()); };
+}catch(_){}
+try{
+  today = function(){ return strictLocalDateKeyV523(new Date()); };
+}catch(_){}
+try{
+  localDateKey = function(d){ return strictLocalDateKeyV523(d instanceof Date ? d : new Date()); };
+}catch(_){}
+
+// Extra protection before save: date must be sane.
+try{
+  if(typeof validateDate === "function" && !window.__v523ValidateDatePatched){
+    window.__v523ValidateDatePatched = true;
+    const originalValidateDateV523 = validateDate;
+    validateDate = function(){
+      sanitizeDateInputV523(false);
+      return originalValidateDateV523();
+    };
+  }
+}catch(_){}
+
+window.addEventListener("load", function(){
+  setTimeout(function(){try{bindDateInputSanityV523();}catch(e){}},100);
+  setTimeout(function(){try{bindDateInputSanityV523();}catch(e){}},800);
+  setTimeout(function(){try{bindDateInputSanityV523();}catch(e){}},1800);
 });

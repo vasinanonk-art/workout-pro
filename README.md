@@ -1,4 +1,4 @@
-# Workout PRO v5.2.2 Target Sets Default Fix
+# Workout PRO v5.2.3 Date Input Sanity Fix
 
 Push this folder to GitHub. Cloudflare will auto deploy.
 
