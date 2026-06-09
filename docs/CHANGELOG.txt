@@ -1,16 +1,10 @@
-# v5.2.3 Date Input Sanity Fix
-
-Fixed:
-- Log Workout date could display invalid value such as 05/05/0005.
-- Date input now accepts only YYYY-MM-DD.
-- Invalid date values are reset to current local date.
-- validateDate is patched to sanitize date before checking.
-- Local date helpers return strict browser-local date.
-
-Preserved:
-- v5.2.2 Target Sets Default Fix
-- v5.2.1 Local Date Fix
-- Backup Export Tool
-- Save callback fix
-- Calendar fix
-- Migration/User isolation
+Workout PRO v5.2.6
+- Deep Exercise Switch Fix in app.module.js
+- Removed duplicated heavy exercise change listeners
+- Exercise dropdown now uses one optimized handler
+- Heavy history/PR/weekly calculations deferred after UI change
+- Mobile white-screen scroll guard added
+- Version/header sync updated to v5.2.6
+- Firestore schema unchanged
+- Calendar/rest rules unchanged
+- Save logic unchanged except existing guards retained

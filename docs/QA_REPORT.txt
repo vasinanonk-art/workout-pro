@@ -1,26 +1,21 @@
-# QA REPORT v5.2.3 Date Input Sanity Fix
+QA REPORT v5.2.6
 
-✅ Version v5.2.3
-✅ Date sanity helper exists
-✅ Runtime sanity guard
-✅ Reject invalid year 0005
-✅ ValidateDate patched
-✅ Target sets fix preserved
-✅ Local date fix preserved
-✅ Backup tool preserved
-✅ Save callback fix preserved
-✅ Calendar fix preserved
-✅ Migration preserved
-✅ User isolation preserved
-✅ Firestore save preserved
-✅ Runtime JS syntax
-✅ Module JS syntax
+Build: 2026-06-09
+Scope: Exercise switch speed + mobile white screen after scroll
 
-Manual QA:
-1. Deploy through GitHub/Cloudflare.
-2. Hard refresh and confirm v5.2.3.
-3. Open Log Workout.
-4. Date must show current local date in valid date format, not 05/05/0005.
-5. Save one set and confirm date is correct.
-6. Clear/invalid date should reset to today.
-7. Target Sets, Calendar, Backup, Save still work.
+Static QA:
+- app.module.js parses with node --check: PASS
+- index.html loads js/v526-mobile-guard.js before app.module.js: PASS
+- Version references updated to v5.2.6: PASS
+- Firestore write schema not modified: PASS
+- Workout split/rest rules not modified: PASS
+
+Manual QA required after deploy:
+1. Hard refresh mobile browser.
+2. Open Log.
+3. Select exercise dropdown 10 times quickly.
+4. Scroll immediately after changing exercise.
+5. Confirm no white screen.
+6. Save one set.
+7. Confirm Save Log still works.
+8. Check Calendar still loads.
