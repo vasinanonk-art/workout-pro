@@ -1,3 +1,0 @@
-Workout PRO
-Version: v4.0.4
-Build: Lazy Tab Render Performance
