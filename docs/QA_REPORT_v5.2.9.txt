@@ -1,0 +1,15 @@
+Workout PRO v5.2.9 QA Report
+
+Build Date: 2026-06-12
+
+Expected:
+- Header shows v5.2.9.
+- Updated 2026-06-12 / Build 2026-06-12.
+- Migration Tool does not appear.
+- Setup page shows v5.2.9 QA panel.
+- Save button locks while saving and recovers after success/error.
+- Calendar/rest/progression rules unchanged.
+- Firestore schema unchanged.
+
+Deploy command:
+npx wrangler deploy --name workout-pro --assets . --compatibility-date=2026-06-03

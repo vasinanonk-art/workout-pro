@@ -1,11 +1,9 @@
-Workout PRO v5.2.8
-- Force Header Sync patch added after app.module.js.
-- Fixes header/hero reverting to v5.2.6 after JavaScript runtime overwrites index.html values.
-- Adds QA panel for v5.2.8.
-- Keeps v5.2.7 save guard behavior.
+Workout PRO v5.2.9
+- Clean Build No Migration.
+- Removed Migration Tool from index.html.
+- Added v529-clean-runtime.js loaded after app.module.js.
+- Removed old stacked patch scripts from index.html.
+- Forced visible header/hero version sync to v5.2.9.
+- Save Guard retained.
 - Firestore schema unchanged.
 - Calendar/rest/progression logic unchanged.
-
-Previous:
-- v5.2.7 Save Performance Fix
-- v5.2.6 Deep Exercise Switch and White Screen Fix

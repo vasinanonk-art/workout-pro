@@ -1,1 +1,1 @@
-Workout PRO v5.2.8 Save Performance Fix
+Workout PRO v5.2.9 Save Performance Fix
