@@ -1,0 +1,13 @@
+Workout PRO v5.2.8 QA Report
+
+Scope:
+- Header/hero visible version forcing
+- Save button guard
+- No Firestore schema change
+- No calendar/rest/progression logic change
+
+Expected after deploy:
+- Header shows v5.2.8
+- Updated 2026-06-12 / Build 2026-06-12
+- Hero card shows v5.2.8 Modern UI, not v5.2.6Modern UI
+- Setup page shows v5.2.8 QA panel

@@ -1,4 +1,4 @@
-// ===== Workout PRO v5.2.7 Save Fix =====
+// ===== Workout PRO v5.2.8 Save Fix =====
 (function(){
   "use strict";
   // Prevent double-loading of this patch.
@@ -63,7 +63,7 @@
       // Replace the global saveSet with our patched version.
       window.saveSet = patched;
     }catch(e){
-      console.warn("[v5.2.7 save fix]", e);
+      console.warn("[v5.2.8 save fix]", e);
     }
   }
 

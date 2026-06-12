@@ -1,14 +1,14 @@
-// ===== Workout PRO v5.2.6 Mobile White Screen Guard =====
+// ===== Workout PRO v5.2.8 Mobile White Screen Guard =====
 (function(){
   "use strict";
   if(window.__WORKOUT_PRO_V526_MOBILE_GUARD__) return;
   window.__WORKOUT_PRO_V526_MOBILE_GUARD__ = true;
 
-  var VERSION = "v5.2.6";
+  var VERSION = "v5.2.8";
   var BUILD_DATE = "2026-06-09";
 
   function $(id){ return document.getElementById(id); }
-  function safe(fn){ try{return fn();}catch(e){console.warn("[v5.2.6 mobile]",e);} }
+  function safe(fn){ try{return fn();}catch(e){console.warn("[v5.2.8 mobile]",e);} }
 
   function injectCss(){
     if($("v526MobileCss")) return;

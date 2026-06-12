@@ -1,16 +1,11 @@
-Workout PRO v5.2.6
-- Deep Exercise Switch Fix in app.module.js
-- Removed duplicated heavy exercise change listeners
-- Exercise dropdown now uses one optimized handler
-- Heavy history/PR/weekly calculations deferred after UI change
-- Mobile white-screen scroll guard added
-- Version/header sync updated to v5.2.6
-- Firestore schema unchanged
-- Calendar/rest rules unchanged
- - Save logic unchanged except existing guards retained
+Workout PRO v5.2.8
+- Force Header Sync patch added after app.module.js.
+- Fixes header/hero reverting to v5.2.6 after JavaScript runtime overwrites index.html values.
+- Adds QA panel for v5.2.8.
+- Keeps v5.2.7 save guard behavior.
+- Firestore schema unchanged.
+- Calendar/rest/progression logic unchanged.
 
-Workout PRO v5.2.7
-- Save performance fix: overrides saveSet via `v527-save-fix.js` to skip heavy post-save recomputations.
-- Added concurrency guard to prevent multiple concurrent saves and temporarily disable heavy functions.
-- Added lightweight sync and single stable render after saving sets.
-- Updated version and build date in UI and docs.
+Previous:
+- v5.2.7 Save Performance Fix
+- v5.2.6 Deep Exercise Switch and White Screen Fix

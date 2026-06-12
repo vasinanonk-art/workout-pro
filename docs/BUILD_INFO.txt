@@ -1,4 +1,4 @@
 App: Workout PRO
-Version: v5.2.7
-Build: Save Performance Fix
-Updated: 2026-06-11
+Version: v5.2.8
+Build: Force Header Sync + Save Guard
+Updated: 2026-06-12
