@@ -7,4 +7,10 @@ Workout PRO v5.2.6
 - Version/header sync updated to v5.2.6
 - Firestore schema unchanged
 - Calendar/rest rules unchanged
-- Save logic unchanged except existing guards retained
+ - Save logic unchanged except existing guards retained
+
+Workout PRO v5.2.7
+- Save performance fix: overrides saveSet via `v527-save-fix.js` to skip heavy post-save recomputations.
+- Added concurrency guard to prevent multiple concurrent saves and temporarily disable heavy functions.
+- Added lightweight sync and single stable render after saving sets.
+- Updated version and build date in UI and docs.

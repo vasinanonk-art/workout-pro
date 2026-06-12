@@ -1,1 +1,1 @@
-Workout PRO v5.2.3 Date Input Sanity Fix
+Workout PRO v5.2.7 Save Performance Fix

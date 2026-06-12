@@ -165,6 +165,7 @@ function openCurrentMedia(kind){openSearch(kind,mediaQueryForCurrent());}
 
 const app=initializeApp(firebaseConfig), auth=getAuth(app), db=getFirestore(app);
 let user=null, teamId=localStorage.getItem("teamId")||"", unsub=null, logs=[], currentSet=1, calDate=new Date(), selectedDate=localDateKey(), timer=null, selectedAlt=null;
+let isSaving = false;
 $("teamId").value=teamId;selectedDate=localDateKey();$("date").value=selectedDate;PROGRAM.forEach(p=>{let o=document.createElement("option");o.value=p[2];o.textContent=`${p[0]} - ${p[2]}`;$("exercise").appendChild(o)});
 const meta=()=>PROGRAM.find(p=>p[2]===$("exercise").value), target=ex=>{let p=PROGRAM.find(p=>p[2]===ex);return p?+p[3]:1}, planned=x=>x.plannedExercise||x.exercise;
 function toKg(v,u){return u==="lb"?v/2.2046:v} function fromKg(v,u){return u==="lb"?(+v*2.2046||0).toFixed(1):(+v||0).toFixed(1)}
