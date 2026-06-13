@@ -15,17 +15,23 @@ Workout PRO v5.2.7
 - Added lightweight sync and single stable render after saving sets.
 - Updated version and build date in UI and docs.
 
-Workout PRO v5.3.0
+Workout PRO v5.3.3
 - Lightweight date and save patch: introduces `v530-lite-date-fix.js` to handle save and date tasks.
 - Completely removes heavy post-save recomputation functions for a smoother experience.
 - Forces the date input to sync with the current day on each page load.
-- Updates version string and build date in the UI and documentation to v5.3.0 (2026-06-12).
+- Updates version string and build date in the UI and documentation to v5.3.3 (2026-06-12).
 - Removes obsolete scripts (`v526-mobile-guard.js`, `v527-save-fix.js`).
 
-Workout PRO v5.3.2
+Workout PRO v5.3.3
 - Final lite patch to address lingering UI version inconsistencies and migration artifacts.
-- Updates the version panel and modern UI header to display **v5.3.2**.
+- Updates the version panel and modern UI header to display **v5.3.3**.
 - Hides the legacy migration card on page load to streamline the Setup page.
 - Updates build metadata to "Lite Date & Save Patch + Final Fix".
-- Updates backup page badge and header strings to v5.3.2.
+- Updates backup page badge and header strings to v5.3.3.
 - Synchronizes all documentation files (BUILD_INFO, VERSION) with the new version and build date.
+
+Workout PRO v5.3.3
+- Adds real Edit Mode for Recent workout logs.
+- Updates existing Firestore workout documents using updateDoc instead of creating duplicate addDoc records.
+- Saves complete edited workout payload including target sets, recovery fields, tempo, rep quality, bias mode, note, volume, and app metadata.
+- Syncs app version to v5.3.3 and keeps cache-proof runtime cleanup.

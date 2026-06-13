@@ -11,7 +11,7 @@ function todayLocalV521(){
 // ===== script =====
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* ===== v5.2.6 Date Input Sanity Fix ===== */
 function setTextSafe(id, value){
@@ -42,7 +42,7 @@ function valueSafe(id, fallback=""){
   return el ? el.value : fallback;
 }
 
-const VERSION="v5.3.0", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
+const VERSION="v5.3.3", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
 
 /* ===== v5.2.6 Date Input Sanity Fix ===== */
 function safeKeyPart(v){
@@ -1059,7 +1059,130 @@ function authDebugGuardRun(){
   }
 }
 
-async function saveSet(){try{$("saveDebug").className="msg";$("saveDebug").textContent="กำลังบันทึก...";if(!user)return alert("Login ก่อน");if(!teamId)return alert("ใส่ Team ID ก่อน");if(!validateDate())return;let m=meta(),ad=activeDay(),st=nextState(),wk=autoWeek();if(st.restLock)return alert("ยังพักไม่ครบ 2 วัน");if(!canSaveCurrentExerciseAdaptive())return alert("ท่านี้ยังไม่สามารถบันทึกได้: อาจเป็นคนละ Day หรือครบเซตแล้ว");let raw=parseFloat($("weight").value),reps=parseInt($("reps").value),rir=parseInt($("rir").value||2);if(!raw||!reps)return alert("กรอก Weight และ Reps");let rememberedAlt=altMemoryForPlanned(m[2]);let persistentAlt=(typeof autoApplyPersistentAlternative==="function"?autoApplyPersistentAlternative():null);let effectiveAlt=selectedAlt||persistentAlt||rememberedAlt;let computedSetNo=canonicalSetState(m[2]).next;let w=toKg(raw,$("unit").value),ex=effectiveAlt?effectiveAlt.name:m[2];await addDoc(collection(db, scopedWorkoutsCollection()),cleanForFirestore({date:$("date").value,week:wk,autoWeek:wk,day:m[0],focus:m[1],exercise:ex,plannedExercise:m[2],isAlternative:!!effectiveAlt,alternativePattern:effectiveAlt?effectiveAlt.pattern:"",alternativeQuery:(effectiveAlt&&effectiveAlt.query)?effectiveAlt.query:"",targetSets:m[3],setNo:computedSetNo,muscle:m[5],weight:w,reps,rir,volume:w*reps,note:$("note").value||"",sleepHours:parseFloat($("sleepHours")?.value||7),soreness:parseInt($("soreness")?.value||2),stress:parseInt($("stress")?.value||2),tempo:$("tempo")?.value||"",repQuality:$("repQuality")?.value||"",biasMode:$("biasMode")?.value||"auto",effectiveReps:effectiveRepsForSet({reps,rir}),userId:user.uid,userName:user.displayName||user.email,userEmail:user.email,teamLabel:activeTeamLabel(),userScope:activeUserKey(),ownerUid:user.uid,ownerEmail:user.email,appVersion:VERSION,createdAt:serverTimestamp()})); if(typeof exSessionAfterSave==="function") exSessionMarkSavedLocal(m[2]); applyCanonicalSetDisplay(m[2]);selectedAlt=null;$("weight").value="";$("reps").value="";$("rir").value=2;$("note").value="";$("saveDebug").className="msg ok";$("saveDebug").textContent="บันทึกสำเร็จ ✅";startRest();setTimeout(sync,600);setTimeout(function(){try{ if(typeof v403Run==="function"){ v403Run(); } else if(typeof window!=="undefined" && typeof window.v403Run==="function"){ window.v403Run(); } }catch(_){} },250);setTimeout(function(){try{ if(typeof fullStabilizationRun==="function"){ fullStabilizationRun(); } else if(typeof window!=="undefined" && typeof window.fullStabilizationRun==="function"){ window.fullStabilizationRun(); } }catch(_){} },950);setTimeout(function(){try{ if(typeof coachCoreRun==="function"){ coachCoreRun(); } else if(typeof window!=="undefined" && typeof window.coachCoreRun==="function"){ window.coachCoreRun(); } }catch(_){} },950);setTimeout(function(){try{ if(typeof runAuthDebugGuardSafe==="function"){ runAuthDebugGuardSafe(); } else if(typeof window!=="undefined" && typeof window.runAuthDebugGuardSafe==="function"){ window.runAuthDebugGuardSafe(); } }catch(_){} },950);setTimeout(function(){try{ if(typeof permissionSafeRun==="function"){ permissionSafeRun(); } else if(typeof window!=="undefined" && typeof window.permissionSafeRun==="function"){ window.permissionSafeRun(); } }catch(_){} },900);setTimeout(function(){try{ if(typeof plateauLiveRecompute==="function"){ plateauLiveRecompute(); } else if(typeof window!=="undefined" && typeof window.plateauLiveRecompute==="function"){ window.plateauLiveRecompute(); } }catch(_){} },900);setTimeout(function(){try{ if(typeof stableRenderAllPanels==="function"){ stableRenderAllPanels(); } else if(typeof window!=="undefined" && typeof window.stableRenderAllPanels==="function"){ window.stableRenderAllPanels(); } }catch(_){} },700)}catch(e){$("saveDebug").className="msg err";$("saveDebug").textContent="Save error: "+e.message;alert("Save error: "+e.message)}}
+let editingLogIdV533 = null;
+
+function setSaveModeV533(editing){
+  const btn = $("saveBtn");
+  const dbg = $("saveDebug");
+  if(btn) btn.textContent = editing ? "บันทึกการแก้ไข" : "+ บันทึกเซตนี้";
+  if(dbg){
+    dbg.className = editing ? "msg warn" : "msg";
+    dbg.textContent = editing ? "โหมดแก้ไข: บันทึกแล้วจะอัปเดตรายการเดิม ไม่สร้างรายการใหม่" : "พร้อมบันทึก";
+  }
+}
+
+function cancelEditLogV533(){
+  editingLogIdV533 = null;
+  setSaveModeV533(false);
+  if($('resetBtn')) $('resetBtn').textContent = 'Reset';
+}
+window.cancelEditLogV533 = cancelEditLogV533;
+
+function buildWorkoutPayloadV533({isEdit=false}={}){
+  const m = meta();
+  const wk = autoWeek();
+  const raw = parseFloat($("weight").value);
+  const reps = parseInt($("reps").value);
+  const rir = parseInt($("rir").value || 2);
+  if(!raw || !reps) throw new Error("กรอก Weight และ Reps");
+
+  const rememberedAlt = altMemoryForPlanned(m[2]);
+  const persistentAlt = (typeof autoApplyPersistentAlternative === "function" ? autoApplyPersistentAlternative() : null);
+  const effectiveAlt = selectedAlt || persistentAlt || rememberedAlt;
+  const w = toKg(raw, $("unit").value);
+  const ex = effectiveAlt ? effectiveAlt.name : m[2];
+  const targetSets = (typeof effectiveTargetSetsV522 === "function") ? effectiveTargetSetsV522(m[2]) : m[3];
+  const setNo = isEdit
+    ? (Number($("setNo")?.textContent) || Number(logs.find(x => x.id === editingLogIdV533)?.setNo) || 1)
+    : canonicalSetState(m[2]).next;
+
+  return cleanForFirestore({
+    date: $("date").value,
+    week: wk,
+    autoWeek: wk,
+    day: m[0],
+    focus: m[1],
+    exercise: ex,
+    plannedExercise: m[2],
+    isAlternative: !!effectiveAlt,
+    alternativePattern: effectiveAlt ? effectiveAlt.pattern : "",
+    alternativeQuery: (effectiveAlt && effectiveAlt.query) ? effectiveAlt.query : "",
+    targetSets,
+    setNo,
+    muscle: m[5],
+    weight: w,
+    reps,
+    rir,
+    volume: w * reps,
+    note: $("note").value || "",
+    sleepHours: parseFloat($("sleepHours")?.value || 7),
+    soreness: parseInt($("soreness")?.value || 2),
+    stress: parseInt($("stress")?.value || 2),
+    tempo: $("tempo")?.value || "",
+    repQuality: $("repQuality")?.value || "",
+    biasMode: $("biasMode")?.value || "auto",
+    effectiveReps: effectiveRepsForSet({reps, rir}),
+    userId: user.uid,
+    userName: user.displayName || user.email,
+    userEmail: user.email,
+    teamLabel: activeTeamLabel(),
+    userScope: activeUserKey(),
+    ownerUid: user.uid,
+    ownerEmail: user.email,
+    appVersion: VERSION,
+    updatedAt: serverTimestamp(),
+    ...(isEdit ? {} : {createdAt: serverTimestamp()})
+  });
+}
+
+async function saveSet(){
+  try{
+    $("saveDebug").className = "msg";
+    $("saveDebug").textContent = editingLogIdV533 ? "กำลังอัปเดต..." : "กำลังบันทึก...";
+    if(!user) return alert("Login ก่อน");
+    if(!teamId) return alert("ใส่ Team ID ก่อน");
+    if(!validateDate()) return;
+
+    const m = meta();
+    const st = nextState();
+    const isEdit = !!editingLogIdV533;
+    if(!isEdit && st.restLock) return alert("ยังพักไม่ครบ 2 วัน");
+    if(!isEdit && !canSaveCurrentExerciseAdaptive()) return alert("ท่านี้ยังไม่สามารถบันทึกได้: อาจเป็นคนละ Day หรือครบเซตแล้ว");
+
+    const payload = buildWorkoutPayloadV533({isEdit});
+    if(isEdit){
+      await updateDoc(doc(db, scopedWorkoutsCollection(), editingLogIdV533), payload);
+    }else{
+      await addDoc(collection(db, scopedWorkoutsCollection()), payload);
+      if(typeof exSessionAfterSave === "function") exSessionMarkSavedLocal(m[2]);
+      startRest();
+    }
+
+    applyCanonicalSetDisplay(m[2]);
+    selectedAlt = null;
+    $("weight").value = "";
+    $("reps").value = "";
+    $("rir").value = 2;
+    $("note").value = "";
+    cancelEditLogV533();
+    $("saveDebug").className = "msg ok";
+    $("saveDebug").textContent = isEdit ? "แก้ไขข้อมูลสำเร็จ ✅" : "บันทึกสำเร็จ ✅";
+    setTimeout(sync,600);
+    [
+      ["v403Run",250],["fullStabilizationRun",950],["coachCoreRun",950],
+      ["runAuthDebugGuardSafe",950],["permissionSafeRun",900],["plateauLiveRecompute",900],
+      ["stableRenderAllPanels",700]
+    ].forEach(([fn,ms])=>setTimeout(function(){try{
+      if(typeof window !== "undefined" && typeof window[fn] === "function") window[fn]();
+      else if(typeof globalThis[fn] === "function") globalThis[fn]();
+    }catch(_){}},ms));
+  }catch(e){
+    $("saveDebug").className = "msg err";
+    $("saveDebug").textContent = "Save error: " + e.message;
+    alert("Save error: " + e.message);
+  }
+}
+
 
 /* ===== v5.2.6 LEGACY_MIGRATION_CODE ===== */
 /* ===== v5.2.6 MIGRATION_RECOVERY_CODE ===== */
@@ -1259,7 +1382,7 @@ function subscribe(){if(unsub)unsub();if(!teamId)return;unsub=onSnapshot(query(c
 onAuthStateChanged(auth,u=>{user=u;$("authState").textContent=u?`Login: ${u.displayName||u.email}`:"ยังไม่ได้ login";$("userLine").textContent=u?`${u.displayName||u.email} / Team: ${teamId||"-"} / ${VERSION}`:`Clean QA • ${VERSION}`;if(u&&teamId)subscribe()});
 $("loginBtn").onclick=()=>signInWithPopup(auth,new GoogleAuthProvider()).catch(e=>alert(e.message));$("logoutBtn").onclick=()=>signOut(auth);$("saveTeamBtn").onclick=()=>{teamId=$("teamId").value.trim();localStorage.setItem("teamId",teamId);subscribe()};
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));$(b.dataset.page).classList.add("active");document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));b.classList.add("active");renderAll()});
-$("exercise").onchange=()=>{selectedAlt=null;$("altStatus").textContent="ยังไม่ได้เลือกท่าทดแทน";applyMeta();sync()};$("date").onchange=()=>{selectedDate=$("date").value;sync()};$("unit").onchange=sync;$("saveBtn").onclick=saveSet;$("resetBtn").onclick=sync;
+$("exercise").onchange=()=>{selectedAlt=null;$("altStatus").textContent="ยังไม่ได้เลือกท่าทดแทน";applyMeta();sync()};$("date").onchange=()=>{selectedDate=$("date").value;sync()};$("unit").onchange=sync;$("saveBtn").onclick=saveSet;$("resetBtn").onclick=function(){cancelEditLogV533();sync();};
 $("clearAltBtn").onclick=clearAltMemoryForCurrent;
 $("imageBtn").onclick=()=>openCurrentMedia("image");
 $("videoBtn").onclick=()=>openCurrentMedia("video");
@@ -1315,7 +1438,44 @@ document.addEventListener("keydown",(e)=>{
 });
 
 function startRest(){let sec=+$("restSec").value||75;localStorage.setItem("restEnd",Date.now()+sec*1000);tick();clearInterval(timer);timer=setInterval(tick,1000)}function stopRest(){clearInterval(timer);timer=null;localStorage.removeItem("restEnd");$("timer").textContent="00:00"}function tick(){let end=+localStorage.getItem("restEnd")||0;if(!end)return;let r=Math.max(0,Math.ceil((end-Date.now())/1000));$("timer").textContent=String(Math.floor(r/60)).padStart(2,"0")+":"+String(r%60).padStart(2,"0");if(r<=0)stopRest()}$("startRest").onclick=startRest;$("stopRest").onclick=stopRest;$("add30").onclick=()=>{let e=+localStorage.getItem("restEnd")||Date.now();localStorage.setItem("restEnd",e+30000);tick()};if(localStorage.getItem("restEnd")){tick();timer=setInterval(tick,1000)}
-function renderRecent(){$("recent").innerHTML=logs.slice(0,20).map(x=>`<div class="item"><h3>Week ${x.week||x.autoWeek} • Set ${x.setNo}/${x.targetSets} • ${x.exercise}</h3><div class="meta">${x.date} • ${x.day}<br>${fromKg(x.weight,$("unit").value)} ${$("unit").value} × ${x.reps} • Vol ${(+x.volume||0).toFixed(0)} kg${x.isAlternative?`<br>แทน: ${x.plannedExercise}`:""}</div><button class="red" onclick="deleteLog('${x.id}')">ลบ</button></div>`).join("")||"<p class='small'>ยังไม่มีข้อมูล</p>"}window.deleteLog=async id=>{if(confirm("ลบเซตนี้?"))await deleteDoc(doc(db, scopedWorkoutsCollection(), id))};
+function renderRecent(){
+  const unit = $("unit").value;
+  $("recent").innerHTML = logs.slice(0,20).map(x=>`<div class="item"><h3>Week ${x.week||x.autoWeek} • Set ${x.setNo||"-"}/${x.targetSets||"-"} • ${x.exercise}</h3><div class="meta">${x.date||"-"} • ${x.day||"-"}<br>${fromKg(x.weight,unit)} ${unit} × ${x.reps||"-"} • Vol ${(+x.volume||0).toFixed(0)} kg${x.isAlternative?`<br>แทน: ${x.plannedExercise}`:""}${x.note?`<br>Note: ${String(x.note).replace(/[<>]/g,"")}`:""}</div><div class="row3"><button class="cyan" onclick="editLogV533('${x.id}')">แก้ไข</button><button class="red" onclick="deleteLog('${x.id}')">ลบ</button></div></div>`).join("") || "<p class='small'>ยังไม่มีข้อมูล</p>";
+}
+
+window.editLogV533 = function(id){
+  const x = logs.find(v => v.id === id);
+  if(!x) return alert("ไม่พบรายการที่จะแก้ไข");
+  editingLogIdV533 = id;
+  if($("date")) $("date").value = x.date || localDateKey();
+  if($("exercise")){
+    const planned = x.plannedExercise || x.exercise;
+    const opt = Array.from($("exercise").options).find(o => o.value === planned);
+    if(opt) $("exercise").value = planned;
+  }
+  if($("weight")) $("weight").value = fromKg(Number(x.weight || 0), $("unit").value);
+  if($("reps")) $("reps").value = x.reps || "";
+  if($("rir")) $("rir").value = x.rir ?? 2;
+  if($("note")) $("note").value = x.note || "";
+  if($("sleepHours")) $("sleepHours").value = x.sleepHours || 7;
+  if($("soreness")) $("soreness").value = x.soreness || 2;
+  if($("stress")) $("stress").value = x.stress || 2;
+  if($("tempo") && x.tempo) $("tempo").value = x.tempo;
+  if($("repQuality") && x.repQuality) $("repQuality").value = x.repQuality;
+  if($("biasMode") && x.biasMode) $("biasMode").value = x.biasMode;
+  if($("targetSets")) $("targetSets").value = x.targetSets || programTargetSetsV522(x.plannedExercise || x.exercise);
+  if($("setNo")) $("setNo").textContent = x.setNo || 1;
+  setSaveModeV533(true);
+  try{showPage("log");}catch(_){}
+  window.scrollTo({top:0, behavior:"smooth"});
+};
+
+window.deleteLog = async id => {
+  if(confirm("ลบเซตนี้?")){
+    if(editingLogIdV533 === id) cancelEditLogV533();
+    await deleteDoc(doc(db, scopedWorkoutsCollection(), id));
+  }
+};
 function renderProgram(){$("programList").innerHTML=PROGRAM.map(p=>`<div class="item"><h3>${p[0]} • ${p[2]}</h3><div class="meta">${p[3]} sets × ${p[4]} • ${p[5]}</div></div>`).join("")}function renderGuide(){$("guideList").innerHTML=PROGRAM.map(p=>`<div class="item"><h3>${p[2]}</h3><div class="meta">Day: ${p[0]} • Muscle: ${p[5]} • Reps: ${p[4]}</div></div>`).join("")}
 
 function recentLogs(days){

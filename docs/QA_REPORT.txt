@@ -1,19 +1,24 @@
-QA REPORT v5.3.2
+QA REPORT v5.3.3
+Date: 2026-06-13
 
-Build: 2026-06-13
-Scope: Final Lite Patch – fix version display across all panels, remove legacy migration UI, and ensure date/save performance.
+Scope fixed:
+1. Version sync upgraded to v5.3.3 across title, header, runtime panel, README, docs, and app VERSION constant.
+2. Recent logs now support Edit, not only Delete.
+3. Editing an existing log now uses Firestore updateDoc on the same document ID instead of addDoc.
+4. Edit mode preserves setNo where possible and updates full workout fields: date, week, day, focus, exercise, plannedExercise, targetSets, weight, reps, RIR, volume, note, recovery inputs, tempo, rep quality, bias mode, user/team metadata, appVersion, and updatedAt.
+5. Save button changes to edit mode label and returns to normal after successful update or Reset.
+6. Target Sets default fallback remains active; save payload now uses effectiveTargetSetsV522 where available.
+7. Migration card removal and cache-proof runtime behavior retained.
 
-Static QA:
-- index.html shows v5.3.2 in title, header, and backup badge.
-- js/runtime.js updates version panel and modern header to v5.3.2 and hides migration card.
-- v530-lite-date-fix.js still handles date synchronization and disables heavy post-save computations.
-- All obsolete patches (v526 mobile guard, v527 save fix) removed from page.
-- docs/BUILD_INFO.txt and docs/VERSION.txt updated to v5.3.2 with build date 2026-06-13.
+Manual QA checklist:
+- Open index.html with hard refresh / new deploy.
+- Confirm v5.3.3 appears in browser title, header, QA card, backup badge, and debug line.
+- Login and load existing logs.
+- Click Recent > แก้ไข.
+- Confirm fields are populated from the selected log.
+- Change weight/reps/RIR/note and save.
+- Confirm existing item is updated, not duplicated.
+- Click Reset during edit mode and confirm it returns to normal save mode.
 
-Manual QA required after deploy:
-1. Hard refresh browser to clear cached scripts.
-2. Confirm that the header, backup badge, and QA panel show v5.3.2.
-3. On the Setup page, confirm the Migration Tool card is no longer visible.
-4. Select exercise dropdown 10 times quickly and save sets repeatedly to verify no lag or UI freeze.
-5. Check that the date input always defaults to the current date upon loading the Log page.
-6. Verify Backup / Export functionality still works and shows the correct version.
+Known limitation:
+- Full browser Firebase write test requires live Firebase login/deploy environment.

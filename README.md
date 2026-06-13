@@ -1,14 +1,13 @@
-# Workout PRO v5.3.2 Final Lite Patch
+# Workout PRO v5.3.3 Final Patch
 
-Push this folder to GitHub. Cloudflare will auto deploy.
+This build fixes incomplete workout record editing.
 
-## Release Notes
-This version completes the lite patch series by synchronizing all version displays, removing the legacy Migration Tool, and maintaining the lightweight date/save fixes introduced previously. It updates build metadata and UI badges to v5.3.2 and ensures that the application remains responsive during save operations.
+## Main fixes
+- Recent logs now have an Edit button.
+- Edit mode updates the original Firestore document instead of adding a duplicate log.
+- Save payload includes full workout fields: date, week, day, focus, exercise, plannedExercise, targetSets, setNo, weight, reps, RIR, volume, note, recovery fields, tempo, rep quality, bias mode, user/team scope, appVersion, and updatedAt.
+- Version sync is updated to v5.3.3.
+- Migration card cleanup and cache-proof runtime patch are retained.
 
-## QA Focus
-- Title, header, and backup badge show v5.3.2.
-- The Migration Tool card should no longer appear in Setup.
-- Date input on the Log page defaults to today on every load.
-- Saving sets is responsive with no UI freeze.
-- Calendar and Dashboard still load correctly.
-- Export JSON/CSV continues to function.
+## QA
+See `docs/QA_REPORT.txt`.
