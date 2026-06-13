@@ -1,1 +1,1 @@
-Workout PRO v5.2.9 Save Performance Fix
+Workout PRO v5.3.0 Lite Date & Save Patch

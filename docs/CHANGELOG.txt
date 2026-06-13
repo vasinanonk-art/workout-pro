@@ -1,9 +1,23 @@
-Workout PRO v5.2.9
-- Clean Build No Migration.
-- Removed Migration Tool from index.html.
-- Added v529-clean-runtime.js loaded after app.module.js.
-- Removed old stacked patch scripts from index.html.
-- Forced visible header/hero version sync to v5.2.9.
-- Save Guard retained.
-- Firestore schema unchanged.
-- Calendar/rest/progression logic unchanged.
+Workout PRO v5.2.6
+- Deep Exercise Switch Fix in app.module.js
+- Removed duplicated heavy exercise change listeners
+- Exercise dropdown now uses one optimized handler
+- Heavy history/PR/weekly calculations deferred after UI change
+- Mobile white-screen scroll guard added
+- Version/header sync updated to v5.2.6
+- Firestore schema unchanged
+- Calendar/rest rules unchanged
+ - Save logic unchanged except existing guards retained
+
+Workout PRO v5.2.7
+- Save performance fix: overrides saveSet via `v527-save-fix.js` to skip heavy post-save recomputations.
+- Added concurrency guard to prevent multiple concurrent saves and temporarily disable heavy functions.
+- Added lightweight sync and single stable render after saving sets.
+- Updated version and build date in UI and docs.
+
+Workout PRO v5.3.0
+- Lightweight date and save patch: introduces `v530-lite-date-fix.js` to handle save and date tasks.
+- Completely removes heavy post-save recomputation functions for a smoother experience.
+- Forces the date input to sync with the current day on each page load.
+- Updates version string and build date in the UI and documentation to v5.3.0 (2026-06-12).
+- Removes obsolete scripts (`v526-mobile-guard.js`, `v527-save-fix.js`).

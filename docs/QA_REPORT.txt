@@ -1,4 +1,4 @@
-QA REPORT v5.2.9
+QA REPORT v5.2.6
 
 Build: 2026-06-09
 Scope: Exercise switch speed + mobile white screen after scroll
@@ -6,7 +6,7 @@ Scope: Exercise switch speed + mobile white screen after scroll
 Static QA:
 - app.module.js parses with node --check: PASS
 - index.html loads js/v526-mobile-guard.js before app.module.js: PASS
-- Version references updated to v5.2.9: PASS
+- Version references updated to v5.2.6: PASS
 - Firestore write schema not modified: PASS
 - Workout split/rest rules not modified: PASS
 

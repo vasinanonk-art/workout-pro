@@ -1,4 +1,4 @@
 App: Workout PRO
-Version: v5.2.9
-Build: Clean Build No Migration
+Version: v5.3.0
+Build: Lite Date & Save Patch
 Updated: 2026-06-12

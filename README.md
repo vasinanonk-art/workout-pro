@@ -1,10 +1,9 @@
-# Workout PRO v5.2.9 Clean Build No Migration
+# Workout PRO v5.2.7 Save Performance Fix
 
 Push this folder to GitHub. Cloudflare will auto deploy.
 
 ## QA Focus
-- Header shows v5.2.9
-- Migration Tool removed
+- Login
 - Save set
 - Log date
 - Calendar
