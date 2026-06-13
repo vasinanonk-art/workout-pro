@@ -21,3 +21,11 @@ Workout PRO v5.3.0
 - Forces the date input to sync with the current day on each page load.
 - Updates version string and build date in the UI and documentation to v5.3.0 (2026-06-12).
 - Removes obsolete scripts (`v526-mobile-guard.js`, `v527-save-fix.js`).
+
+Workout PRO v5.3.2
+- Final lite patch to address lingering UI version inconsistencies and migration artifacts.
+- Updates the version panel and modern UI header to display **v5.3.2**.
+- Hides the legacy migration card on page load to streamline the Setup page.
+- Updates build metadata to "Lite Date & Save Patch + Final Fix".
+- Updates backup page badge and header strings to v5.3.2.
+- Synchronizes all documentation files (BUILD_INFO, VERSION) with the new version and build date.

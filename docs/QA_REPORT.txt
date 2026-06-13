@@ -1,21 +1,19 @@
-QA REPORT v5.2.6
+QA REPORT v5.3.2
 
-Build: 2026-06-09
-Scope: Exercise switch speed + mobile white screen after scroll
+Build: 2026-06-13
+Scope: Final Lite Patch – fix version display across all panels, remove legacy migration UI, and ensure date/save performance.
 
 Static QA:
-- app.module.js parses with node --check: PASS
-- index.html loads js/v526-mobile-guard.js before app.module.js: PASS
-- Version references updated to v5.2.6: PASS
-- Firestore write schema not modified: PASS
-- Workout split/rest rules not modified: PASS
+- index.html shows v5.3.2 in title, header, and backup badge.
+- js/runtime.js updates version panel and modern header to v5.3.2 and hides migration card.
+- v530-lite-date-fix.js still handles date synchronization and disables heavy post-save computations.
+- All obsolete patches (v526 mobile guard, v527 save fix) removed from page.
+- docs/BUILD_INFO.txt and docs/VERSION.txt updated to v5.3.2 with build date 2026-06-13.
 
 Manual QA required after deploy:
-1. Hard refresh mobile browser.
-2. Open Log.
-3. Select exercise dropdown 10 times quickly.
-4. Scroll immediately after changing exercise.
-5. Confirm no white screen.
-6. Save one set.
-7. Confirm Save Log still works.
-8. Check Calendar still loads.
+1. Hard refresh browser to clear cached scripts.
+2. Confirm that the header, backup badge, and QA panel show v5.3.2.
+3. On the Setup page, confirm the Migration Tool card is no longer visible.
+4. Select exercise dropdown 10 times quickly and save sets repeatedly to verify no lag or UI freeze.
+5. Check that the date input always defaults to the current date upon loading the Log page.
+6. Verify Backup / Export functionality still works and shows the correct version.
