@@ -119,7 +119,8 @@ function modernUiHeader(){
    hero.id='modernHero';
    hero.className='card';
    hero.style.marginBottom='18px';
-   hero.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><div><div style="font-size:28px;font-weight:800">Workout PRO</div><div style="opacity:.8;margin-top:4px">Modern Hypertrophy & Recovery System</div></div><div><span class="status-pill status-good">v5.2.6</span><span class="status-pill status-warn">Modern UI</span></div></div>';
+   // Display the current app version in the Modern UI header.  Updated to v5.3.0 in the lite patch.
+   hero.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><div><div style="font-size:28px;font-weight:800">Workout PRO</div><div style="opacity:.8;margin-top:4px">Modern Hypertrophy & Recovery System</div></div><div><span class="status-pill status-good">v5.3.0</span><span class="status-pill status-warn">Modern UI</span></div></div>';
    main.prepend(hero);
  }catch(e){console.warn(e)}
 }
