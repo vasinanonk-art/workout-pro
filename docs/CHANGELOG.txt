@@ -1,37 +1,12 @@
-Workout PRO v5.2.6
-- Deep Exercise Switch Fix in app.module.js
-- Removed duplicated heavy exercise change listeners
-- Exercise dropdown now uses one optimized handler
-- Heavy history/PR/weekly calculations deferred after UI change
-- Mobile white-screen scroll guard added
-- Version/header sync updated to v5.2.6
-- Firestore schema unchanged
-- Calendar/rest rules unchanged
- - Save logic unchanged except existing guards retained
+v5.3.4 - Performance / White Flash Fix
+- Fixed slow white/black flash after Save/Edit and page switching.
+- Added debounced active-page rendering.
+- Reduced full dashboard/calendar/program rebuilds on every tab click.
+- Optimistic local state update after Firestore add/update.
+- Added non-blocking loading overlay.
+- Bumped cache query to v=534.
 
-Workout PRO v5.2.7
-- Save performance fix: overrides saveSet via `v527-save-fix.js` to skip heavy post-save recomputations.
-- Added concurrency guard to prevent multiple concurrent saves and temporarily disable heavy functions.
-- Added lightweight sync and single stable render after saving sets.
-- Updated version and build date in UI and docs.
-
-Workout PRO v5.3.3
-- Lightweight date and save patch: introduces `v530-lite-date-fix.js` to handle save and date tasks.
-- Completely removes heavy post-save recomputation functions for a smoother experience.
-- Forces the date input to sync with the current day on each page load.
-- Updates version string and build date in the UI and documentation to v5.3.3 (2026-06-12).
-- Removes obsolete scripts (`v526-mobile-guard.js`, `v527-save-fix.js`).
-
-Workout PRO v5.3.3
-- Final lite patch to address lingering UI version inconsistencies and migration artifacts.
-- Updates the version panel and modern UI header to display **v5.3.3**.
-- Hides the legacy migration card on page load to streamline the Setup page.
-- Updates build metadata to "Lite Date & Save Patch + Final Fix".
-- Updates backup page badge and header strings to v5.3.3.
-- Synchronizes all documentation files (BUILD_INFO, VERSION) with the new version and build date.
-
-Workout PRO v5.3.3
-- Adds real Edit Mode for Recent workout logs.
-- Updates existing Firestore workout documents using updateDoc instead of creating duplicate addDoc records.
-- Saves complete edited workout payload including target sets, recovery fields, tempo, rep quality, bias mode, note, volume, and app metadata.
-- Syncs app version to v5.3.3 and keeps cache-proof runtime cleanup.
+v5.3.3 - Edit Fix
+- Added Edit Log mode.
+- Used updateDoc for existing records.
+- Version sync and cache patch.

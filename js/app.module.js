@@ -42,7 +42,7 @@ function valueSafe(id, fallback=""){
   return el ? el.value : fallback;
 }
 
-const VERSION="v5.3.3", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
+const VERSION="v5.3.4", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
 
 /* ===== v5.2.6 Date Input Sanity Fix ===== */
 function safeKeyPart(v){
@@ -1150,10 +1150,16 @@ async function saveSet(){
     if(!isEdit && !canSaveCurrentExerciseAdaptive()) return alert("ท่านี้ยังไม่สามารถบันทึกได้: อาจเป็นคนละ Day หรือครบเซตแล้ว");
 
     const payload = buildWorkoutPayloadV533({isEdit});
+    __w534IsSaving = true;
+    w534SetBusy(true, isEdit ? "กำลังอัปเดตข้อมูล..." : "กำลังบันทึก...");
     if(isEdit){
-      await updateDoc(doc(db, scopedWorkoutsCollection(), editingLogIdV533), payload);
+      const editId = editingLogIdV533;
+      await updateDoc(doc(db, scopedWorkoutsCollection(), editId), payload);
+      const idx = logs.findIndex(x=>x.id===editId);
+      if(idx>=0) logs[idx] = {...logs[idx], ...payload, id:editId};
     }else{
-      await addDoc(collection(db, scopedWorkoutsCollection()), payload);
+      const ref = await addDoc(collection(db, scopedWorkoutsCollection()), payload);
+      logs = [{...payload, id:ref.id, createdAt:new Date()}, ...logs];
       if(typeof exSessionAfterSave === "function") exSessionMarkSavedLocal(m[2]);
       startRest();
     }
@@ -1167,16 +1173,14 @@ async function saveSet(){
     cancelEditLogV533();
     $("saveDebug").className = "msg ok";
     $("saveDebug").textContent = isEdit ? "แก้ไขข้อมูลสำเร็จ ✅" : "บันทึกสำเร็จ ✅";
-    setTimeout(sync,600);
-    [
-      ["v403Run",250],["fullStabilizationRun",950],["coachCoreRun",950],
-      ["runAuthDebugGuardSafe",950],["permissionSafeRun",900],["plateauLiveRecompute",900],
-      ["stableRenderAllPanels",700]
-    ].forEach(([fn,ms])=>setTimeout(function(){try{
+    w534RenderCurrentPage("log");
+    setTimeout(()=>{try{sync()}catch(_){}; __w534IsSaving=false; w534SetBusy(false);},120);
+    [["v403Run",450],["plateauLiveRecompute",650],["stableRenderAllPanels",700]].forEach(([fn,ms])=>setTimeout(function(){try{
       if(typeof window !== "undefined" && typeof window[fn] === "function") window[fn]();
       else if(typeof globalThis[fn] === "function") globalThis[fn]();
     }catch(_){}},ms));
   }catch(e){
+    __w534IsSaving=false; w534SetBusy(false);
     $("saveDebug").className = "msg err";
     $("saveDebug").textContent = "Save error: " + e.message;
     alert("Save error: " + e.message);
@@ -1378,10 +1382,56 @@ function bindLegacyMigration(){
   window.__migrationModuleReady = true;
 }
 
-function subscribe(){if(unsub)unsub();if(!teamId)return;unsub=onSnapshot(query(collection(db, scopedWorkoutsCollection()),orderBy("createdAt","desc")),s=>{logs=s.docs.map(d=>({id:d.id,...d.data()}));$("debug").className="msg ok";$("debug").textContent=`โหลดข้อมูลแล้ว ${logs.length} sets • ${VERSION} • Isolated User Data`;renderAll();bindLegacyMigration();setTimeout(function(){try{bindTargetSetsDefaultV522();}catch(e){}},80);setTimeout(function(){try{bindBackupExportToolV520();}catch(e){}},100);setTimeout(function(){try{bindCalendarStayFixV512();bindCalendarGoLogV512();}catch(e){}},50);if(logs.length===0)setTimeout(checkLegacyLogsForMigration,400)},e=>{$("debug").className="msg err";$("debug").textContent=e.message})}
+/* ===== v5.3.4 PERFORMANCE / WHITE FLASH FIX ===== */
+let __w534RenderTimer = null;
+let __w534LastPage = "setup";
+let __w534IsSaving = false;
+function w534ActivePage(){
+  try{return document.querySelector(".page.active")?.id || __w534LastPage || "setup";}catch(_){return __w534LastPage||"setup";}
+}
+function w534SetBusy(on, text="กำลังโหลด..."){
+  try{
+    let el=document.getElementById("w534Busy");
+    if(!el){
+      el=document.createElement("div"); el.id="w534Busy"; el.className="w534Busy";
+      el.innerHTML='<div class="w534BusyBox"><div class="w534Spinner"></div><div id="w534BusyText">กำลังโหลด...</div></div>';
+      document.body.appendChild(el);
+    }
+    const t=document.getElementById("w534BusyText"); if(t) t.textContent=text;
+    el.classList.toggle("show", !!on);
+  }catch(_){}
+}
+function w534SafeCall(fn){try{ if(typeof fn==="function") fn(); }catch(e){console.warn("v5.3.4 safe render", e);}}
+function w534RenderCurrentPage(page=w534ActivePage()){
+  __w534LastPage=page;
+  w534SafeCall(renderRecent);
+  if(page==="dash"){w534SafeCall(renderDashboard); w534SafeCall(()=>{ if(typeof v5RenderMuscleBalance==="function") v5RenderMuscleBalance(); }); w534SafeCall(()=>{ if(typeof v5RenderPRBoard==="function") v5RenderPRBoard(); }); w534SafeCall(()=>{ if(typeof v5RenderRecoveryTrend==="function") v5RenderRecoveryTrend(); });}
+  else if(page==="coach"){w534SafeCall(renderCoach); w534SafeCall(()=>{ if(typeof renderHypertrophyIntelligence==="function") renderHypertrophyIntelligence(); });}
+  else if(page==="calendar"){w534SafeCall(renderCalendar); w534SafeCall(()=>renderDaySummary(selectedDate));}
+  else if(page==="log"){w534SafeCall(applyMeta); w534SafeCall(updatePR); w534SafeCall(updateWeekly); w534SafeCall(updateNextWeekRecommendation); w534SafeCall(updateOrderGuidance); w534SafeCall(()=>{ if(typeof historySummaryForCurrent==="function") historySummaryForCurrent(); }); w534SafeCall(()=>{ if(typeof renderMediaPanel==="function") renderMediaPanel(); }); w534SafeCall(()=>{ if(typeof v5RenderLogSummary==="function") v5RenderLogSummary(); });}
+  else if(page==="program"){w534SafeCall(renderProgram);}
+  else if(page==="guide"){w534SafeCall(renderGuide);}
+  else if(page==="backup"){w534SafeCall(()=>{ if(typeof v5BindExport==="function") v5BindExport(); });}
+}
+function w534DebouncedRender(page=w534ActivePage(), delay=80){
+  clearTimeout(__w534RenderTimer);
+  __w534RenderTimer=setTimeout(()=>{w534RenderCurrentPage(page);}, delay);
+}
+function w534ShowPage(page){
+  try{
+    document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active", p.id===page));
+    document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.dataset.page===page));
+    __w534LastPage=page;
+    w534DebouncedRender(page, 20);
+  }catch(e){console.warn("show page", e);}
+}
+window.show = w534ShowPage;
+window.showPage = w534ShowPage;
+
+function subscribe(){if(unsub)unsub();if(!teamId)return;unsub=onSnapshot(query(collection(db, scopedWorkoutsCollection()),orderBy("createdAt","desc")),s=>{logs=s.docs.map(d=>({id:d.id,...d.data()}));$("debug").className="msg ok";$("debug").textContent=`โหลดข้อมูลแล้ว ${logs.length} sets • ${VERSION} • Isolated User Data`;w534DebouncedRender(w534ActivePage(), __w534IsSaving?120:40);bindLegacyMigration();setTimeout(function(){try{bindTargetSetsDefaultV522();}catch(e){}},120);setTimeout(function(){try{bindBackupExportToolV520();}catch(e){}},160);setTimeout(function(){try{bindCalendarStayFixV512();bindCalendarGoLogV512();}catch(e){}},120);if(logs.length===0)setTimeout(checkLegacyLogsForMigration,500)},e=>{$("debug").className="msg err";$("debug").textContent=e.message})}
 onAuthStateChanged(auth,u=>{user=u;$("authState").textContent=u?`Login: ${u.displayName||u.email}`:"ยังไม่ได้ login";$("userLine").textContent=u?`${u.displayName||u.email} / Team: ${teamId||"-"} / ${VERSION}`:`Clean QA • ${VERSION}`;if(u&&teamId)subscribe()});
 $("loginBtn").onclick=()=>signInWithPopup(auth,new GoogleAuthProvider()).catch(e=>alert(e.message));$("logoutBtn").onclick=()=>signOut(auth);$("saveTeamBtn").onclick=()=>{teamId=$("teamId").value.trim();localStorage.setItem("teamId",teamId);subscribe()};
-document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));$(b.dataset.page).classList.add("active");document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));b.classList.add("active");renderAll()});
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>w534ShowPage(b.dataset.page));
 $("exercise").onchange=()=>{selectedAlt=null;$("altStatus").textContent="ยังไม่ได้เลือกท่าทดแทน";applyMeta();sync()};$("date").onchange=()=>{selectedDate=$("date").value;sync()};$("unit").onchange=sync;$("saveBtn").onclick=saveSet;$("resetBtn").onclick=function(){cancelEditLogV533();sync();};
 $("clearAltBtn").onclick=clearAltMemoryForCurrent;
 $("imageBtn").onclick=()=>openCurrentMedia("image");
@@ -2310,7 +2360,17 @@ function v5RenderAll(){
   v5BindExport();
 }
 
-function renderAll(){setTimeout(v5RenderAll,180);setTimeout(v430RenderAllFeaturePanels,120); if(window.__v404TabSwitching){return;} setTimeout(function(){try{ if(typeof v403Run==="function"){ v403Run(); } else if(typeof window!=="undefined" && typeof window.v403Run==="function"){ window.v403Run(); } }catch(_){} },80);setTimeout(function(){try{ if(typeof plateauLiveRecompute==="function"){ plateauLiveRecompute(); } else if(typeof window!=="undefined" && typeof window.plateauLiveRecompute==="function"){ window.plateauLiveRecompute(); } }catch(_){} },120);setTimeout(renderPlateauDetectionSafe,120);bindAutoPersistentAlternative();autoApplyPersistentAlternative();bindStableRenderTriggers();setTimeout(function(){try{ if(typeof stableRenderAllPanels==="function"){ stableRenderAllPanels(); } else if(typeof window!=="undefined" && typeof window.stableRenderAllPanels==="function"){ window.stableRenderAllPanels(); } }catch(_){} },80);bindCanonicalExerciseSwitch(); if($('exercise')) applyCanonicalSetDisplay($('exercise').value);exSessionBindDropdown(); if($('exercise')) exSessionRestore($('exercise').value);calSyncBind();calSyncUpdateStatus();exSessionBindDropdown(); if($('exercise')) exSessionRestore($('exercise').value);historySummaryForCurrent();bindPersistentAltButtons();if(typeof renderMediaPanel==="function")renderMediaPanel();bindAiCoachButtons();renderRecent();renderProgram();renderGuide();renderDashboard();renderCoach();renderCalendar();renderDaySummary(selectedDate);sync()}
+function renderAll(){
+  clearTimeout(__w534RenderTimer);
+  setTimeout(()=>{try{v5RenderAll()}catch(e){}},120);
+  setTimeout(()=>{try{v430RenderAllFeaturePanels()}catch(e){}},160);
+  setTimeout(()=>{try{renderPlateauDetectionSafe()}catch(e){}},220);
+  try{bindAutoPersistentAlternative();autoApplyPersistentAlternative();bindStableRenderTriggers();bindCanonicalExerciseSwitch();}catch(e){}
+  try{ if($('exercise')) applyCanonicalSetDisplay($('exercise').value); }catch(e){}
+  try{exSessionBindDropdown(); if($('exercise')) exSessionRestore($('exercise').value);}catch(e){}
+  try{calSyncBind();calSyncUpdateStatus();bindPersistentAltButtons();bindAiCoachButtons();}catch(e){}
+  w534DebouncedRender(w534ActivePage(), 30);
+}
 updateDateStatus();renderAll();
 
 document.addEventListener("DOMContentLoaded",()=>bindAiCoachButtons());

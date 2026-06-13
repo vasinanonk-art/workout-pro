@@ -1,24 +1,26 @@
-QA REPORT v5.3.3
-Date: 2026-06-13
+Workout PRO v5.3.4 QA REPORT
+Build: 2026-06-13
+Patch: Performance / White Flash Fix
 
-Scope fixed:
-1. Version sync upgraded to v5.3.3 across title, header, runtime panel, README, docs, and app VERSION constant.
-2. Recent logs now support Edit, not only Delete.
-3. Editing an existing log now uses Firestore updateDoc on the same document ID instead of addDoc.
-4. Edit mode preserves setNo where possible and updates full workout fields: date, week, day, focus, exercise, plannedExercise, targetSets, weight, reps, RIR, volume, note, recovery inputs, tempo, rep quality, bias mode, user/team metadata, appVersion, and updatedAt.
-5. Save button changes to edit mode label and returns to normal after successful update or Reset.
-6. Target Sets default fallback remains active; save payload now uses effectiveTargetSetsV522 where available.
-7. Migration card removal and cache-proof runtime behavior retained.
+Changed:
+- Reduced full render after Firebase snapshot.
+- Page tabs now render only the active page instead of rebuilding every panel.
+- Save/Edit now updates local state immediately before Firestore snapshot returns.
+- Removed heavy post-save chained render calls that caused 3-5 sec white screen.
+- Added small non-blocking busy overlay during save/update.
+- Added global show/showPage compatibility for Backup and Edit navigation.
+- Version/cache bumped to v5.3.4 / v=534.
 
-Manual QA checklist:
-- Open index.html with hard refresh / new deploy.
-- Confirm v5.3.3 appears in browser title, header, QA card, backup badge, and debug line.
-- Login and load existing logs.
-- Click Recent > แก้ไข.
-- Confirm fields are populated from the selected log.
-- Change weight/reps/RIR/note and save.
-- Confirm existing item is updated, not duplicated.
-- Click Reset during edit mode and confirm it returns to normal save mode.
+Checks performed:
+- node --check js/app.module.js: PASS
+- node --check js/runtime.js: PASS
+- Required files present: PASS
+- Version sync in index/runtime/app/docs: PASS
 
-Known limitation:
-- Full browser Firebase write test requires live Firebase login/deploy environment.
+Manual browser checks still required after Cloudflare deploy:
+1. Login with Google.
+2. Open Log page.
+3. Save new set; page should not turn white for 3-5 seconds.
+4. Edit existing log; record should update and not duplicate.
+5. Switch Dash / Coach / Calendar / Log; page transition should be faster.
+6. Purge Cloudflare cache if v5.3.4 does not show.

@@ -129,3 +129,12 @@ button.v431-alt-cancel-clean,
 .cal-log-row{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid rgba(148,163,184,.22);border-radius:14px;background:rgba(2,6,23,.42)}
 .cal-log-row span{color:#cbd5e1}
 #calendarGoLogBtn{margin-top:12px;width:100%;min-height:52px}
+
+
+/* v5.3.4 Performance overlay - prevents white/black flash during save/page render */
+.page{transition:opacity .12s ease-in-out;}
+.w534Busy{position:fixed;inset:auto 16px 16px auto;z-index:99999;display:none;pointer-events:none;}
+.w534Busy.show{display:block;}
+.w534BusyBox{display:flex;align-items:center;gap:10px;background:rgba(2,6,23,.92);border:1px solid rgba(56,189,248,.45);box-shadow:0 12px 35px rgba(0,0,0,.35);border-radius:14px;padding:12px 14px;color:#e5f6ff;font-size:13px;}
+.w534Spinner{width:16px;height:16px;border:2px solid rgba(148,163,184,.35);border-top-color:#38bdf8;border-radius:50%;animation:w534spin .75s linear infinite;}
+@keyframes w534spin{to{transform:rotate(360deg)}}
