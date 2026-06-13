@@ -1,4 +1,4 @@
-Workout PRO v5.3.4 QA REPORT
+Workout PRO v5.3.5 QA REPORT
 Build: 2026-06-13
 Patch: Performance / White Flash Fix
 
@@ -9,7 +9,7 @@ Changed:
 - Removed heavy post-save chained render calls that caused 3-5 sec white screen.
 - Added small non-blocking busy overlay during save/update.
 - Added global show/showPage compatibility for Backup and Edit navigation.
-- Version/cache bumped to v5.3.4 / v=534.
+- Version/cache bumped to v5.3.5 / v=534.
 
 Checks performed:
 - node --check js/app.module.js: PASS
@@ -23,4 +23,10 @@ Manual browser checks still required after Cloudflare deploy:
 3. Save new set; page should not turn white for 3-5 seconds.
 4. Edit existing log; record should update and not duplicate.
 5. Switch Dash / Coach / Calendar / Log; page transition should be faster.
-6. Purge Cloudflare cache if v5.3.4 does not show.
+6. Purge Cloudflare cache if v5.3.5 does not show.
+
+
+v5.3.5 QA
+- Syntax check: pending by build script.
+- Day Lock hard guard patched in saveSet.
+- Legacy v403 override panel no longer enables Save during locked state.

@@ -42,7 +42,7 @@ function valueSafe(id, fallback=""){
   return el ? el.value : fallback;
 }
 
-const VERSION="v5.3.4", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
+const VERSION="v5.3.5", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
 
 /* ===== v5.2.6 Date Input Sanity Fix ===== */
 function safeKeyPart(v){
@@ -1146,8 +1146,16 @@ async function saveSet(){
     const m = meta();
     const st = nextState();
     const isEdit = !!editingLogIdV533;
-    if(!isEdit && st.restLock) return alert("ยังพักไม่ครบ 2 วัน");
-    if(!isEdit && !canSaveCurrentExerciseAdaptive()) return alert("ท่านี้ยังไม่สามารถบันทึกได้: อาจเป็นคนละ Day หรือครบเซตแล้ว");
+    const adNow = (typeof activeDay === "function") ? activeDay() : "";
+    if(!isEdit && (st.restLock || adNow === "REST_LOCK")){
+      if($("saveBtn")) $("saveBtn").disabled = true;
+      return alert("ยังพักไม่ครบ 2 วัน ต้องรอให้ครบ หรือใช้ Manual Override เท่านั้น");
+    }
+    if(!isEdit && (st.dateLock || adNow === "DAY_DATE_LOCK")){
+      if($("saveBtn")) $("saveBtn").disabled = true;
+      return alert(st.message || "วันนี้ยังถูกล็อกตาม Day Lock / Rest Rule");
+    }
+    if(!isEdit && (!String(adNow).startsWith("Day") || !canSaveCurrentExerciseAdaptive())) return alert("ท่านี้ยังไม่สามารถบันทึกได้: อาจเป็นคนละ Day, ยังพักไม่ครบ, หรือครบเซตแล้ว");
 
     const payload = buildWorkoutPayloadV533({isEdit});
     __w534IsSaving = true;
@@ -1382,7 +1390,7 @@ function bindLegacyMigration(){
   window.__migrationModuleReady = true;
 }
 
-/* ===== v5.3.4 PERFORMANCE / WHITE FLASH FIX ===== */
+/* ===== v5.3.5 PERFORMANCE / WHITE FLASH FIX ===== */
 let __w534RenderTimer = null;
 let __w534LastPage = "setup";
 let __w534IsSaving = false;
@@ -1401,7 +1409,7 @@ function w534SetBusy(on, text="กำลังโหลด..."){
     el.classList.toggle("show", !!on);
   }catch(_){}
 }
-function w534SafeCall(fn){try{ if(typeof fn==="function") fn(); }catch(e){console.warn("v5.3.4 safe render", e);}}
+function w534SafeCall(fn){try{ if(typeof fn==="function") fn(); }catch(e){console.warn("v5.3.5 safe render", e);}}
 function w534RenderCurrentPage(page=w534ActivePage()){
   __w534LastPage=page;
   w534SafeCall(renderRecent);
@@ -2216,7 +2224,13 @@ function v403RenderUnlockPanel(){
     const btn=document.getElementById("unlockOverrideBtn");
     if(btn&&!btn.dataset.bound){btn.dataset.bound="1";btn.onclick=v403RequestSkipDay;}
     const saveBtn=document.querySelector("#saveBtn")||[...document.querySelectorAll("button")].find(b=>b.textContent.includes("บันทึกเซตนี้"));
-    if(saveBtn){ if(c.allComplete){saveBtn.disabled=true;saveBtn.style.opacity=".45";} else {saveBtn.disabled=false;saveBtn.style.opacity="1";} }
+    if(saveBtn){
+      const adLock=(typeof activeDay==="function") ? activeDay() : "";
+      const stLock=(typeof nextState==="function") ? nextState() : {};
+      const lockedByDay = !!(c.allComplete || stLock.restLock || stLock.dateLock || adLock==="REST_LOCK" || adLock==="DAY_DATE_LOCK" || adLock==="COMPLETE");
+      saveBtn.disabled=lockedByDay;
+      saveBtn.style.opacity=lockedByDay?".45":"1";
+    }
   }catch(e){console.warn("v403RenderUnlockPanel",e);}
 }
 function v403Run(){ if(window.__v404TooSoon&&window.__v404TooSoon('v403Run',900)) return; 
@@ -3141,4 +3155,54 @@ window.addEventListener("load", function(){
   setTimeout(function(){try{bindDateInputSanityV523();}catch(e){}},100);
   setTimeout(function(){try{bindDateInputSanityV523();}catch(e){}},800);
   setTimeout(function(){try{bindDateInputSanityV523();}catch(e){}},1800);
+});
+
+
+/* ===== v5.3.5 DAY_LOCK_HARD_FIX =====
+   Critical: legacy override panel must never re-enable Save while REST_LOCK / DAY_DATE_LOCK is active. */
+function w535HardDayLockEnforce(){
+  try{
+    const btn = document.getElementById("saveBtn");
+    const st = (typeof nextState === "function") ? nextState() : {};
+    const ad = (typeof activeDay === "function") ? activeDay() : "";
+    const locked = !!(st.restLock || st.dateLock || ad === "REST_LOCK" || ad === "DAY_DATE_LOCK" || ad === "COMPLETE");
+    if(btn && locked){
+      btn.disabled = true;
+      btn.style.opacity = ".45";
+      btn.dataset.dayLockHard = "1";
+    }else if(btn){
+      btn.dataset.dayLockHard = "0";
+    }
+    const ex = document.getElementById("exercise");
+    if(ex && locked){
+      Array.from(ex.options).forEach(o=>{ o.disabled = true; });
+    }
+    return !locked;
+  }catch(e){ console.warn("w535HardDayLockEnforce", e); return false; }
+}
+window.w535HardDayLockEnforce = w535HardDayLockEnforce;
+
+try{
+  const _w535OldSync = sync;
+  sync = function(){
+    const r = _w535OldSync.apply(this, arguments);
+    setTimeout(w535HardDayLockEnforce, 0);
+    setTimeout(w535HardDayLockEnforce, 120);
+    return r;
+  };
+}catch(e){ console.warn("w535 sync wrap", e); }
+
+try{
+  const _w535OldV403 = v403RenderUnlockPanel;
+  v403RenderUnlockPanel = function(){
+    const r = _w535OldV403.apply(this, arguments);
+    setTimeout(w535HardDayLockEnforce, 0);
+    setTimeout(w535HardDayLockEnforce, 120);
+    return r;
+  };
+}catch(e){ console.warn("w535 v403 wrap", e); }
+
+window.addEventListener("load", function(){
+  setTimeout(w535HardDayLockEnforce, 300);
+  setTimeout(w535HardDayLockEnforce, 1200);
 });

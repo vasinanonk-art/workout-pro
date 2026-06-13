@@ -85,8 +85,8 @@ function uiPolishAddVersionPanel(){
   const d=document.createElement('div');
   d.id='versionQAPanel';
   d.className='card version-panel';
-  // Updated version panel for v5.3.4. Reflects current build and patch notes.
-  d.innerHTML='<div class="section-title">Build / QA</div><div class="msg info">Version: <b>v5.3.4</b><br>Build: Lite Date & Save Patch + Final Fix<br>QA: Heavy recomputations disabled; date always synchronized</div>';
+  // Updated version panel for v5.3.5. Reflects current build and patch notes.
+  d.innerHTML='<div class="section-title">Build / QA</div><div class="msg info">Version: <b>v5.3.5</b><br>Build: Lite Date & Save Patch + Final Fix<br>QA: Heavy recomputations disabled; date always synchronized</div>';
   donate.appendChild(d);
  }catch(e){console.warn(e)}
 }
@@ -120,8 +120,8 @@ function modernUiHeader(){
    hero.id='modernHero';
    hero.className='card';
    hero.style.marginBottom='18px';
-   // Display the current app version in the Modern UI header.  Updated to v5.3.4 in the lite patch.
-   hero.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><div><div style="font-size:28px;font-weight:800">Workout PRO</div><div style="opacity:.8;margin-top:4px">Modern Hypertrophy & Recovery System</div></div><div><span class="status-pill status-good">v5.3.4</span><span class="status-pill status-warn">Modern UI</span></div></div>';
+   // Display the current app version in the Modern UI header.  Updated to v5.3.5 in the lite patch.
+   hero.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><div><div style="font-size:28px;font-weight:800">Workout PRO</div><div style="opacity:.8;margin-top:4px">Modern Hypertrophy & Recovery System</div></div><div><span class="status-pill status-good">v5.3.5</span><span class="status-pill status-warn">Modern UI</span></div></div>';
    main.prepend(hero);
  }catch(e){console.warn(e)}
 }
@@ -623,7 +623,7 @@ document.addEventListener("click",function(e){
   });
 })();
 
-// ===== v5.3.4 Final Patch =====
+// ===== v5.3.5 Final Patch =====
 // Remove the legacy migration card to streamline the Setup page.
 (function(){
   try{
