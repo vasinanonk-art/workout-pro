@@ -1,5 +1,5 @@
-QA v5.3.7
-- app.module.js syntax check: pending in build script.
-- Day Lock runtime panel: injected.
-- Save guard: hard wrapper before write.
-- Manual override: localStorage scoped by team/user/date/day.
+QA v5.3.8
+- Syntax check: pending in build script.
+- Date helper centralized to Asia/Bangkok.
+- No UTC toISOString date key for today/day lock.
+- Desktop date input min-width added.

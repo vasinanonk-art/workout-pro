@@ -1,11 +1,25 @@
 
 /* ===== v5.2.6 LOCAL_DATE_FIX ===== */
+function bangkokDateKey(d=new Date()){
+  // Canonical date key for all workout/day-lock logic.
+  // Do not use toISOString().split("T")[0] because it is UTC and can shift date.
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(d instanceof Date ? d : new Date(d));
+}
 function localDateKeyV521(d){
-  const x = d instanceof Date ? d : new Date();
-  return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}-${String(x.getDate()).padStart(2,"0")}`;
+  return bangkokDateKey(d instanceof Date ? d : new Date());
 }
 function todayLocalV521(){
-  return localDateKeyV521(new Date());
+  return bangkokDateKey(new Date());
+}
+function displayDateTH(key){
+  const m = String(key||"").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m) return String(key||"-");
+  return `${Number(m[3])}/${Number(m[2])}/${String(Number(m[1])+543).slice(-2)}`;
 }
 
 // ===== script =====
@@ -42,7 +56,7 @@ function valueSafe(id, fallback=""){
   return el ? el.value : fallback;
 }
 
-const VERSION="v5.3.7", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
+const VERSION="v5.3.8", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
 
 /* ===== v5.2.6 Date Input Sanity Fix ===== */
 function safeKeyPart(v){
@@ -74,9 +88,7 @@ const PROGRAM=[
 const DAY_ORDER=["Day 1","Day 2","Day 4","Day 5"], REST={quick:45,standard:75,heavy:105};
 
 function localDateKey(d=new Date()){
-  const x=new Date(d);
-  x.setMinutes(x.getMinutes()-x.getTimezoneOffset());
-  return x.toISOString().slice(0,10);
+  return bangkokDateKey(d instanceof Date ? d : new Date(d));
 }
 
 const ALT={
@@ -170,7 +182,7 @@ $("teamId").value=teamId;selectedDate=localDateKey();$("date").value=selectedDat
 const meta=()=>PROGRAM.find(p=>p[2]===$("exercise").value), target=ex=>{let p=PROGRAM.find(p=>p[2]===ex);return p?+p[3]:1}, planned=x=>x.plannedExercise||x.exercise;
 function toKg(v,u){return u==="lb"?v/2.2046:v} function fromKg(v,u){return u==="lb"?(+v*2.2046||0).toFixed(1):(+v||0).toFixed(1)}
 function today(){return localDateKey()} function parseD(s){let [y,m,d]=String(s).split("-").map(Number);return new Date(y,m-1,d)} function keyD(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")} function addDays(d,n){let x=new Date(d);x.setDate(x.getDate()+n);return x}
-function diffDate(s){let a=new Date(),b=parseD(s);a.setHours(0,0,0,0);b.setHours(0,0,0,0);return Math.round((a-b)/86400000)}
+function diffDate(s){let a=parseD(today()),b=parseD(s);a.setHours(0,0,0,0);b.setHours(0,0,0,0);return Math.round((a-b)/86400000)}
 function normalizedLogs(){return [...logs].sort((a,b)=>(a.date||"").localeCompare(b.date||"")||(+a.createdAt?.seconds||0)-(+b.createdAt?.seconds||0))}
 function countIn(c,ex){return c.filter(x=>planned(x)===ex).length} function dayComplete(c,d){if(!c||!c.length)return false;return PROGRAM.filter(p=>p[0]===d).every(p=>countIn(c,p[2])>=target(p[2]))} function cycleComplete(c){if(!c||!c.length)return false;return DAY_ORDER.every(d=>dayComplete(c,d))}
 function cycles(){let cs=[[]];for(let x of normalizedLogs()){if(cycleComplete(cs[cs.length-1]))cs.push([]);cs[cs.length-1].push(x)}return cs} 
@@ -565,7 +577,7 @@ function calSyncUpdateStatus(){
   const s=calSyncAnalysis();
   const cls=s.status==="OK"?"msg ok":(s.status==="DATE_NOT_TODAY"?"msg warn":"msg info");
   $("calendarSyncStatus").className=cls;
-  $("calendarSyncStatus").innerHTML=`Calendar Sync<br>Today: <b>${s.today}</b><br>Selected: <b>${s.selected}</b><br>Active Day: <b>${s.active}</b><br>${s.note}`;
+  $("calendarSyncStatus").innerHTML=`Calendar Sync<br>Today: <b>${displayDateTH(s.today)}</b> <span class="small">(${s.today})</span><br>Selected: <b>${displayDateTH(s.selected)}</b> <span class="small">(${s.selected})</span><br>Active Day: <b>${s.active}</b><br>${s.note}`;
 }
 function calSyncBind(){
   if($("date") && $("date").dataset.calendarSyncBound!=="1"){

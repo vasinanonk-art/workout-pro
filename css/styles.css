@@ -150,3 +150,17 @@ main{background:#050c1a;}
 .w536PageHold{position:fixed;inset:0;z-index:9998;pointer-events:none;background:transparent;}
 .w536MiniStatus{position:fixed;right:14px;bottom:86px;z-index:99999;background:rgba(2,6,23,.92);border:1px solid rgba(56,189,248,.42);border-radius:999px;padding:8px 12px;color:#e5f6ff;font-size:12px;box-shadow:0 8px 28px rgba(0,0,0,.25);display:none;}
 .w536MiniStatus.show{display:block;}
+
+
+/* ===== v5.3.8 DATE FIELD WIDTH FIX =====
+   Desktop browser date inputs can visually clip the first digit when the control is narrow.
+   Keep canonical value as YYYY-MM-DD, and give the native input enough width. */
+input[type="date"]{
+  min-width: 180px;
+  width: 100%;
+  box-sizing: border-box;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 520px){
+  input[type="date"]{min-width: 160px;}
+}
