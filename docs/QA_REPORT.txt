@@ -1,4 +1,4 @@
-QA v5.3.20
-- Fixed SyntaxError: Coalescing and logical operators used together.
-- Checked app.module.js with node --check.
-- Checked runtime.js with node --check.
+QA v5.3.21
+- node --check app.module.js: PASS
+- node --check runtime.js: PASS
+- Exercise dropdown progress patch appended without touching Day Lock core.

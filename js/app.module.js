@@ -56,7 +56,7 @@ function valueSafe(id, fallback=""){
   return el ? el.value : fallback;
 }
 
-const VERSION="v5.3.20", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
+const VERSION="v5.3.21", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
 
 /* ===== v5.2.6 Date Input Sanity Fix ===== */
 function safeKeyPart(v){
@@ -1403,7 +1403,7 @@ function bindLegacyMigration(){
   window.__migrationModuleReady = true;
 }
 
-/* ===== v5.3.20 PERFORMANCE / WHITE FLASH FIX ===== */
+/* ===== v5.3.21 PERFORMANCE / WHITE FLASH FIX ===== */
 let __w534RenderTimer = null;
 let __w534LastPage = "setup";
 let __w534IsSaving = false;
@@ -1422,7 +1422,7 @@ function w534SetBusy(on, text="กำลังโหลด..."){
     el.classList.toggle("show", !!on);
   }catch(_){}
 }
-function w534SafeCall(fn){try{ if(typeof fn==="function") fn(); }catch(e){console.warn("v5.3.20 safe render", e);}}
+function w534SafeCall(fn){try{ if(typeof fn==="function") fn(); }catch(e){console.warn("v5.3.21 safe render", e);}}
 function w534RenderCurrentPage(page=w534ActivePage()){
   __w534LastPage=page;
   w534SafeCall(renderRecent);
@@ -3171,7 +3171,7 @@ window.addEventListener("load", function(){
 });
 
 
-/* ===== v5.3.20 DAY_LOCK_HARD_FIX =====
+/* ===== v5.3.21 DAY_LOCK_HARD_FIX =====
    Critical: legacy override panel must never re-enable Save while REST_LOCK / DAY_DATE_LOCK is active. */
 function w535HardDayLockEnforce(){
   try{
@@ -3221,9 +3221,9 @@ window.addEventListener("load", function(){
 });
 
 
-/* ===== v5.3.20 NO_WHITE_SCREEN_CORE_FIX =====
+/* ===== v5.3.21 NO_WHITE_SCREEN_CORE_FIX =====
    Hard rule: never blank the current page while the next page is rendering.
-   Day Lock v5.3.20 remains active and is re-enforced after every navigation/save. */
+   Day Lock v5.3.21 remains active and is re-enforced after every navigation/save. */
 let __w536NavToken = 0;
 let __w536DashTimer = null;
 let __w536SyncTimer = null;
@@ -3362,8 +3362,8 @@ window.addEventListener("load", function(){
 });
 
 
-/* ===== v5.3.20 DATE FIELD DISPLAY-ONLY FIX =====
-   Base: v5.3.20 + v5.3.20 Day Lock runtime.
+/* ===== v5.3.21 DATE FIELD DISPLAY-ONLY FIX =====
+   Base: v5.3.21 + v5.3.21 Day Lock runtime.
    Purpose: fix desktop native date input visual clipping without touching Day Lock, sync, saveSet, REST_LOCK, or override logic.
 */
 (function(){
@@ -3406,13 +3406,13 @@ window.addEventListener("load", function(){
 
 
 
-/* ===== v5.3.20 DAY_LOCK_SINGLE_RENDERER_CLEAN_FIX =====
+/* ===== v5.3.21 DAY_LOCK_SINGLE_RENDERER_CLEAN_FIX =====
    Clean fix: removes legacy renderer race by keeping one Day Lock controller.
    Rules: Day 1 -> Day 2 -> Rest -> Day 4 -> Day 5 -> Rest -> Rest -> next Week Day 1.
    Manual override is explicit and scoped by team/user/date.
 */
 (function(){
-  const VERSION_5315 = "v5.3.20";
+  const VERSION_5315 = "v5.3.21";
   const DAYS = ["Day 1","Day 2","Day 4","Day 5"];
   const PANEL_ID = "dayLockSingleSourcePanel";
   const LOG_ID = "log";
@@ -3694,12 +3694,12 @@ window.addEventListener("load", function(){
 })();
 
 
-/* ===== v5.3.20 WORKOUT STATE SYNC FIX =====
+/* ===== v5.3.21 WORKOUT STATE SYNC FIX =====
    Fixes: set counter double increment after save, recent log not refreshing,
    Daily Performance/summary using stale state, and debug panels stuck on checking.
 */
 (function(){
-  const VERSION_5318 = "v5.3.20";
+  const VERSION_5318 = "v5.3.21";
   const byId = (id)=>document.getElementById(id);
   const safe = (fn)=>{ try{ if(typeof fn === "function") return fn(); }catch(e){ console.warn("v5318", e); } };
   function keyDate(){
@@ -3796,13 +3796,13 @@ window.addEventListener("load", function(){
   document.addEventListener("click",()=>setTimeout(()=>window.__w5318RefreshLogState(),180),true);
 })();
 
-/* ===== v5.3.20 EXERCISE_RECOMMENDATION_ISOLATION_FIX =====
+/* ===== v5.3.21 EXERCISE_RECOMMENDATION_ISOLATION_FIX =====
    Fix: recommendation/PR/weekly/double progression must use the currently selected exercise only.
    Do not fall back to same movement group (e.g. Barbell Bench Press -> Incline Dumbbell Press).
    Day Lock / Save Guard / Date logic are intentionally untouched.
 */
 (function(){
-  const V519 = "v5.3.20";
+  const V519 = "v5.3.21";
   function $safe(id){ try{return document.getElementById(id);}catch(e){return null;} }
   function cleanName(v){ return String(v||"").trim(); }
   function currentSelectedExercise(){
@@ -3952,4 +3952,192 @@ window.addEventListener("load", function(){
     document.querySelectorAll(".badge,.version,.status-pill").forEach(el=>{ el.innerHTML=String(el.innerHTML).replace(/v5\.3\.\d+/g,V519); });
     document.title="Workout PRO "+V519;
   }catch(e){}
+})();
+
+
+/* ===== v5.3.21 EXERCISE DROPDOWN PROGRESS / DONE LOCK FIX =====
+   Purpose:
+   - Show per-exercise progress in the exercise dropdown: (done/target)
+   - Disable completed exercises so users cannot select a finished movement
+   - Keep the current Set counter, ready box, PR/weekly recommendation aligned with the selected planned exercise
+   - Count alternative rows correctly via plannedExercise without changing Day Lock / Save Guard logic
+*/
+(function(){
+  const V5321 = "v5.3.21";
+  const DAYS5321 = ["Day 1","Day 2","Day 4","Day 5"];
+  let applying = false;
+  let lastSig = "";
+  function byId(id){ try{return document.getElementById(id);}catch(e){return null;} }
+  function safeText(v){ return String(v == null ? "" : v).trim(); }
+  function programRows(){ try{return Array.isArray(PROGRAM) ? PROGRAM : [];}catch(e){return [];} }
+  function programRow(ex){ ex=safeText(ex); return programRows().find(p=>p && p[2]===ex) || null; }
+  function programDay(ex){ const p=programRow(ex); return p ? p[0] : ""; }
+  function targetFor(ex){
+    try{ if(typeof effectiveTargetSetsV522 === "function") return Number(effectiveTargetSetsV522(ex)) || 1; }catch(e){}
+    try{ if(typeof target === "function") return Number(target(ex)) || 1; }catch(e){}
+    const p=programRow(ex); return p ? Number(p[3]||1) : 1;
+  }
+  function dateKey(){
+    const d=byId("date");
+    if(d && /^\d{4}-\d{2}-\d{2}$/.test(String(d.value||""))) return d.value;
+    try{ if(typeof selectedDate !== "undefined" && /^\d{4}-\d{2}-\d{2}$/.test(String(selectedDate))) return String(selectedDate); }catch(e){}
+    try{ if(typeof today === "function") return today(); }catch(e){}
+    const z=new Date(); return z.getFullYear()+"-"+String(z.getMonth()+1).padStart(2,"0")+"-"+String(z.getDate()).padStart(2,"0");
+  }
+  function activeAllowedDay(){
+    try{
+      if(typeof activeDay === "function"){
+        const d=activeDay();
+        if(DAYS5321.includes(d)) return d;
+        return "";
+      }
+    }catch(e){}
+    const ex=byId("exercise");
+    return ex ? programDay(ex.value) : "";
+  }
+  function samePlanned(row, planned){
+    planned=safeText(planned);
+    const actual=safeText(row && row.exercise);
+    const p=safeText(row && row.plannedExercise);
+    if(!planned) return false;
+    if(p) return p===planned;
+    return actual===planned;
+  }
+  function rowsForPlanned(planned, onlyDate=true){
+    const d=dateKey();
+    try{
+      return (Array.isArray(logs)?logs:[]).filter(x=>{
+        if(onlyDate && String(x.date||"")!==String(d)) return false;
+        return samePlanned(x, planned);
+      }).sort((a,b)=>Number(a.setNo||0)-Number(b.setNo||0));
+    }catch(e){ return []; }
+  }
+  function doneFor(planned){
+    const rows=rowsForPlanned(planned,true);
+    const maxSet=Math.max(0,...rows.map(x=>Number(x.setNo||x.setNumber||x.set||0)));
+    return Math.max(rows.length, maxSet);
+  }
+  function firstIncomplete(day){
+    for(const p of programRows().filter(p=>p && p[0]===day)){
+      const done=doneFor(p[2]);
+      const target=targetFor(p[2]);
+      if(done < target) return p[2];
+    }
+    return "";
+  }
+  function decorateOption(opt, allowedDay){
+    const planned=safeText(opt.value);
+    const p=programRow(planned);
+    if(!p) return {allowed:false,done:0,target:1,complete:false};
+    const day=p[0];
+    const target=targetFor(planned);
+    const done=Math.min(target, doneFor(planned));
+    const complete=target>0 && done>=target;
+    const dayAllowed=!allowedDay || day===allowedDay;
+    const lockTxt=dayAllowed ? "" : " 🔒";
+    const status=complete ? " ✓ DONE" : (done>0 ? " ▶" : "");
+    opt.textContent=`${status} ${day} - ${planned} (${done}/${target})${lockTxt}`.trim();
+    opt.disabled=(!dayAllowed) || complete;
+    opt.hidden=!dayAllowed;
+    return {allowed:dayAllowed,done,target,complete};
+  }
+  function setReadyBox(planned, done, target, complete){
+    const box=byId("readyStatus") || byId("exerciseStatus") || byId("sessionStatus");
+    if(!box) return;
+    box.className=complete ? "msg ok" : "msg";
+    box.innerHTML=complete
+      ? `ท่านี้ครบแล้ว: <b>${planned}</b> (${done}/${target})<br><span class="small">เลือกท่าถัดไปที่ยังไม่ครบ</span>`
+      : `พร้อมบันทึก<br><b>${planned}</b>: เล่นไปแล้ว ${done}/${target} เซต • เซตถัดไปคือ Set ${Math.min(done+1,target)}`;
+  }
+  function applySetCounter(planned){
+    const target=targetFor(planned);
+    const done=Math.min(target, doneFor(planned));
+    const next=Math.min(done+1,target);
+    const complete=target>0 && done>=target;
+    const setNo=byId("setNo"); if(setNo) setNo.textContent=String(next);
+    const setTitle=byId("setTitle"); if(setTitle) setTitle.textContent=`Set ${next} / ${target}`;
+    document.querySelectorAll("h2,h3,.section-title").forEach(el=>{
+      const t=String(el.textContent||"").trim();
+      if(/^Set\s+\d+\s*\/\s*\d+/.test(t)) el.textContent=`Set ${next} / ${target}`;
+    });
+    setReadyBox(planned, done, target, complete);
+    const save=byId("saveBtn");
+    if(save){
+      if(complete){ save.disabled=true; save.style.opacity=".45"; save.dataset.exerciseComplete="1"; }
+      else if(save.dataset.dayLock!=="1"){ save.disabled=false; save.style.opacity="1"; save.dataset.exerciseComplete="0"; }
+    }
+    return {done,target,next,complete};
+  }
+  function renderExerciseDropdownProgress(force=false){
+    if(applying) return;
+    const ex=byId("exercise"); if(!ex) return;
+    const allowedDay=activeAllowedDay() || programDay(ex.value) || "Day 1";
+    const sig=[dateKey(), allowedDay, (Array.isArray(logs)?logs.length:0), ex.value, force?"f":""].join("|");
+    if(!force && sig===lastSig) return;
+    lastSig=sig;
+    applying=true;
+    try{
+      const before=ex.value;
+      Array.from(ex.options).forEach(o=>decorateOption(o, allowedDay));
+      const selectedInfo=(ex.selectedOptions && ex.selectedOptions[0]) ? decorateOption(ex.selectedOptions[0], allowedDay) : null;
+      if(!before || !selectedInfo || selectedInfo.complete || !selectedInfo.allowed || (ex.selectedOptions[0] && ex.selectedOptions[0].disabled)){
+        const next=firstIncomplete(allowedDay);
+        if(next) ex.value=next;
+      }
+      const planned=safeText(ex.value) || firstIncomplete(allowedDay);
+      if(planned){
+        if(ex.value!==planned) ex.value=planned;
+        applySetCounter(planned);
+      }
+    }catch(e){ console.warn("v5321 dropdown progress",e); }
+    finally{ applying=false; }
+  }
+  function refreshAll(){
+    renderExerciseDropdownProgress(true);
+    try{ if(typeof updatePR === "function") updatePR(); }catch(e){}
+    try{ if(typeof updateWeekly === "function") updateWeekly(); }catch(e){}
+    try{ if(typeof updateNextWeekRecommendation === "function") updateNextWeekRecommendation(); }catch(e){}
+    try{ if(typeof updateOrderGuidance === "function") updateOrderGuidance(); }catch(e){}
+    try{ if(typeof window.__v5317Status === "function") window.__v5317Status("พร้อมใช้งาน", "ok"); }catch(e){}
+  }
+  function bind(){
+    const ex=byId("exercise"); if(ex && ex.dataset.v5321Bound!=="1"){
+      ex.dataset.v5321Bound="1";
+      ex.addEventListener("change",()=>{
+        try{ if(typeof window.__v5317Status === "function") window.__v5317Status("กำลังอัปเดตสถานะท่า...", "info"); }catch(e){}
+        setTimeout(refreshAll,30);
+        setTimeout(refreshAll,180);
+      });
+    }
+  }
+  try{
+    const oldSync=sync;
+    sync=function(){
+      const r=oldSync.apply(this,arguments);
+      setTimeout(()=>{ bind(); refreshAll(); },80);
+      setTimeout(()=>{ bind(); refreshAll(); },320);
+      return r;
+    };
+  }catch(e){}
+  try{
+    const oldSave=saveSet;
+    saveSet=async function(){
+      const r=await oldSave.apply(this,arguments);
+      setTimeout(()=>{ bind(); refreshAll(); },80);
+      setTimeout(()=>{ bind(); refreshAll(); },650);
+      return r;
+    };
+  }catch(e){}
+  function syncLabels(){
+    try{ document.title="Workout PRO "+V5321; }catch(e){}
+    try{ const u=byId("userLine"); if(u) u.innerHTML=String(u.innerHTML||"").replace(/v5\.3\.\d+/g,V5321); }catch(e){}
+    try{ document.querySelectorAll(".badge,.version,.status-pill").forEach(el=>{ el.innerHTML=String(el.innerHTML||"").replace(/v5\.3\.\d+/g,V5321); }); }catch(e){}
+  }
+  window.__v5321RenderExerciseDropdownProgress=renderExerciseDropdownProgress;
+  window.__v5321RefreshExerciseProgress=refreshAll;
+  window.addEventListener("load",()=>{
+    setTimeout(()=>{ syncLabels(); bind(); refreshAll(); },400);
+    setTimeout(()=>{ syncLabels(); bind(); refreshAll(); },1500);
+    setTimeout(()=>{ syncLabels(); bind(); refreshAll(); },3500);
+  });
 })();

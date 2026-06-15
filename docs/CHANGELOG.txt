@@ -1,5 +1,5 @@
-v5.3.20
-- Hotfix JavaScript SyntaxError from mixed ?? and logical operators.
-- Keeps v5.3.18 state sync fix.
-- Keeps v5.3.19 exercise recommendation isolation.
-- No Day Lock renderer changes.
+v5.3.21
+- Show per-exercise progress in dropdown.
+- Disable completed exercises.
+- Keep set counter aligned with selected exercise.
+- Preserve Day Lock / Save Guard / recommendation hotfix.
