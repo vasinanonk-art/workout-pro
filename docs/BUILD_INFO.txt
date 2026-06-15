@@ -1,2 +1,2 @@
-Workout PRO v5.3.13
+Workout PRO v5.3.15
 Build: Day Lock Render Single Source Fix

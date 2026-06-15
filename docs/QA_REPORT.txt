@@ -1,5 +1,12 @@
-QA v5.3.13
-- node --check app.module.js: PASS
-- node --check runtime.js: PASS
-- Legacy w537 render/enforce delegated to current w5311/w5312 controls.
-- Day Lock skip controls should no longer disappear after timer refresh.
+Workout PRO v5.3.15 QA Report
+
+Fix scope:
+- Removed legacy duplicate Day Lock renderers from app.module.js.
+- Kept one canonical Day Lock Control panel only.
+- Added scoped Manual Override by team/user/date.
+- Save guard blocks Firebase writes while REST_LOCK / DAY_DATE_LOCK is active unless override is explicitly set.
+- Runtime/version labels synced to v5.3.15.
+
+Expected grep check:
+- grep -n "Day Lock Control" js/app.module.js should show one panel.innerHTML renderer plus debug/filter text only.
+- Runtime should stay v5.3.15 and should not bounce to older versions.
