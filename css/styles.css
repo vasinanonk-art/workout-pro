@@ -140,7 +140,7 @@ button.v431-alt-cancel-clean,
 @keyframes w534spin{to{transform:rotate(360deg)}}
 
 
-/* ===== v5.3.6 No White Screen Core Fix =====
+/* ===== v5.3.8 No White Screen Core Fix =====
    Keep the previous page visible until the next page has rendered.
    This prevents blank white/black frames during heavy Firebase/chart work. */
 html,body{background:#050c1a!important;min-height:100%;}
