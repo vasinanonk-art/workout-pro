@@ -56,7 +56,7 @@ function valueSafe(id, fallback=""){
   return el ? el.value : fallback;
 }
 
-const VERSION="v5.3.16", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
+const VERSION="v5.3.17", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
 
 /* ===== v5.2.6 Date Input Sanity Fix ===== */
 function safeKeyPart(v){
@@ -1402,7 +1402,7 @@ function bindLegacyMigration(){
   window.__migrationModuleReady = true;
 }
 
-/* ===== v5.3.16 PERFORMANCE / WHITE FLASH FIX ===== */
+/* ===== v5.3.17 PERFORMANCE / WHITE FLASH FIX ===== */
 let __w534RenderTimer = null;
 let __w534LastPage = "setup";
 let __w534IsSaving = false;
@@ -1421,7 +1421,7 @@ function w534SetBusy(on, text="กำลังโหลด..."){
     el.classList.toggle("show", !!on);
   }catch(_){}
 }
-function w534SafeCall(fn){try{ if(typeof fn==="function") fn(); }catch(e){console.warn("v5.3.16 safe render", e);}}
+function w534SafeCall(fn){try{ if(typeof fn==="function") fn(); }catch(e){console.warn("v5.3.17 safe render", e);}}
 function w534RenderCurrentPage(page=w534ActivePage()){
   __w534LastPage=page;
   w534SafeCall(renderRecent);
@@ -3170,7 +3170,7 @@ window.addEventListener("load", function(){
 });
 
 
-/* ===== v5.3.16 DAY_LOCK_HARD_FIX =====
+/* ===== v5.3.17 DAY_LOCK_HARD_FIX =====
    Critical: legacy override panel must never re-enable Save while REST_LOCK / DAY_DATE_LOCK is active. */
 function w535HardDayLockEnforce(){
   try{
@@ -3220,9 +3220,9 @@ window.addEventListener("load", function(){
 });
 
 
-/* ===== v5.3.16 NO_WHITE_SCREEN_CORE_FIX =====
+/* ===== v5.3.17 NO_WHITE_SCREEN_CORE_FIX =====
    Hard rule: never blank the current page while the next page is rendering.
-   Day Lock v5.3.16 remains active and is re-enforced after every navigation/save. */
+   Day Lock v5.3.17 remains active and is re-enforced after every navigation/save. */
 let __w536NavToken = 0;
 let __w536DashTimer = null;
 let __w536SyncTimer = null;
@@ -3361,8 +3361,8 @@ window.addEventListener("load", function(){
 });
 
 
-/* ===== v5.3.16 DATE FIELD DISPLAY-ONLY FIX =====
-   Base: v5.3.16 + v5.3.16 Day Lock runtime.
+/* ===== v5.3.17 DATE FIELD DISPLAY-ONLY FIX =====
+   Base: v5.3.17 + v5.3.17 Day Lock runtime.
    Purpose: fix desktop native date input visual clipping without touching Day Lock, sync, saveSet, REST_LOCK, or override logic.
 */
 (function(){
@@ -3405,13 +3405,13 @@ window.addEventListener("load", function(){
 
 
 
-/* ===== v5.3.16 DAY_LOCK_SINGLE_RENDERER_CLEAN_FIX =====
+/* ===== v5.3.17 DAY_LOCK_SINGLE_RENDERER_CLEAN_FIX =====
    Clean fix: removes legacy renderer race by keeping one Day Lock controller.
    Rules: Day 1 -> Day 2 -> Rest -> Day 4 -> Day 5 -> Rest -> Rest -> next Week Day 1.
    Manual override is explicit and scoped by team/user/date.
 */
 (function(){
-  const VERSION_5315 = "v5.3.16";
+  const VERSION_5315 = "v5.3.17";
   const DAYS = ["Day 1","Day 2","Day 4","Day 5"];
   const PANEL_ID = "dayLockSingleSourcePanel";
   const LOG_ID = "log";

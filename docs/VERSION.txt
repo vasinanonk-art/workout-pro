@@ -1,2 +1,1 @@
-Workout PRO v5.3.16
-Day Lock Single Renderer Clean Fix
+Workout PRO v5.3.17

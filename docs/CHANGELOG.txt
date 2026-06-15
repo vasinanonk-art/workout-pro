@@ -1,10 +1,15 @@
-v5.3.16
-- Fix Day Lock panel reverting from v5.3.16/v5.3.16 back to legacy v5.3.16 renderer.
+Workout PRO v5.3.17
+- Added visible loading/status feedback for Save, Day Lock override, page navigation, date sync, and exercise selection.
+- Added bottom UX status bar and inline status updates.
+- Preserved v5.3.16 Day Lock select/exercise dropdown fix.
+
+v5.3.17
+- Fix Day Lock panel reverting from v5.3.17/v5.3.17 back to legacy v5.3.17 renderer.
 - Keep skip-day / override controls visible.
 - Force legacy Day Lock timers to delegate to the current runtime panel.
 - Preserve date display fix and Day Lock save guard.
 
-v5.3.16
+v5.3.17
 - Adds Day Lock single-source renderer guard.
 - Removes visible duplicate Day Lock panels at runtime.
 - Keeps override selector visible and stable.

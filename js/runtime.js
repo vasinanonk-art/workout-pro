@@ -85,8 +85,8 @@ function uiPolishAddVersionPanel(){
   const d=document.createElement('div');
   d.id='versionQAPanel';
   d.className='card version-panel';
-  // Updated version panel for v5.3.16. Reflects current build and patch notes.
-  d.innerHTML='<div class="section-title">Build / QA</div><div class="msg info">Version: <b>v5.3.16</b><br>Build: Lite Date & Save Patch + Final Fix<br>QA: Heavy recomputations disabled; date always synchronized</div>';
+  // Updated version panel for v5.3.17. Reflects current build and patch notes.
+  d.innerHTML='<div class="section-title">Build / QA</div><div class="msg info">Version: <b>v5.3.17</b><br>Build: Lite Date & Save Patch + Final Fix<br>QA: Heavy recomputations disabled; date always synchronized</div>';
   donate.appendChild(d);
  }catch(e){console.warn(e)}
 }
@@ -120,8 +120,8 @@ function modernUiHeader(){
    hero.id='modernHero';
    hero.className='card';
    hero.style.marginBottom='18px';
-   // Display the current app version in the Modern UI header.  Updated to v5.3.16 in the lite patch.
-   hero.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><div><div style="font-size:28px;font-weight:800">Workout PRO</div><div style="opacity:.8;margin-top:4px">Modern Hypertrophy & Recovery System</div></div><div><span class="status-pill status-good">v5.3.16</span><span class="status-pill status-warn">Modern UI</span></div></div>';
+   // Display the current app version in the Modern UI header.  Updated to v5.3.17 in the lite patch.
+   hero.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><div><div style="font-size:28px;font-weight:800">Workout PRO</div><div style="opacity:.8;margin-top:4px">Modern Hypertrophy & Recovery System</div></div><div><span class="status-pill status-good">v5.3.17</span><span class="status-pill status-warn">Modern UI</span></div></div>';
    main.prepend(hero);
  }catch(e){console.warn(e)}
 }
@@ -623,7 +623,7 @@ document.addEventListener("click",function(e){
   });
 })();
 
-// ===== v5.3.16 Final Patch =====
+// ===== v5.3.17 Final Patch =====
 // Remove the legacy migration card to streamline the Setup page.
 (function(){
   try{
@@ -632,4 +632,135 @@ document.addEventListener("click",function(e){
       if(card) card.remove();
     });
   }catch(e){ console.warn(e); }
+})();
+
+
+// ===== v5.3.17 User Feedback / Loading Status UX =====
+(function(){
+  if(window.__w5317UxStatusPatch) return;
+  window.__w5317UxStatusPatch = true;
+  var hideTimer = null;
+  var activeOps = 0;
+  function ensureBar(){
+    var bar = document.getElementById('uxStatusBar');
+    if(bar) return bar;
+    bar = document.createElement('div');
+    bar.id = 'uxStatusBar';
+    bar.innerHTML = '<span class="uxSpin"></span><span id="uxStatusText">พร้อมใช้งาน</span>';
+    document.body.appendChild(bar);
+    return bar;
+  }
+  function setInline(text, cls){
+    try{
+      var ids = ['saveDebug','dayDateLockDebug','lockStatus','calendarSyncStatus'];
+      var el = null;
+      for(var i=0;i<ids.length;i++){ el = document.getElementById(ids[i]); if(el) break; }
+      if(el){
+        el.classList.add('ux-inline-status');
+        if(text) el.textContent = text;
+      }
+    }catch(_){ }
+  }
+  function show(text, type, ms){
+    try{
+      clearTimeout(hideTimer);
+      var bar = ensureBar();
+      var label = document.getElementById('uxStatusText');
+      if(label) label.textContent = text || 'กำลังทำงาน...';
+      bar.className = '';
+      if(type) bar.classList.add(type);
+      bar.classList.add('show');
+      setInline(text, type);
+      if(ms !== 0){
+        hideTimer = setTimeout(function(){ hide(); }, ms || 1800);
+      }
+    }catch(e){ console.warn('ux status', e); }
+  }
+  function hide(){
+    try{
+      var bar = document.getElementById('uxStatusBar');
+      if(bar) bar.classList.remove('show');
+    }catch(_){ }
+  }
+  function busy(text){
+    activeOps++;
+    show(text || 'กำลังโหลด...', '', 0);
+  }
+  function done(text){
+    activeOps = Math.max(0, activeOps-1);
+    show(text || 'เสร็จแล้ว', 'ok', 1100);
+  }
+  function fail(text){
+    activeOps = 0;
+    show(text || 'เกิดข้อผิดพลาด', 'err', 2400);
+  }
+  window.appStatus = {show:show, hide:hide, busy:busy, done:done, fail:fail};
+  window.showAppStatus = show;
+
+  function labelFor(el){
+    var id = (el && el.id) || '';
+    var txt = ((el && (el.innerText || el.textContent || el.value)) || '').trim();
+    if(id === 'saveBtn') return 'กำลังบันทึกเซต...';
+    if(id === 'resetBtn') return 'กำลังรีเซ็ตฟอร์ม...';
+    if(id === 'exercise') return 'กำลังโหลดข้อมูลท่าเล่น...';
+    if(id === 'date') return 'กำลังซิงก์วันที่และ Day Lock...';
+    if(id === 'restMode' || id === 'tempo' || id === 'repQuality' || id === 'biasMode' || id === 'unit') return 'กำลังอัปเดตค่า...';
+    if(id === 'calendarGoLogBtn') return 'กำลังเปิดหน้า Log...';
+    if(id === 'loginBtn') return 'กำลัง Login...';
+    if(id === 'logoutBtn') return 'กำลัง Logout...';
+    if(id === 'saveTeamBtn') return 'กำลังบันทึก Team ID...';
+    if(id === 'startRest') return 'เริ่มจับเวลาพัก...';
+    if(id === 'stopRest') return 'หยุดจับเวลาพัก...';
+    if(id === 'imageBtn' || id === 'videoBtn' || id === 'altBtn') return 'กำลังเปิดข้อมูลท่าเล่น...';
+    if(/override|unlock|skip|ข้าม|ปลด/i.test(id + ' ' + txt)) return 'กำลังตรวจสิทธิ์ข้าม Day Lock...';
+    if(el && el.matches && el.matches('.tab')) return 'กำลังเปลี่ยนหน้า...';
+    if(el && el.tagName === 'SELECT') return 'กำลังอัปเดตรายการ...';
+    if(el && el.tagName === 'BUTTON') return 'กำลังทำรายการ...';
+    return '';
+  }
+  function mark(el, on){
+    try{
+      if(!el || !el.classList) return;
+      if(on) el.classList.add('ux-busy'); else el.classList.remove('ux-busy');
+    }catch(_){ }
+  }
+  document.addEventListener('pointerdown', function(ev){
+    try{
+      var el = ev.target && ev.target.closest ? ev.target.closest('button,select,input[type="date"]') : null;
+      if(!el) return;
+      var msg = labelFor(el);
+      if(!msg) return;
+      mark(el, true);
+      show(msg, '', 0);
+      setTimeout(function(){ mark(el, false); }, 900);
+      setTimeout(function(){ if(activeOps===0) show('พร้อมใช้งาน', 'ok', 700); }, 850);
+    }catch(_){ }
+  }, true);
+  document.addEventListener('change', function(ev){
+    try{
+      var el = ev.target;
+      if(!el || !el.matches || !el.matches('select,input[type="date"],input[type="number"],textarea')) return;
+      var msg = labelFor(el) || 'กำลังอัปเดตข้อมูล...';
+      show(msg, '', 0);
+      setTimeout(function(){ show('อัปเดตแล้ว', 'ok', 900); }, 450);
+    }catch(_){ }
+  }, true);
+  document.addEventListener('click', function(ev){
+    try{
+      var el = ev.target && ev.target.closest ? ev.target.closest('button') : null;
+      if(!el) return;
+      var id = el.id || '';
+      var txt = (el.innerText || el.textContent || '').trim();
+      if(id === 'saveBtn'){
+        show('กำลังบันทึกเซตลงฐานข้อมูล...', '', 0);
+        setTimeout(function(){ show('ถ้าข้อมูลไม่ขึ้น ให้รอ Sync สักครู่', 'warn', 1800); }, 1800);
+      }else if(/override|unlock|skip|ข้าม|ปลด/i.test(id+' '+txt)){
+        show('กำลังปลด Day Lock สำหรับวันที่เลือก...', '', 0);
+        setTimeout(function(){ show('ตรวจสอบ Day Lock แล้ว', 'ok', 1100); }, 900);
+      }
+    }catch(_){ }
+  }, true);
+  window.addEventListener('load', function(){ setTimeout(function(){ show('พร้อมใช้งาน • v5.3.17', 'ok', 1200); }, 450); });
+  window.addEventListener('error', function(e){ fail('มี JavaScript error: ' + ((e && e.message) || 'unknown')); });
+  window.addEventListener('unhandledrejection', function(e){ fail('โหลดข้อมูลไม่สำเร็จ / Firebase ตอบกลับช้า'); });
 })();
