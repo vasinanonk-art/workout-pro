@@ -1,3 +1,8 @@
-v5.3.10
-- Preserve v5.3.7 Day Lock runtime and v5.3.8 Bangkok date engine.
+v5.3.11
+- Day Lock init guard: disable exercise/save while checking.
+- Only active or manually overridden Day options are selectable.
+- Restored explicit skip-day override selector.
+
+v5.3.11
+- Preserve v5.3.7 Day Lock runtime and v5.3.11 Bangkok date engine.
 - Fix desktop date input display without wrapping sync/save logic.

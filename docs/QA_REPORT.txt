@@ -1,5 +1,5 @@
-QA v5.3.10
-- Based on v5.3.8 source with v5.3.7 Day Lock runtime preserved.
+QA v5.3.11
+- Based on v5.3.11 source with v5.3.7 Day Lock runtime preserved.
 - No modification to saveSet Day Lock guard.
 - No modification to REST_LOCK / DAY_DATE_LOCK logic.
 - Date field display-only patch added for desktop visual clipping.

@@ -3572,3 +3572,193 @@ window.w537DayLockDebug=function(){ try{return {activeDay:activeDay(), raw:nextI
   });
   document.addEventListener("click",()=>setTimeout(applyDateDisplayOnly,0),true);
 })();
+
+
+/* ===== v5.3.11 DAY_LOCK_INIT_GUARD_AND_SKIP_SELECTOR =====
+   Fix: Log page rendered before Day Lock enforcement, allowing dropdown to open with all days.
+   Rules: while lock state is checking, Save and exercise dropdown are disabled. After check, only active/override Day options are selectable.
+*/
+(function(){
+  const W5311_VERSION = "v5.3.11";
+  const W5311_DAYS = ["Day 1","Day 2","Day 4","Day 5"];
+  let __w5311Ready = false;
+  let __w5311Applying = false;
+
+  function el(id){ return document.getElementById(id); }
+  function teamKey(){ try{return (typeof activeTeamLabel==="function"?activeTeamLabel():(localStorage.getItem("teamId")||"local"));}catch(_){return "local";} }
+  function userKey(){ try{return (typeof activeUserKey==="function"?activeUserKey():((window.user&&user.uid)||"local"));}catch(_){return "local";} }
+  function dateKey(){ try{return (el("date")&&el("date").value)||((typeof today==="function")?today():new Date().toISOString().slice(0,10));}catch(_){return new Date().toISOString().slice(0,10);} }
+  function skipKey(date){ return "W5311_DAY_SKIP_TARGET::" + teamKey() + "::" + userKey() + "::" + (date||dateKey()); }
+  function getSkipTarget(date){ try{ const v=localStorage.getItem(skipKey(date)); return W5311_DAYS.includes(v)?v:""; }catch(_){return "";} }
+  function setSkipTarget(day,date){ try{ if(day) localStorage.setItem(skipKey(date), day); }catch(_){ } }
+  function clearSkipTarget(date){ try{ localStorage.removeItem(skipKey(date)); }catch(_){ } }
+  function logsLoaded(){
+    try{
+      const d=el("debug");
+      if(d && /โหลดข้อมูลแล้ว|Isolated User Data|sets/.test(d.textContent||"")) return true;
+    }catch(_){ }
+    return __w5311Ready;
+  }
+  function rawAllowedDay(){
+    try{
+      const manual=getSkipTarget(dateKey());
+      if(manual) return manual;
+      const ad=(typeof activeDay==="function")?activeDay():"";
+      if(W5311_DAYS.includes(ad)) return ad;
+      const st=(typeof nextState==="function")?nextState():{};
+      if(st && W5311_DAYS.includes(st.day)) return st.day;
+      return "";
+    }catch(_){ return ""; }
+  }
+  function exerciseDayForValue(v){
+    try{ const p=(PROGRAM||[]).find(r=>r[2]===v); return p?p[0]:""; }catch(_){return "";}
+  }
+  function firstExerciseForDay(day){
+    try{ const p=(PROGRAM||[]).find(r=>r[0]===day); return p?p[2]:""; }catch(_){return "";}
+  }
+  function currentLockInfo(){
+    try{
+      const manual=getSkipTarget(dateKey());
+      if(manual) return {locked:false, target:manual, type:"OVERRIDE", message:"Manual Override เปิดอยู่: เล่น " + manual, overridden:true};
+      if(typeof w537LockReason==="function") return w537LockReason();
+      const st=(typeof nextState==="function")?nextState():{};
+      const ad=(typeof activeDay==="function")?activeDay():"";
+      if(st.restLock || ad==="REST_LOCK") return {locked:true,target:"Day 1",type:"REST_LOCK",message:"ยังพักไม่ครบตาม Rest Rule",overridden:false};
+      if(st.dateLock || ad==="DAY_DATE_LOCK") return {locked:true,target:st.day||"",type:"DAY_DATE_LOCK",message:st.message||"ยังไม่ถึงวันที่ปลดล็อก",overridden:false};
+      if(ad==="COMPLETE") return {locked:true,target:"COMPLETE",type:"COMPLETE",message:"Cycle นี้ครบแล้ว",overridden:false};
+      return {locked:false,target:rawAllowedDay(),type:"OPEN",message:"พร้อมใช้งาน",overridden:false};
+    }catch(e){ return {locked:true,target:"",type:"CHECKING",message:"กำลังตรวจสอบ Day Lock",overridden:false}; }
+  }
+  function filterExerciseDropdown(){
+    const ex=el("exercise");
+    const save=el("saveBtn");
+    const info=currentLockInfo();
+    const ready=logsLoaded();
+    const allowed=rawAllowedDay();
+    if(!ex) return;
+
+    if(!ready){
+      ex.disabled=true;
+      Array.from(ex.options).forEach(o=>{ o.disabled=true; o.hidden=false; });
+      if(save){ save.disabled=true; save.style.opacity=".45"; }
+      return;
+    }
+
+    const hardLocked=!!(info.locked || info.type==="REST_LOCK" || info.type==="DAY_DATE_LOCK" || info.type==="COMPLETE");
+    if(hardLocked){
+      ex.disabled=true;
+      Array.from(ex.options).forEach(o=>{
+        const d=exerciseDayForValue(o.value);
+        const show = info.target && d===info.target;
+        o.disabled=true;
+        o.hidden=!show;
+      });
+      if(save){ save.disabled=true; save.style.opacity=".45"; }
+      return;
+    }
+
+    ex.disabled=false;
+    Array.from(ex.options).forEach(o=>{
+      const d=exerciseDayForValue(o.value);
+      const allow = d===allowed;
+      o.disabled=!allow;
+      o.hidden=!allow;
+    });
+    if(allowed && exerciseDayForValue(ex.value)!==allowed){
+      const first=firstExerciseForDay(allowed);
+      if(first) ex.value=first;
+    }
+    if(save){ save.disabled=false; save.style.opacity="1"; }
+  }
+  function renderPanel(){
+    try{
+      const logPage=el("log"); if(!logPage) return;
+      let panel=el("w537DayLockPanel")||el("w5311DayLockPanel");
+      if(!panel){ panel=document.createElement("div"); panel.id="w5311DayLockPanel"; panel.className="card"; logPage.insertBefore(panel, logPage.querySelector(".card")||logPage.firstChild); }
+      const ready=logsLoaded();
+      const info=currentLockInfo();
+      const selected=getSkipTarget(dateKey());
+      const cls=!ready?"warn":(info.locked?"warn":(info.overridden||selected?"warn":"ok"));
+      const status=!ready?"CHECKING":(info.locked?"LOCKED":(selected?"OVERRIDE":"OPEN"));
+      const message=!ready?"กำลังโหลดข้อมูลและตรวจสอบ Day Lock...":(selected?"Manual Override เปิดอยู่: เล่น "+selected:(info.message||"พร้อมใช้งาน"));
+      const lockBtn=(ready && info.locked && info.target && info.target!=="COMPLETE")
+        ? `<button id="w5311UnlockTargetBtn" class="orange" type="button">ขอปลด Day Lock / เล่น ${info.target}</button>` : "";
+      const skipOptions=W5311_DAYS.map(d=>`<option value="${d}" ${selected===d?"selected":""}>${d}</option>`).join("");
+      const skipBox=ready ? `<div class="row3" style="margin-top:12px">
+          <select id="w5311SkipDaySelect">${skipOptions}</select>
+          <button id="w5311SkipDayBtn" class="orange" type="button">ข้ามไปเล่นวันที่เลือก</button>
+          <button id="w5311ClearSkipBtn" class="gray" type="button">ยกเลิก Override</button>
+        </div><div class="small">ถ้าจะเล่นคนละวัน ต้องเลือกจากตรงนี้เท่านั้น ไม่ใช่เปิดจาก dropdown โดยตรง</div>` : "";
+      panel.innerHTML=`<h3>Day Lock Control</h3><div class="msg ${cls}">
+        Status: <b>${status}</b><br>
+        Target: <b>${info.target||rawAllowedDay()||"-"}</b><br>${message}<br>
+        <span class="small">Runtime: ${W5311_VERSION} • Save Guard: ${info.locked||!ready?"LOCK":"READY"}</span>
+      </div>${lockBtn}${skipBox}`;
+
+      const unlock=el("w5311UnlockTargetBtn");
+      if(unlock){ unlock.onclick=function(){ const t=info.target; if(!t) return; if(!confirm(`ยืนยันปลด Day Lock เพื่อเล่น ${t} วันนี้ใช่ไหม?`)) return; try{ if(typeof w537SetOverride==="function") w537SetOverride(t,dateKey()); }catch(_){ } setSkipTarget(t,dateKey()); applyAll(); }; }
+      const skipBtn=el("w5311SkipDayBtn");
+      if(skipBtn){ skipBtn.onclick=function(){ const t=el("w5311SkipDaySelect")?.value; if(!t) return; if(!confirm(`ยืนยันข้ามไปเล่น ${t} วันนี้ใช่ไหม?`)) return; setSkipTarget(t,dateKey()); applyAll(); }; }
+      const clearBtn=el("w5311ClearSkipBtn");
+      if(clearBtn){ clearBtn.onclick=function(){ clearSkipTarget(dateKey()); applyAll(); }; }
+    }catch(e){ console.warn("w5311 renderPanel", e); }
+  }
+  function applyAll(){
+    if(__w5311Applying) return;
+    __w5311Applying=true;
+    try{
+      filterExerciseDropdown();
+      renderPanel();
+      if(typeof applyMeta==="function") try{applyMeta();}catch(_){ }
+    }finally{ __w5311Applying=false; }
+  }
+
+  try{
+    const oldSync=sync;
+    sync=function(){
+      const r=oldSync.apply(this, arguments);
+      setTimeout(applyAll,0);
+      setTimeout(applyAll,80);
+      setTimeout(applyAll,240);
+      return r;
+    };
+  }catch(e){ console.warn("w5311 sync wrap", e); }
+  try{
+    const oldSave=saveSet;
+    saveSet=async function(){
+      try{
+        applyAll();
+        const isEdit=!!(typeof editingLogIdV533!=="undefined" && editingLogIdV533);
+        if(!isEdit){
+          const ex=el("exercise");
+          const chosenDay=ex?exerciseDayForValue(ex.value):"";
+          const allowed=rawAllowedDay();
+          const info=currentLockInfo();
+          if(!logsLoaded() || info.locked){ applyAll(); alert("Day Lock ยังไม่พร้อมหรือยังล็อกอยู่ ต้องใช้ปุ่มขอปลด/ข้ามวันก่อน"); return; }
+          if(allowed && chosenDay && chosenDay!==allowed){ applyAll(); alert(`ท่านี้เป็น ${chosenDay} แต่วันนี้อนุญาต ${allowed} เท่านั้น`); return; }
+        }
+        return await oldSave.apply(this, arguments);
+      }finally{ setTimeout(applyAll,120); }
+    };
+    const sb=el("saveBtn"); if(sb) sb.onclick=saveSet;
+  }catch(e){ console.warn("w5311 save wrap", e); }
+
+  window.addEventListener("load", function(){
+    try{ const ex=el("exercise"), sb=el("saveBtn"); if(ex) ex.disabled=true; if(sb){sb.disabled=true; sb.style.opacity=".45";} }catch(_){ }
+    setTimeout(applyAll,50);
+    setTimeout(applyAll,250);
+    setTimeout(applyAll,800);
+    setTimeout(()=>{ __w5311Ready=true; applyAll(); },2200);
+    const dbg=el("debug");
+    if(dbg && window.MutationObserver){
+      new MutationObserver(()=>{ if(logsLoaded()){ __w5311Ready=true; applyAll(); }}).observe(dbg,{childList:true,subtree:true,characterData:true});
+    }
+    const ex=el("exercise");
+    if(ex){
+      ["pointerdown","mousedown","focus","click","touchstart"].forEach(ev=>ex.addEventListener(ev, function(){ applyAll(); }, true));
+      ex.addEventListener("change", function(){ applyAll(); }, true);
+    }
+  });
+  document.addEventListener("click",()=>setTimeout(applyAll,0),true);
+  window.w5311DayLockDebug=function(){ return {ready:logsLoaded(), manual:getSkipTarget(dateKey()), info:currentLockInfo(), allowed:rawAllowedDay(), exercise:el("exercise")?.value, exerciseDay:exerciseDayForValue(el("exercise")?.value||""), logs:(logs||[]).length}; };
+})();
