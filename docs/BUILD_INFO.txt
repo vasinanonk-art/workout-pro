@@ -1,4 +1,2 @@
-Workout PRO v5.3.8
-Build Date: 2026-06-13
-Build Type: Performance Patch
-Target: Cloudflare Pages / GitHub main
+Workout PRO v5.3.9
+Build: Date Input Canonical Sync Fix

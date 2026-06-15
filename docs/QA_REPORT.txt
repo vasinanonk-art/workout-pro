@@ -1,5 +1,5 @@
-QA v5.3.8
-- Syntax check: pending in build script.
-- Date helper centralized to Asia/Bangkok.
-- No UTC toISOString date key for today/day lock.
-- Desktop date input min-width added.
+QA v5.3.9
+- app.module.js syntax: PASS
+- runtime.js syntax: PASS
+- Day Lock code retained: PASS
+- Date canonical helper added: PASS

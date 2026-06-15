@@ -56,7 +56,7 @@ function valueSafe(id, fallback=""){
   return el ? el.value : fallback;
 }
 
-const VERSION="v5.3.8", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
+const VERSION="v5.3.9", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
 
 /* ===== v5.2.6 Date Input Sanity Fix ===== */
 function safeKeyPart(v){
@@ -1402,7 +1402,7 @@ function bindLegacyMigration(){
   window.__migrationModuleReady = true;
 }
 
-/* ===== v5.3.8 PERFORMANCE / WHITE FLASH FIX ===== */
+/* ===== v5.3.9 PERFORMANCE / WHITE FLASH FIX ===== */
 let __w534RenderTimer = null;
 let __w534LastPage = "setup";
 let __w534IsSaving = false;
@@ -1421,7 +1421,7 @@ function w534SetBusy(on, text="กำลังโหลด..."){
     el.classList.toggle("show", !!on);
   }catch(_){}
 }
-function w534SafeCall(fn){try{ if(typeof fn==="function") fn(); }catch(e){console.warn("v5.3.8 safe render", e);}}
+function w534SafeCall(fn){try{ if(typeof fn==="function") fn(); }catch(e){console.warn("v5.3.9 safe render", e);}}
 function w534RenderCurrentPage(page=w534ActivePage()){
   __w534LastPage=page;
   w534SafeCall(renderRecent);
@@ -3170,7 +3170,7 @@ window.addEventListener("load", function(){
 });
 
 
-/* ===== v5.3.8 DAY_LOCK_HARD_FIX =====
+/* ===== v5.3.9 DAY_LOCK_HARD_FIX =====
    Critical: legacy override panel must never re-enable Save while REST_LOCK / DAY_DATE_LOCK is active. */
 function w535HardDayLockEnforce(){
   try{
@@ -3220,9 +3220,9 @@ window.addEventListener("load", function(){
 });
 
 
-/* ===== v5.3.8 NO_WHITE_SCREEN_CORE_FIX =====
+/* ===== v5.3.9 NO_WHITE_SCREEN_CORE_FIX =====
    Hard rule: never blank the current page while the next page is rendering.
-   Day Lock v5.3.5 remains active and is re-enforced after every navigation/save. */
+   Day Lock v5.3.9 remains active and is re-enforced after every navigation/save. */
 let __w536NavToken = 0;
 let __w536DashTimer = null;
 let __w536SyncTimer = null;
@@ -3361,13 +3361,13 @@ window.addEventListener("load", function(){
 });
 
 
-/* ===== v5.3.8 DAY_LOCK_REAL_RUNTIME_FIX =====
+/* ===== v5.3.9 DAY_LOCK_REAL_RUNTIME_FIX =====
    Fix: ES-module scoped legacy Day Override was not reliably called/exposed.
    This patch makes Day Lock the runtime source of truth and keeps the override button visible.
    Rules:
    Day 1 -> Day 2 -> Rest Day -> Day 4 -> Day 5 -> Rest -> Rest -> next Day 1.
 */
-const W537_VERSION = "v5.3.8";
+const W537_VERSION = "v5.3.9";
 function w537SelectedDate(){ return (document.getElementById("date") && document.getElementById("date").value) || today(); }
 function w537OverrideKey(day, date){ return "W537_DAY_LOCK_OVERRIDE::" + activeTeamLabel() + "::" + activeUserKey() + "::" + (date||w537SelectedDate()) + "::" + (day||""); }
 function w537HasOverride(day, date){ try{return localStorage.getItem(w537OverrideKey(day,date)) === "1";}catch(_){return false;} }
@@ -3530,3 +3530,87 @@ window.addEventListener("load", function(){
   setInterval(()=>{try{ if(document.querySelector("#log.page.active")) w537HardEnforce(); }catch(_){ }},1500);
 });
 window.w537DayLockDebug=function(){ try{return {activeDay:activeDay(), raw:nextIncompleteDayRaw(), nextState:nextState(), lock:w537LockReason(), date:w537SelectedDate(), logs:(logs||[]).length};}catch(e){return {error:e.message};} };
+
+/* ===== v5.3.9 DATE_INPUT_CANONICAL_SYNC_FIX =====
+   Root fix: native desktop date inputs can show a locale/partial value while the app state is correct.
+   Keep the app value as canonical YYYY-MM-DD and normalize every page/load/save path. */
+const W539_VERSION = "v5.3.9";
+function w539TodayKey(){
+  try{ return (typeof strictLocalDateKeyV523 === "function") ? strictLocalDateKeyV523(new Date()) : (typeof localDateKey === "function" ? localDateKey() : new Intl.DateTimeFormat("sv-SE",{timeZone:"Asia/Bangkok",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date())); }
+  catch(_){ return new Intl.DateTimeFormat("sv-SE",{timeZone:"Asia/Bangkok",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date()); }
+}
+function w539IsKey(v){ return /^\d{4}-\d{2}-\d{2}$/.test(String(v||"")); }
+function w539NormalizeDate(v){
+  v=String(v||"").trim();
+  if(w539IsKey(v)) return v;
+  // dd/mm/yyyy or dd/mm/yy recovery
+  let m=v.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2}|\d{4})$/);
+  if(m){
+    let d=Number(m[1]), mo=Number(m[2]), y=Number(m[3]);
+    if(y<100) y += 2000;
+    const key=`${y}-${String(mo).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    if(w539IsKey(key)) return key;
+  }
+  // Native Date parsing is only a last-resort recovery.
+  const dt=new Date(v);
+  if(!isNaN(dt.getTime())){
+    return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
+  }
+  return w539TodayKey();
+}
+function w539CanonicalDate(){
+  try{
+    if(typeof selectedDate !== "undefined" && w539IsKey(selectedDate)) return selectedDate;
+  }catch(_){ }
+  const el=document.getElementById("date");
+  if(el && w539IsKey(el.value)) return el.value;
+  return w539TodayKey();
+}
+function w539SyncDateField(force=false){
+  const el=document.getElementById("date");
+  if(!el) return w539TodayKey();
+  // Use text mode to avoid browser-specific native date rendering bugs on desktop.
+  try{
+    if(el.type !== "text") el.type = "text";
+    el.inputMode = "numeric";
+    el.placeholder = "YYYY-MM-DD";
+    el.autocomplete = "off";
+  }catch(_){ }
+  const canonical = force ? w539TodayKey() : w539NormalizeDate(el.value || w539CanonicalDate());
+  el.value = canonical;
+  try{ selectedDate = canonical; }catch(_){ }
+  el.dataset.dateCanonical = canonical;
+  try{ if(typeof updateDateStatus === "function") updateDateStatus(); }catch(_){ }
+  try{ if(typeof calSyncUpdateStatus === "function") calSyncUpdateStatus(); }catch(_){ }
+  return canonical;
+}
+function w539BindDateField(){
+  const el=document.getElementById("date");
+  if(!el) return;
+  w539SyncDateField(!el.value);
+  if(el.dataset.w539Bound === "1") return;
+  el.dataset.w539Bound = "1";
+  el.addEventListener("change",()=>{ w539SyncDateField(false); try{ if(typeof sync === "function") sync(); }catch(_){ } });
+  el.addEventListener("blur",()=>{ w539SyncDateField(false); });
+}
+try{
+  const __w539OldSync = sync;
+  sync = function(){
+    try{ w539SyncDateField(false); }catch(_){ }
+    const r = __w539OldSync.apply(this, arguments);
+    setTimeout(()=>{try{w539SyncDateField(false)}catch(_){}},0);
+    return r;
+  };
+}catch(e){ console.warn("w539 sync wrap", e); }
+try{
+  const __w539OldSave = saveSet;
+  saveSet = async function(){
+    try{ w539SyncDateField(false); }catch(_){ }
+    return await __w539OldSave.apply(this, arguments);
+  };
+}catch(e){ console.warn("w539 save wrap", e); }
+window.addEventListener("load", function(){
+  setTimeout(w539BindDateField, 50);
+  setTimeout(()=>w539SyncDateField(false), 400);
+  setTimeout(()=>w539SyncDateField(false), 1200);
+});
