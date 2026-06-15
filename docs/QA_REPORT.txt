@@ -1,12 +1,12 @@
-Workout PRO v5.3.15 QA Report
+Workout PRO v5.3.16 QA Report
 
 Fix scope:
 - Removed legacy duplicate Day Lock renderers from app.module.js.
 - Kept one canonical Day Lock Control panel only.
 - Added scoped Manual Override by team/user/date.
 - Save guard blocks Firebase writes while REST_LOCK / DAY_DATE_LOCK is active unless override is explicitly set.
-- Runtime/version labels synced to v5.3.15.
+- Runtime/version labels synced to v5.3.16.
 
 Expected grep check:
 - grep -n "Day Lock Control" js/app.module.js should show one panel.innerHTML renderer plus debug/filter text only.
-- Runtime should stay v5.3.15 and should not bounce to older versions.
+- Runtime should stay v5.3.16 and should not bounce to older versions.

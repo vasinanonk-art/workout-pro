@@ -131,7 +131,7 @@ button.v431-alt-cancel-clean,
 #calendarGoLogBtn{margin-top:12px;width:100%;min-height:52px}
 
 
-/* v5.3.15 Performance overlay - prevents white/black flash during save/page render */
+/* v5.3.16 Performance overlay - prevents white/black flash during save/page render */
 .page{transition:opacity .12s ease-in-out;}
 .w534Busy{position:fixed;inset:auto 16px 16px auto;z-index:99999;display:none;pointer-events:none;}
 .w534Busy.show{display:block;}
@@ -140,7 +140,7 @@ button.v431-alt-cancel-clean,
 @keyframes w534spin{to{transform:rotate(360deg)}}
 
 
-/* ===== v5.3.15 No White Screen Core Fix =====
+/* ===== v5.3.16 No White Screen Core Fix =====
    Keep the previous page visible until the next page has rendered.
    This prevents blank white/black frames during heavy Firebase/chart work. */
 html,body{background:#050c1a!important;min-height:100%;}
@@ -152,7 +152,7 @@ main{background:#050c1a;}
 .w536MiniStatus.show{display:block;}
 
 
-/* ===== v5.3.15 DATE FIELD WIDTH FIX =====
+/* ===== v5.3.16 DATE FIELD WIDTH FIX =====
    Desktop browser date inputs can visually clip the first digit when the control is narrow.
    Keep canonical value as YYYY-MM-DD, and give the native input enough width. */
 input[type="date"]{

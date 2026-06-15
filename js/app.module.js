@@ -56,7 +56,7 @@ function valueSafe(id, fallback=""){
   return el ? el.value : fallback;
 }
 
-const VERSION="v5.3.15", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
+const VERSION="v5.3.16", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
 
 /* ===== v5.2.6 Date Input Sanity Fix ===== */
 function safeKeyPart(v){
@@ -1402,7 +1402,7 @@ function bindLegacyMigration(){
   window.__migrationModuleReady = true;
 }
 
-/* ===== v5.3.15 PERFORMANCE / WHITE FLASH FIX ===== */
+/* ===== v5.3.16 PERFORMANCE / WHITE FLASH FIX ===== */
 let __w534RenderTimer = null;
 let __w534LastPage = "setup";
 let __w534IsSaving = false;
@@ -1421,7 +1421,7 @@ function w534SetBusy(on, text="กำลังโหลด..."){
     el.classList.toggle("show", !!on);
   }catch(_){}
 }
-function w534SafeCall(fn){try{ if(typeof fn==="function") fn(); }catch(e){console.warn("v5.3.15 safe render", e);}}
+function w534SafeCall(fn){try{ if(typeof fn==="function") fn(); }catch(e){console.warn("v5.3.16 safe render", e);}}
 function w534RenderCurrentPage(page=w534ActivePage()){
   __w534LastPage=page;
   w534SafeCall(renderRecent);
@@ -3170,7 +3170,7 @@ window.addEventListener("load", function(){
 });
 
 
-/* ===== v5.3.15 DAY_LOCK_HARD_FIX =====
+/* ===== v5.3.16 DAY_LOCK_HARD_FIX =====
    Critical: legacy override panel must never re-enable Save while REST_LOCK / DAY_DATE_LOCK is active. */
 function w535HardDayLockEnforce(){
   try{
@@ -3220,9 +3220,9 @@ window.addEventListener("load", function(){
 });
 
 
-/* ===== v5.3.15 NO_WHITE_SCREEN_CORE_FIX =====
+/* ===== v5.3.16 NO_WHITE_SCREEN_CORE_FIX =====
    Hard rule: never blank the current page while the next page is rendering.
-   Day Lock v5.3.15 remains active and is re-enforced after every navigation/save. */
+   Day Lock v5.3.16 remains active and is re-enforced after every navigation/save. */
 let __w536NavToken = 0;
 let __w536DashTimer = null;
 let __w536SyncTimer = null;
@@ -3361,8 +3361,8 @@ window.addEventListener("load", function(){
 });
 
 
-/* ===== v5.3.15 DATE FIELD DISPLAY-ONLY FIX =====
-   Base: v5.3.15 + v5.3.15 Day Lock runtime.
+/* ===== v5.3.16 DATE FIELD DISPLAY-ONLY FIX =====
+   Base: v5.3.16 + v5.3.16 Day Lock runtime.
    Purpose: fix desktop native date input visual clipping without touching Day Lock, sync, saveSet, REST_LOCK, or override logic.
 */
 (function(){
@@ -3405,18 +3405,23 @@ window.addEventListener("load", function(){
 
 
 
-/* ===== v5.3.15 DAY_LOCK_SINGLE_RENDERER_CLEAN_FIX =====
+/* ===== v5.3.16 DAY_LOCK_SINGLE_RENDERER_CLEAN_FIX =====
    Clean fix: removes legacy renderer race by keeping one Day Lock controller.
    Rules: Day 1 -> Day 2 -> Rest -> Day 4 -> Day 5 -> Rest -> Rest -> next Week Day 1.
    Manual override is explicit and scoped by team/user/date.
 */
 (function(){
-  const VERSION_5315 = "v5.3.15";
+  const VERSION_5315 = "v5.3.16";
   const DAYS = ["Day 1","Day 2","Day 4","Day 5"];
   const PANEL_ID = "dayLockSingleSourcePanel";
   const LOG_ID = "log";
   let rendering = false;
   let renderTimer = null;
+  let pendingSkipDay = "";
+  function userIsInteractingWithSelect(){
+    const a = document.activeElement;
+    return !!(a && (a.id === "exercise" || a.id === "w5315SkipSelect"));
+  }
 
   function byId(id){ return document.getElementById(id); }
   function safeCall(fn){ try{ if(typeof fn === "function") return fn(); }catch(e){ console.warn("v5315 safeCall", e); } }
@@ -3609,7 +3614,8 @@ window.addEventListener("load", function(){
       const manual = getOverride(dateKey());
       const status = info.locked && !manual ? "LOCKED" : (manual ? "OVERRIDE" : "OPEN");
       const cls = info.locked && !manual ? "warn" : (manual ? "warn" : "ok");
-      const opts = DAYS.map(d=>`<option value="${d}" ${manual===d?"selected":""}>${d}</option>`).join("");
+      const selectedSkip = pendingSkipDay || manual || (DAYS.includes(info.target) ? info.target : "Day 1");
+      const opts = DAYS.map(d=>`<option value="${d}" ${selectedSkip===d?"selected":""}>${d}</option>`).join("");
       const unlockBtn = (info.locked && info.target && DAYS.includes(info.target) && !manual) ? `<button id="w5315UnlockBtn" class="orange" type="button">ขอปลด Day Lock / เล่น ${info.target}</button>` : "";
       panel.innerHTML = `<h3>Day Lock Control</h3>
         <div class="msg ${cls}">Status: <b>${status}</b><br>
@@ -3624,12 +3630,16 @@ window.addEventListener("load", function(){
         <div class="small">ถ้าจะเล่นคนละวัน ต้องเลือกจากตรงนี้เท่านั้น ไม่ใช่จาก dropdown โดยตรง</div>
         ${unlockBtn}`;
       const sel = byId("w5315SkipSelect");
+      if(sel){
+        sel.onchange = function(){ pendingSkipDay = sel.value; };
+        sel.onclick = function(e){ if(e) e.stopPropagation(); };
+      }
       const skip = byId("w5315SkipBtn");
-      if(skip) skip.onclick = function(){ const day = sel ? sel.value : (info.target || "Day 1"); setOverride(day,dateKey()); scheduleRender(0); safeCall(sync); };
+      if(skip) skip.onclick = function(){ const day = pendingSkipDay || (sel ? sel.value : (info.target || "Day 1")); setOverride(day,dateKey()); pendingSkipDay = day; scheduleRender(0); safeCall(sync); };
       const clear = byId("w5315ClearBtn");
-      if(clear) clear.onclick = function(){ clearOverride(dateKey()); scheduleRender(0); safeCall(sync); };
+      if(clear) clear.onclick = function(){ pendingSkipDay = ""; clearOverride(dateKey()); scheduleRender(0); safeCall(sync); };
       const unlock = byId("w5315UnlockBtn");
-      if(unlock) unlock.onclick = function(){ setOverride(info.target,dateKey()); scheduleRender(0); safeCall(sync); };
+      if(unlock) unlock.onclick = function(){ pendingSkipDay = info.target; setOverride(info.target,dateKey()); scheduleRender(0); safeCall(sync); };
       applyDropdown(info);
       syncVersionLabels();
     }catch(e){ console.warn("v5315 render", e); }
@@ -3637,7 +3647,7 @@ window.addEventListener("load", function(){
   }
   function scheduleRender(ms=50){
     clearTimeout(renderTimer);
-    renderTimer = setTimeout(renderNow, ms);
+    renderTimer = setTimeout(()=>{ if(userIsInteractingWithSelect()) return; renderNow(); }, ms);
   }
 
   // Prevent legacy global hooks from repainting other Day Lock panels.
@@ -3669,14 +3679,15 @@ window.addEventListener("load", function(){
   window.addEventListener("load", function(){
     [50,250,800,1600].forEach(t=>setTimeout(renderNow,t));
     const ex = byId("exercise");
-    if(ex){ ["change","focus","click","pointerdown","touchstart"].forEach(ev=>ex.addEventListener(ev,()=>scheduleRender(0),true)); }
+    if(ex){ ["change","blur"].forEach(ev=>ex.addEventListener(ev,()=>scheduleRender(120),true)); }
     const date = byId("date");
     if(date){ ["change","blur","input"].forEach(ev=>date.addEventListener(ev,()=>scheduleRender(0),true)); }
   });
   document.addEventListener("click", function(e){
     const t = e && e.target;
-    if(t && (t.id === "w5315SkipBtn" || t.id === "w5315ClearBtn" || t.id === "w5315UnlockBtn" || t.id === "w5315SkipSelect")) return;
-    scheduleRender(80);
+    if(t && (t.closest && (t.closest("#dayLockSingleSourcePanel") || t.closest("#altModal")))) return;
+    if(t && (t.id === "exercise" || t.id === "w5315SkipSelect")) return;
+    scheduleRender(160);
   }, true);
-  setInterval(function(){ try{ if(document.querySelector("#log.page.active")) renderNow(); }catch(_){ } }, 2500);
+  setInterval(function(){ try{ if(document.querySelector("#log.page.active") && !userIsInteractingWithSelect()) renderNow(); }catch(_){ } }, 4000);
 })();
