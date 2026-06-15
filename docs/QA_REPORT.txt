@@ -1,4 +1,4 @@
-QA v5.3.12
+QA v5.3.13
 - node --check app.module.js: PASS
 - node --check runtime.js: PASS
 - Legacy w537 render/enforce delegated to current w5311/w5312 controls.

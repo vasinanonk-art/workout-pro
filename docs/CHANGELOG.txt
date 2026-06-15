@@ -1,5 +1,5 @@
-v5.3.12
-- Fix Day Lock panel reverting from v5.3.11/v5.3.12 back to legacy v5.3.10 renderer.
+v5.3.13
+- Fix Day Lock panel reverting from v5.3.13/v5.3.13 back to legacy v5.3.13 renderer.
 - Keep skip-day / override controls visible.
 - Force legacy Day Lock timers to delegate to the current runtime panel.
 - Preserve date display fix and Day Lock save guard.
