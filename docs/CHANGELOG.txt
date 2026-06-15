@@ -1,18 +1,5 @@
-v5.3.5 - Performance / White Flash Fix
-- Fixed slow white/black flash after Save/Edit and page switching.
-- Added debounced active-page rendering.
-- Reduced full dashboard/calendar/program rebuilds on every tab click.
-- Optimistic local state update after Firestore add/update.
-- Added non-blocking loading overlay.
-- Bumped cache query to v=534.
-
-v5.3.3 - Edit Fix
-- Added Edit Log mode.
-- Used updateDoc for existing records.
-- Version sync and cache patch.
-
-
-v5.3.5 DAY LOCK HARD FIX
-- Fixed legacy override panel re-enabling Save during REST_LOCK/DAY_DATE_LOCK.
-- Added hard guard inside saveSet before Firestore write.
-- Added post-render enforcement after sync and override panel render.
+v5.3.7
+- Restored visible Day Lock Control panel at runtime.
+- Patched ES-module scoped Day Lock functions so override works reliably.
+- Added hard Save guard before Firebase write.
+- Kept v5.3.6 no-white-screen navigation patch.

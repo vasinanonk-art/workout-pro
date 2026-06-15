@@ -42,7 +42,7 @@ function valueSafe(id, fallback=""){
   return el ? el.value : fallback;
 }
 
-const VERSION="v5.3.5", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
+const VERSION="v5.3.7", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
 
 /* ===== v5.2.6 Date Input Sanity Fix ===== */
 function safeKeyPart(v){
@@ -1390,7 +1390,7 @@ function bindLegacyMigration(){
   window.__migrationModuleReady = true;
 }
 
-/* ===== v5.3.5 PERFORMANCE / WHITE FLASH FIX ===== */
+/* ===== v5.3.6 PERFORMANCE / WHITE FLASH FIX ===== */
 let __w534RenderTimer = null;
 let __w534LastPage = "setup";
 let __w534IsSaving = false;
@@ -1409,7 +1409,7 @@ function w534SetBusy(on, text="กำลังโหลด..."){
     el.classList.toggle("show", !!on);
   }catch(_){}
 }
-function w534SafeCall(fn){try{ if(typeof fn==="function") fn(); }catch(e){console.warn("v5.3.5 safe render", e);}}
+function w534SafeCall(fn){try{ if(typeof fn==="function") fn(); }catch(e){console.warn("v5.3.6 safe render", e);}}
 function w534RenderCurrentPage(page=w534ActivePage()){
   __w534LastPage=page;
   w534SafeCall(renderRecent);
@@ -3158,7 +3158,7 @@ window.addEventListener("load", function(){
 });
 
 
-/* ===== v5.3.5 DAY_LOCK_HARD_FIX =====
+/* ===== v5.3.6 DAY_LOCK_HARD_FIX =====
    Critical: legacy override panel must never re-enable Save while REST_LOCK / DAY_DATE_LOCK is active. */
 function w535HardDayLockEnforce(){
   try{
@@ -3206,3 +3206,315 @@ window.addEventListener("load", function(){
   setTimeout(w535HardDayLockEnforce, 300);
   setTimeout(w535HardDayLockEnforce, 1200);
 });
+
+
+/* ===== v5.3.6 NO_WHITE_SCREEN_CORE_FIX =====
+   Hard rule: never blank the current page while the next page is rendering.
+   Day Lock v5.3.5 remains active and is re-enforced after every navigation/save. */
+let __w536NavToken = 0;
+let __w536DashTimer = null;
+let __w536SyncTimer = null;
+let __w536LastSyncAt = 0;
+
+function w536Mini(on, text="กำลังเตรียมหน้า..."){
+  try{
+    let el=document.getElementById("w536MiniStatus");
+    if(!el){ el=document.createElement("div"); el.id="w536MiniStatus"; el.className="w536MiniStatus"; document.body.appendChild(el); }
+    el.textContent=text;
+    el.classList.toggle("show", !!on);
+  }catch(_){ }
+}
+function w536LightRender(page){
+  try{
+    // Fast, page-local rendering only. Heavy charts are deferred.
+    if(page==="log"){
+      w534SafeCall(applyMeta); w534SafeCall(updatePR); w534SafeCall(updateWeekly);
+      w534SafeCall(updateNextWeekRecommendation); w534SafeCall(updateOrderGuidance);
+      w534SafeCall(()=>{ if(typeof renderMediaPanel==="function") renderMediaPanel(); });
+      w534SafeCall(()=>{ if(typeof syncSelectedExerciseState==="function") syncSelectedExerciseState(); });
+    }else if(page==="calendar"){
+      w534SafeCall(renderCalendar); w534SafeCall(()=>renderDaySummary(selectedDate));
+    }else if(page==="program"){
+      w534SafeCall(renderProgram);
+    }else if(page==="guide"){
+      w534SafeCall(renderGuide);
+    }else if(page==="coach"){
+      // Avoid drawing charts before the page is visible.
+      w534SafeCall(()=>{ if($('coachAdvice')) $('coachAdvice').innerHTML = $('coachAdvice').innerHTML || 'กำลังเตรียม Coach...'; });
+    }else if(page==="dash"){
+      // KPI first; charts later.
+      try{ setTextSafe("kVol", logs.reduce((a,b)=>a+(+b.volume||0),0).toFixed(0)); }catch(_){ }
+      try{ setTextSafe("kSets", logs.length); }catch(_){ }
+      try{ setTextSafe("kUsers", new Set(logs.map(x=>x.userId)).size); }catch(_){ }
+      try{ setTextSafe("kWeek", autoWeek()); }catch(_){ }
+      try{ setTextSafe("chartStatus", "Dashboard ready"); }catch(_){ }
+    }
+  }catch(e){ console.warn("w536LightRender", e); }
+}
+function w536HeavyRender(page, token){
+  try{
+    if(token!==__w536NavToken) return;
+    if(page==="dash"){
+      clearTimeout(__w536DashTimer);
+      __w536DashTimer=setTimeout(()=>{
+        try{ if(token!==__w536NavToken) return; renderDashboard(); }catch(e){console.warn("dash",e)}
+        setTimeout(()=>{try{ if(token===__w536NavToken && typeof v5RenderMuscleBalance==="function") v5RenderMuscleBalance(); }catch(e){}},80);
+        setTimeout(()=>{try{ if(token===__w536NavToken && typeof v5RenderPRBoard==="function") v5RenderPRBoard(); }catch(e){}},140);
+        setTimeout(()=>{try{ if(token===__w536NavToken && typeof v5RenderRecoveryTrend==="function") v5RenderRecoveryTrend(); }catch(e){}},200);
+      },120);
+    }else if(page==="coach"){
+      setTimeout(()=>{try{ if(token===__w536NavToken) renderCoach(); }catch(e){console.warn("coach",e)}},80);
+      setTimeout(()=>{try{ if(token===__w536NavToken && typeof renderHypertrophyIntelligence==="function") renderHypertrophyIntelligence(); }catch(e){}},180);
+    }else if(page==="log"){
+      setTimeout(()=>{try{ if(token===__w536NavToken && typeof historySummaryForCurrent==="function") historySummaryForCurrent(); }catch(e){}},120);
+      setTimeout(()=>{try{ if(token===__w536NavToken && typeof v5RenderLogSummary==="function") v5RenderLogSummary(); }catch(e){}},180);
+    }else if(page==="backup"){
+      setTimeout(()=>{try{ if(token===__w536NavToken && typeof v5BindExport==="function") v5BindExport(); }catch(e){}},80);
+    }
+  }catch(e){ console.warn("w536HeavyRender", e); }
+}
+function w536ShowPage(page){
+  const token=++__w536NavToken;
+  try{
+    const target=document.getElementById(page);
+    if(!target) return;
+    const current=document.querySelector(".page.active");
+    if(current && current.id===page){ w536LightRender(page); w536HeavyRender(page, token); return; }
+    w536Mini(true, "กำลังเปิดหน้า...");
+    target.classList.add("preparing");
+    w536LightRender(page);
+    requestAnimationFrame(()=>{
+      requestAnimationFrame(()=>{
+        try{
+          if(token!==__w536NavToken) return;
+          document.querySelectorAll(".page").forEach(p=>{
+            p.classList.toggle("active", p.id===page);
+            p.classList.remove("preparing");
+          });
+          document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.dataset.page===page));
+          __w534LastPage=page;
+          if(typeof w535HardDayLockEnforce==="function") setTimeout(w535HardDayLockEnforce,0);
+          w536HeavyRender(page, token);
+          setTimeout(()=>w536Mini(false),180);
+        }catch(e){ console.warn("w536ShowPage swap", e); w536Mini(false); }
+      });
+    });
+  }catch(e){ console.warn("w536ShowPage", e); w536Mini(false); }
+}
+window.show=w536ShowPage;
+window.showPage=w536ShowPage;
+w534ShowPage=w536ShowPage;
+
+// Replace broad all-page render fallback with current-page rendering only.
+try{
+  renderSafe=function(){
+    try{ w536LightRender(w534ActivePage()); w536HeavyRender(w534ActivePage(), __w536NavToken); }
+    catch(e){ try{ setTextSafe("chartStatus", "Render fallback: "+e.message); }catch(_){} }
+  };
+}catch(e){ console.warn("w536 renderSafe override", e); }
+
+// Debounce Firestore snapshots so navigation/save does not trigger repeated full renders.
+try{
+  const _w536OldRenderCurrent = w534RenderCurrentPage;
+  w534RenderCurrentPage = function(page=w534ActivePage()){
+    const now=Date.now();
+    if(now-__w536LastSyncAt<120){
+      clearTimeout(__w536SyncTimer);
+      __w536SyncTimer=setTimeout(()=>{w536LightRender(page); w536HeavyRender(page, __w536NavToken);},160);
+      return;
+    }
+    __w536LastSyncAt=now;
+    w536LightRender(page);
+    w536HeavyRender(page, __w536NavToken);
+  };
+}catch(e){ console.warn("w536 w534RenderCurrentPage override", e); }
+
+// Save path: keep current UI visible, update recent list lightly, delay expensive sync.
+try{
+  const _w536OldW534SetBusy = w534SetBusy;
+  w534SetBusy=function(on, text){
+    // Use mini status instead of full overlay to avoid perceived blank screen.
+    w536Mini(!!on, text||"กำลังทำงาน...");
+    if(!on) setTimeout(()=>w536Mini(false),120);
+  };
+}catch(e){ console.warn("w536 busy override", e); }
+
+window.addEventListener("load", function(){
+  try{
+    document.querySelectorAll(".tab").forEach(b=>{ b.onclick=()=>w536ShowPage(b.dataset.page); });
+    const backupBtn=[...document.querySelectorAll("nav button")].find(b=>String(b.textContent||"").trim()==="Backup");
+    if(backupBtn) backupBtn.onclick=()=>w536ShowPage("backup");
+    setTimeout(()=>{try{ if(typeof w535HardDayLockEnforce==="function") w535HardDayLockEnforce(); }catch(_){}},250);
+  }catch(e){ console.warn("w536 load bind", e); }
+});
+
+
+/* ===== v5.3.7 DAY_LOCK_REAL_RUNTIME_FIX =====
+   Fix: ES-module scoped legacy Day Override was not reliably called/exposed.
+   This patch makes Day Lock the runtime source of truth and keeps the override button visible.
+   Rules:
+   Day 1 -> Day 2 -> Rest Day -> Day 4 -> Day 5 -> Rest -> Rest -> next Day 1.
+*/
+const W537_VERSION = "v5.3.7";
+function w537SelectedDate(){ return (document.getElementById("date") && document.getElementById("date").value) || today(); }
+function w537OverrideKey(day, date){ return "W537_DAY_LOCK_OVERRIDE::" + activeTeamLabel() + "::" + activeUserKey() + "::" + (date||w537SelectedDate()) + "::" + (day||""); }
+function w537HasOverride(day, date){ try{return localStorage.getItem(w537OverrideKey(day,date)) === "1";}catch(_){return false;} }
+function w537SetOverride(day, date){
+  try{
+    const payload={day, date:date||w537SelectedDate(), at:new Date().toISOString(), by:(user&&user.email)||"local"};
+    localStorage.setItem(w537OverrideKey(day,payload.date), "1");
+    localStorage.setItem("W537_DAY_LOCK_OVERRIDE_LAST", JSON.stringify(payload));
+  }catch(_){ }
+}
+function w537RawNextPlayableDay(){
+  try{
+    const raw = nextIncompleteDayRaw();
+    if(raw === "REST_LOCK") return "Day 1";
+    if(raw === "DAY_DATE_LOCK") return nextIncompleteDayRaw();
+    if(raw === "COMPLETE") return "COMPLETE";
+    return raw;
+  }catch(_){ return ""; }
+}
+try{
+  const __w537OriginalActiveDay = activeDay;
+  activeDay = function(){
+    try{
+      const raw = nextIncompleteDayRaw();
+      const sel = w537SelectedDate();
+      if(raw === "REST_LOCK") return w537HasOverride("Day 1", sel) ? "Day 1" : "REST_LOCK";
+      if(raw === "COMPLETE") return "COMPLETE";
+      const info = calendarUnlockInfoForNextDay(raw);
+      return (info.allowed || w537HasOverride(raw, sel)) ? raw : "DAY_DATE_LOCK";
+    }catch(e){
+      console.warn("w537 activeDay fallback", e);
+      return __w537OriginalActiveDay();
+    }
+  };
+}catch(e){ console.warn("w537 activeDay patch failed", e); }
+try{
+  nextState = function(){
+    const d = activeDay();
+    if(d === "REST_LOCK"){
+      const rc = lastCompletedCycle();
+      return {restLock:true, week:autoWeek(), rest:restCount(rc,w537SelectedDate()), earliest:earliestNext(rc)};
+    }
+    if(d === "DAY_DATE_LOCK"){
+      const raw = nextIncompleteDayRaw();
+      const info = calendarUnlockInfoForNextDay(raw);
+      return {dateLock:true, day:raw, week:autoWeek(), message:info.message};
+    }
+    if(d === "COMPLETE") return {complete:true, day:d, week:autoWeek()};
+    for(const p of PROGRAM.filter(p=>p[0]===d)){
+      const done=countActive(p[2]), t=target(p[2]);
+      if(done<t) return {day:d, exercise:p[2], done, target:t, next:done+1, remain:t-done, week:autoWeek()};
+    }
+    return {complete:true, day:d, week:autoWeek()};
+  };
+}catch(e){ console.warn("w537 nextState patch failed", e); }
+function w537LockReason(){
+  try{
+    const raw = nextIncompleteDayRaw();
+    const sel = w537SelectedDate();
+    if(raw === "REST_LOCK"){
+      const rc=lastCompletedCycle();
+      const overridden=w537HasOverride("Day 1", sel);
+      return {locked:!overridden, target:"Day 1", type:"REST_LOCK", message:`ยังพักไม่ครบ 2 วันหลัง Day 5<br>เริ่มได้เร็วสุด: <b>${earliestNext(rc)}</b>`, overridden};
+    }
+    if(raw === "COMPLETE") return {locked:true, target:"COMPLETE", type:"COMPLETE", message:"Cycle นี้ครบแล้ว", overridden:false};
+    const info=calendarUnlockInfoForNextDay(raw);
+    const overridden=w537HasOverride(raw, sel);
+    return {locked:(!info.allowed && !overridden), target:raw, type:info.allowed?"OPEN":"DAY_DATE_LOCK", message:info.message, overridden};
+  }catch(e){ return {locked:false,target:"",type:"ERR",message:e.message,overridden:false}; }
+}
+function w537RenderDayLockPanel(){
+  try{
+    const logPage=document.getElementById("log");
+    if(!logPage) return;
+    let panel=document.getElementById("w537DayLockPanel");
+    if(!panel){
+      panel=document.createElement("div");
+      panel.id="w537DayLockPanel";
+      panel.className="card";
+      const first=logPage.querySelector(".card");
+      logPage.insertBefore(panel, first || logPage.firstChild);
+    }
+    const info=w537LockReason();
+    const st=(typeof nextState==="function")?nextState():{};
+    const cls=info.locked?"warn":(info.overridden?"warn":"ok");
+    const btnHtml=info.locked && info.target && info.target!=="COMPLETE"
+      ? `<button id="w537UnlockBtn" class="orange" type="button">ขอปลด Day Lock / เล่น ${info.target}</button>`
+      : (info.overridden?`<div class="small">Manual Override เปิดอยู่สำหรับ ${info.target}</div>`:``);
+    panel.innerHTML=`<h3>Day Lock Control</h3><div class="msg ${cls}">
+      Status: <b>${info.locked?"LOCKED":(info.overridden?"OVERRIDE":"OPEN")}</b><br>
+      Target: <b>${info.target||"-"}</b><br>${info.message||"พร้อมใช้งาน"}<br>
+      <span class="small">Runtime: ${W537_VERSION} • Save Guard: ${st.restLock||st.dateLock?"LOCK":"READY"}</span>
+      </div>${btnHtml}`;
+    const btn=document.getElementById("w537UnlockBtn");
+    if(btn){
+      btn.onclick=function(){
+        if(!confirm(`ยืนยันปลด Day Lock เพื่อเล่น ${info.target} วันนี้ใช่ไหม?\nระบบจะบันทึกเป็น Manual Override เฉพาะวันนี้`)) return;
+        w537SetOverride(info.target, w537SelectedDate());
+        try{ sync(); }catch(_){ }
+        setTimeout(w537RenderDayLockPanel,50);
+        setTimeout(w537HardEnforce,80);
+      };
+    }
+  }catch(e){ console.warn("w537RenderDayLockPanel", e); }
+}
+function w537HardEnforce(){
+  try{
+    const st=(typeof nextState==="function")?nextState():{};
+    const ad=(typeof activeDay==="function")?activeDay():"";
+    const locked=!!(st.restLock || st.dateLock || ad==="REST_LOCK" || ad==="DAY_DATE_LOCK" || ad==="COMPLETE");
+    const btn=document.getElementById("saveBtn");
+    if(btn){ btn.disabled=locked; btn.style.opacity=locked?".45":"1"; btn.dataset.w537Locked=locked?"1":"0"; }
+    const ex=document.getElementById("exercise");
+    if(ex && locked){ Array.from(ex.options).forEach(o=>o.disabled=true); }
+    w537RenderDayLockPanel();
+    return !locked;
+  }catch(e){ console.warn("w537HardEnforce", e); return false; }
+}
+try{
+  const __w537OldSync = sync;
+  sync = function(){
+    const r=__w537OldSync.apply(this, arguments);
+    setTimeout(w537HardEnforce,0);
+    setTimeout(w537HardEnforce,160);
+    return r;
+  };
+}catch(e){ console.warn("w537 sync wrap failed", e); }
+try{
+  const __w537OldSaveSet = saveSet;
+  saveSet = async function(){
+    try{
+      const isEdit = !!(typeof editingLogIdV533 !== "undefined" && editingLogIdV533);
+      if(!isEdit){
+        const st=(typeof nextState==="function")?nextState():{};
+        const ad=(typeof activeDay==="function")?activeDay():"";
+        if(st.restLock || ad==="REST_LOCK"){
+          w537HardEnforce();
+          alert("ยังพักไม่ครบ 2 วันหลัง Day 5 ต้องกดขอปลด Day Lock ก่อนเท่านั้น");
+          return;
+        }
+        if(st.dateLock || ad==="DAY_DATE_LOCK"){
+          w537HardEnforce();
+          alert(st.message || "ยังไม่ถึงวันที่ปลดล็อก ต้องกดขอปลด Day Lock ก่อนเท่านั้น");
+          return;
+        }
+      }
+      return await __w537OldSaveSet.apply(this, arguments);
+    }finally{
+      setTimeout(w537HardEnforce,120);
+      setTimeout(w537RenderDayLockPanel,180);
+    }
+  };
+  const sb=document.getElementById("saveBtn");
+  if(sb) sb.onclick=saveSet;
+}catch(e){ console.warn("w537 saveSet wrap failed", e); }
+window.addEventListener("load", function(){
+  setTimeout(w537HardEnforce,250);
+  setTimeout(w537RenderDayLockPanel,300);
+  setTimeout(()=>{try{ const sb=document.getElementById("saveBtn"); if(sb) sb.onclick=saveSet; }catch(_){ }},500);
+  setInterval(()=>{try{ if(document.querySelector("#log.page.active")) w537HardEnforce(); }catch(_){ }},1500);
+});
+window.w537DayLockDebug=function(){ try{return {activeDay:activeDay(), raw:nextIncompleteDayRaw(), nextState:nextState(), lock:w537LockReason(), date:w537SelectedDate(), logs:(logs||[]).length};}catch(e){return {error:e.message};} };
