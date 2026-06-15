@@ -1,3 +1,2 @@
-Build: Workout PRO v5.4.0 Clean Rebuild
-Date: 2026-06-15
-Runtime: clean single-state app.module.js
+Version: v5.4.2
+Build: Calendar + Strict Day Dropdown Fix

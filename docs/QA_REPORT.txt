@@ -1,6 +1,7 @@
-QA v5.4.0
-[PASS] node --check js/app.module.js
-[PASS] node --check js/runtime.js
-[PASS] No duplicate Day Lock renderer in app.module.js
-[PASS] Single version label v5.4.0
-[NOTE] Firebase login/write must be tested in live browser after deploy.
+Workout PRO v5.4.2 QA
+- node --check js/app.module.js: PASS
+- node --check js/runtime.js: PASS
+- Day Lock renderer count: 1
+- Calendar renderer count: 1
+- Exercise dropdown uses strict allowedDays; no fallback to locked old day
+- Calendar grid/insight/go-log binding added

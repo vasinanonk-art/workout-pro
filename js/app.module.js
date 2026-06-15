@@ -1,10 +1,10 @@
-// Workout PRO v5.4.0 CLEAN REBUILD
+// Workout PRO v5.4.2 CLEAN REBUILD - CALENDAR + STRICT LOCK + DROPDOWN FILTER FIX
 // Single state engine. No legacy render patches. No duplicate Day Lock / Dropdown renderers.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const VERSION = "v5.4.0";
+const VERSION = "v5.4.2";
 const $ = (id) => document.getElementById(id);
 const firebaseConfig = {"apiKey":"AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI","authDomain":"workout-program-9eea7.firebaseapp.com","projectId":"workout-program-9eea7","storageBucket":"workout-program-9eea7.firebasestorage.app","messagingSenderId":"315102427876","appId":"1:315102427876:web:d2d5d4c89eb78fae960af1","measurementId":"G-JHEKDYEY8B"};
 
@@ -53,7 +53,8 @@ let state = {
   page:"setup",
   timerId:null,
   timerLeft:0,
-  lastRender:0
+  lastRender:0,
+  calendarMonth: todayTH().slice(0,7)
 };
 
 function todayTH(){ return new Intl.DateTimeFormat("sv-SE",{timeZone:"Asia/Bangkok",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date()); }
@@ -102,19 +103,29 @@ function calcDayLock(date=state.selectedDate){
   const d4 = lastDateWithCompletedDay("Day 4");
   const d5 = lastDateWithCompletedDay("Day 5");
   let allowed = [];
-  if(!d1 || !dayCompleteOnDate("Day 1", d1)) allowed=["Day 1"];
-  else if(!d2 || dayDiff(date,d1)<=0) allowed=["Day 2"];
-  else if(!d2 || !dayCompleteOnDate("Day 2", d2)) allowed=["Day 2"];
-  else if(!d4 || dayDiff(date,d2)<=1) allowed = dayDiff(date,d2)>=1 ? ["Day 4"] : [];
-  else if(!d4 || !dayCompleteOnDate("Day 4", d4)) allowed=["Day 4"];
-  else if(!d5 || dayDiff(date,d4)<=0) allowed=["Day 5"];
-  else if(!d5 || !dayCompleteOnDate("Day 5", d5)) allowed=["Day 5"];
-  else {
+  // Strict sequence lock:
+  // Day 1 -> next calendar day Day 2 -> at least 1 rest day -> Day 4 -> next calendar day Day 5 -> rest before new Day 1.
+  // Do not unlock the next training day on the same selected date after finishing the previous day.
+  if(!d1 || !dayCompleteOnDate("Day 1", d1)) {
+    allowed=["Day 1"];
+  } else if(!d2 || !dayCompleteOnDate("Day 2", d2)) {
+    const earliest = addDaysKey(d1,1);
+    if(dayDiff(date,d1) >= 1) allowed=["Day 2"];
+    else return {status:"LOCKED", code:"NEXT_DAY_LOCK", reason:`Day 1 วันนี้จบแล้ว แต่ Day 2 ต้องเริ่มได้เร็วสุด ${earliest}`, allowedDays:[], earliest};
+  } else if(!d4 || !dayCompleteOnDate("Day 4", d4)) {
+    const earliest = addDaysKey(d2,2);
+    if(dayDiff(date,d2) >= 2) allowed=["Day 4"];
+    else return {status:"LOCKED", code:"REST_LOCK", reason:`หลัง Day 2 ต้องพักก่อน 1 วัน เริ่ม Day 4 ได้เร็วสุด ${earliest}`, allowedDays:[], earliest};
+  } else if(!d5 || !dayCompleteOnDate("Day 5", d5)) {
+    const earliest = addDaysKey(d4,1);
+    if(dayDiff(date,d4) >= 1) allowed=["Day 5"];
+    else return {status:"LOCKED", code:"NEXT_DAY_LOCK", reason:`Day 5 ต้องเริ่มได้เร็วสุด ${earliest}`, allowedDays:[], earliest};
+  } else {
     const earliest = addDaysKey(d5,2);
     allowed = dayDiff(date,d5)>=2 ? ["Day 1"] : [];
-    if(!allowed.length) return {status:"LOCKED", code:"REST_LOCK", reason:`พักหลัง Day 5 ยังไม่ครบ 2 วัน เริ่มได้เร็วสุด ${earliest}`, allowedDays:[], earliest};
+    if(!allowed.length) return {status:"LOCKED", code:"REST_LOCK", reason:`พักหลัง Day 5 ยังไม่ครบ เริ่มรอบใหม่ได้เร็วสุด ${earliest}`, allowedDays:[], earliest};
   }
-  if(!allowed.length) return {status:"LOCKED", code:"REST_LOCK", reason:"วันนี้เป็นวันพักตามโปรแกรม", allowedDays:[], earliest:"-"};
+  if(!allowed.length) return {status:"LOCKED", code:"REST_LOCK", reason:"วันนี้ยังไม่ใช่วันฝึกถัดไปตามโปรแกรม", allowedDays:[], earliest:"-"};
   if(!allowed.includes(currentDay)) return {status:"LOCKED", code:"DAY_LOCK", reason:`วันนี้อนุญาตเฉพาะ ${allowed.join(", ")}`, allowedDays:allowed, earliest:date};
   return {status:"OPEN", reason:`อนุญาต: ${allowed.join(", ")}`, allowedDays:allowed, earliest:date};
 }
@@ -151,7 +162,9 @@ function renderExerciseSelect(){
   const sel=$("exercise"); if(!sel) return;
   const old=state.selectedExercise;
   const lock=calcDayLock();
-  const allowedDays=lock.override ? DAY_ORDER : (lock.allowedDays?.length ? lock.allowedDays : [dayForExercise(old)]);
+  // Source of truth: when locked, do NOT fall back to the old selected day.
+  // This prevents Day 2 from becoming selectable on the same date after Day 1 completes.
+  const allowedDays = lock.status==="OPEN" ? (lock.allowedDays?.length ? lock.allowedDays : DAY_ORDER) : [];
   sel.innerHTML="";
   PROGRAM.forEach(p=>{
     const [day,,ex,tgt]=p;
@@ -160,11 +173,13 @@ function renderExerciseSelect(){
     const isDone=done>=Number(tgt);
     const lockedDay = !allowedDays.includes(day);
     opt.disabled = isDone || lockedDay;
-    opt.textContent = `${isDone?"✓":""}${day} - ${ex} (${done}/${tgt})${lockedDay?" 🔒":""}`;
+    opt.textContent = `${isDone?"✓ ":""}${day} - ${ex} (${done}/${tgt})${isDone?" 🔒":(lockedDay?" 🔒":"")}`;
     sel.appendChild(opt);
   });
-  const preferred = [...sel.options].find(o=>o.value===old && !o.disabled) || [...sel.options].find(o=>!o.disabled) || [...sel.options][0];
+  const preferred = [...sel.options].find(o=>o.value===old && !o.disabled) || [...sel.options].find(o=>!o.disabled);
   if(preferred){ sel.value=preferred.value; state.selectedExercise=preferred.value; }
+  else { sel.value = old; }
+  sel.disabled = !preferred;
   renderExerciseProgressList();
 }
 function renderExerciseProgressList(){
@@ -180,16 +195,24 @@ function renderExerciseProgressList(){
 function renderDayLock(){
   const lock=calcDayLock();
   const box=$("dayDateLockDebug"); if(!box) return;
-  const days = DAY_ORDER.map(d=>`<option value="${d}" ${d===dayForExercise(state.selectedExercise)?"selected":""}>${d}</option>`).join("");
+  const current = dayForExercise(state.selectedExercise);
+  const days = DAY_ORDER.map(d=>`<option value="${d}" ${d===current?"selected":""}>${d}</option>`).join("");
   box.className = `msg lock-panel ${lock.status==="OPEN"?"open":"locked"}`;
   box.innerHTML = `<h3>Day Lock Control</h3>
     <div>Status: <b>${lock.status}</b> <span class="pill">Runtime ${VERSION}</span></div>
     <div class="small">Today: ${dateLabelTH(todayTH())} (${todayTH()}) • Selected: ${dateLabelTH(state.selectedDate)} (${state.selectedDate})</div>
+    <div class="small">Allowed: ${lock.allowedDays?.length ? lock.allowedDays.join(", ") : "-"}</div>
     <div class="small">${lock.reason}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><select id="overrideDaySelect">${days}</select><button id="overrideDayBtn" class="orange" type="button">ข้ามไปเล่น Day ที่เลือก</button></div>
     <div class="select-hint">ถ้าข้ามวัน ต้องกดปุ่มนี้ก่อน Save ถึงจะทำงาน</div>`;
-  $("overrideDaySelect")?.addEventListener("change", e=>{ const ex=nextIncompleteExercise(e.target.value,state.selectedDate); state.selectedExercise=ex; renderAll(); });
-  $("overrideDayBtn")?.addEventListener("click",()=>grantOverride($("overrideDaySelect")?.value || dayForExercise(state.selectedExercise)));
+  $("overrideDaySelect")?.addEventListener("change", e=>{ state.selectedDayForOverride=e.target.value; status("เลือก Day ที่จะข้าม: "+e.target.value,"warn",1200); });
+  $("overrideDayBtn")?.addEventListener("click",()=>{
+    const d=$("overrideDaySelect")?.value || current;
+    grantOverride(d);
+    const ex=nextIncompleteExercise(d,state.selectedDate);
+    state.selectedExercise=ex;
+    renderAll();
+  });
   setHtml("lockStatus", lock.status==="OPEN" ? `<span class="ok-text">พร้อมเล่น: ${dayForExercise(state.selectedExercise)}</span>` : `<span class="warn-text">ล็อกอยู่: ${lock.reason}</span>`);
 }
 function updateFormDerived(){
@@ -257,7 +280,56 @@ function renderCoach(){
 }
 function renderProgram(){ const host=$("programList"); if(host) host.innerHTML=DAY_ORDER.map(d=>`<h3>${d}</h3>`+dayExercises(d).map(p=>`<div class="exercise-progress-item">${p[2]} • ${p[3]} sets • ${p[4]}</div>`).join("")).join(""); }
 function renderGuide(){ const host=$("guideList"); if(host) host.innerHTML=PROGRAM.map(p=>`<div class="exercise-progress-item"><b>${p[2]}</b><br><span class="small">${p[0]} • ${p[4]} reps • RIR 1–2</span></div>`).join(""); }
-function renderCalendar(){ setText("monthTitle", new Intl.DateTimeFormat("th-TH",{month:"long",year:"numeric",timeZone:"Asia/Bangkok"}).format(parseKey(state.selectedDate))); setText("dayTitle", `Daily Summary - ${dateLabelTH(state.selectedDate)}`); setHtml("daySummary", `Sets: ${logsOnDate(state.selectedDate).length} • Completed: ${completedDaysByDate(state.selectedDate).join(", ")||"-"}`); }
+function calendarDateClass(date){
+  const arr=logsOnDate(date);
+  if(!arr.length) return "";
+  const completed=completedDaysByDate(date);
+  if(completed.length) return "completed";
+  return "partial";
+}
+function renderCalendar(){
+  if(!state.calendarMonth) state.calendarMonth = state.selectedDate.slice(0,7);
+  const [yy,mm]=state.calendarMonth.split("-").map(Number);
+  const first=new Date(yy,mm-1,1);
+  const last=new Date(yy,mm,0);
+  setText("monthTitle", new Intl.DateTimeFormat("th-TH",{month:"long",year:"numeric",timeZone:"Asia/Bangkok"}).format(first));
+  const grid=$("calGrid");
+  if(grid){
+    const heads=["อา","จ","อ","พ","พฤ","ศ","ส"].map(h=>`<div class="calHead">${h}</div>`).join("");
+    let cells="";
+    for(let i=0;i<first.getDay();i++) cells += `<div class="calDay empty"></div>`;
+    for(let d=1; d<=last.getDate(); d++){
+      const key=`${yy}-${String(mm).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+      const arr=logsOnDate(key);
+      const completed=completedDaysByDate(key);
+      const cls=["calDay", key===state.selectedDate?"sel":"", key===todayTH()?"today":"", calendarDateClass(key)].join(" ");
+      const tag=arr.length?`<span class="calTag ${completed.length?"completed":"partial"}">${completed.length?completed.join(", "):arr.length+" sets"}</span>`:"";
+      cells += `<div class="${cls}" data-date="${key}"><b>${d}</b><br>${tag}</div>`;
+    }
+    grid.innerHTML=heads+cells;
+    grid.querySelectorAll(".calDay[data-date]").forEach(el=>el.addEventListener("click",()=>{
+      state.selectedDate=el.dataset.date;
+      state.calendarMonth=state.selectedDate.slice(0,7);
+      setVal("date",state.selectedDate);
+      const lock=calcDayLock();
+      const d=lock.status==="OPEN" && lock.allowedDays?.length ? lock.allowedDays[0] : dayForExercise(state.selectedExercise);
+      const next=nextIncompleteExercise(d,state.selectedDate);
+      if(next) state.selectedExercise=next;
+      status("เลือกวันที่ "+dateLabelTH(state.selectedDate),"ok");
+      renderAll();
+    }));
+  }
+  const arr=logsOnDate(state.selectedDate);
+  const completed=completedDaysByDate(state.selectedDate);
+  setText("dayTitle", `Daily Summary - ${dateLabelTH(state.selectedDate)}`);
+  setHtml("daySummary", `Sets: ${arr.length} • Completed: ${completed.join(", ")||"-"}`);
+  const vol=volumeForLogs(arr);
+  const exs=[...new Set(arr.map(plannedOf))];
+  setHtml("v5DayInsight", arr.length ? `Volume: <b>${vol.toFixed(0)} kg</b><br>Exercises: ${exs.join(", ")}<br>Completed: ${completed.join(", ")||"-"}` : "ยังไม่มีข้อมูลของวันนี้");
+  setHtml("calendarSelectedDayDetail", arr.length ? arr.slice(-8).reverse().map(x=>`<div class="small">${x.exercise}: ${x.weightKg} kg × ${x.reps} (${plannedOf(x)})</div>`).join("") : "");
+  const btn=$("calendarGoLogBtn");
+  if(btn){ btn.disabled=false; btn.classList.remove("disabled"); btn.onclick=()=>{ show("log"); }; }
+}
 function renderBackup(){ const first=logsSorted()[0]?.date||"-", last=logsSorted().at(-1)?.date||"-"; setText("backupKpiSets", state.logs.length); setText("backupKpiVolume", volumeForLogs(state.logs).toFixed(0)); setText("backupKpiFirst", first); setText("backupKpiLast", last); setHtml("backupSummaryBox", `Backup ready • ${state.logs.length} logs • ${VERSION}`); }
 function renderMediaPanel(){ const ex=actualExerciseName(); setText("mediaTitle", `Media Reference: ${ex}`); setHtml("mediaCue", `Cue: คุมฟอร์ม ไม่ฝืนเจ็บ • Search: ${ex} proper form`); }
 
@@ -293,7 +365,16 @@ function bind(){
   $("loginBtn")?.addEventListener("click",()=>signInWithPopup(auth,new GoogleAuthProvider()).catch(e=>status(e.message,"err",0)));
   $("logoutBtn")?.addEventListener("click",()=>signOut(auth));
   $("saveTeamBtn")?.addEventListener("click",()=>{ state.teamId=$("teamId")?.value.trim()||"Beer-Team"; localStorage.setItem("teamId",state.teamId); subscribeLogs(); status("บันทึก Team ID แล้ว","ok"); });
-  $("date")?.addEventListener("change",e=>{ state.selectedDate=isValidDateKey(e.target.value)?e.target.value:todayTH(); state.selectedExercise=nextIncompleteExercise(calcDayLock().allowedDays?.[0]||dayForExercise(state.selectedExercise),state.selectedDate); renderAll(); });
+  $("date")?.addEventListener("change",e=>{
+    state.selectedDate=isValidDateKey(e.target.value)?e.target.value:todayTH();
+    state.calendarMonth=state.selectedDate.slice(0,7);
+    const lock=calcDayLock();
+    const d=lock.status==="OPEN" && lock.allowedDays?.length ? lock.allowedDays[0] : dayForExercise(state.selectedExercise);
+    state.selectedExercise=nextIncompleteExercise(d,state.selectedDate);
+    renderAll();
+  });
+  $("prevM")?.addEventListener("click",()=>{ const [y,m]=state.calendarMonth.split("-").map(Number); const dt=new Date(y,m-2,1); state.calendarMonth=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}`; renderCalendar(); });
+  $("nextM")?.addEventListener("click",()=>{ const [y,m]=state.calendarMonth.split("-").map(Number); const dt=new Date(y,m,1); state.calendarMonth=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}`; renderCalendar(); });
   $("exercise")?.addEventListener("change",e=>{ state.selectedExercise=e.target.value; state.selectedAlt=null; status("เลือกท่า: "+state.selectedExercise,"ok",900); renderAll(); });
   $("saveBtn")?.addEventListener("click",saveSet); $("resetBtn")?.addEventListener("click",resetForm);
   $("altBtn")?.addEventListener("click",openAltModal); $("closeAlt")?.addEventListener("click",()=>$("altModal")?.classList.remove("show"));
@@ -314,5 +395,5 @@ function download(name,text,type){ const a=document.createElement("a"); a.href=U
 onAuthStateChanged(auth,u=>{ state.user=u; if(u && !state.teamId) state.teamId="Beer-Team"; subscribeLogs(); renderAll(); });
 
 window.addEventListener("DOMContentLoaded",()=>{
-  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); renderAll(); status("Workout PRO v5.4.0 Clean Rebuild พร้อมใช้งาน","ok",2500);
+  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); renderAll(); status("Workout PRO v5.4.2 พร้อมใช้งาน","ok",2500);
 });

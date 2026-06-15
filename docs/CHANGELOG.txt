@@ -1,6 +1,6 @@
-v5.4.0
-- Clean rebuild, not a patch stack
-- Removed legacy duplicate renderers
-- Rebuilt Day Lock, Exercise Progress, Recent Log, Dashboard, Coach from one state engine
-- Added stable status bar
-- Syntax checked app.module.js and runtime.js
+Workout PRO v5.4.2
+- Fix Calendar grid not rendering.
+- Fix Calendar daily insight not binding to selected date.
+- Fix Go Log button disabled while logs exist.
+- Fix exercise dropdown allowing locked next day after same-day completion.
+- Keep clean single state engine.
