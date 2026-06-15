@@ -1,4 +1,4 @@
-// ===== Workout PRO v5.3.15 Lightweight Patch =====
+// ===== Workout PRO v5.3.18 Lightweight Patch =====
 // This patch reduces UI slowness by disabling heavy post-save recomputation
 // and forces the date input to synchronize with the current day whenever the page loads.
 (function(){
@@ -47,7 +47,7 @@
       };
       patched.__v530patched = true;
       window.saveSet = patched;
-    }catch(e){ console.warn("[v5.3.15 lite patch]", e); }
+    }catch(e){ console.warn("[v5.3.18 lite patch]", e); }
   }
   // Force the date input to current date
   function forceDate(){

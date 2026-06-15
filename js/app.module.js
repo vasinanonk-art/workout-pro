@@ -56,7 +56,7 @@ function valueSafe(id, fallback=""){
   return el ? el.value : fallback;
 }
 
-const VERSION="v5.3.17", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
+const VERSION="v5.3.18", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
 
 /* ===== v5.2.6 Date Input Sanity Fix ===== */
 function safeKeyPart(v){
@@ -1180,7 +1180,7 @@ async function saveSet(){
     }else{
       const ref = await addDoc(collection(db, scopedWorkoutsCollection()), payload);
       logs = [{...payload, id:ref.id, createdAt:new Date()}, ...logs];
-      if(typeof exSessionAfterSave === "function") exSessionMarkSavedLocal(m[2]);
+      if(typeof exSessionAfterSave === "function") exSessionAfterSave(m[2]);
       startRest();
     }
 
@@ -1193,6 +1193,7 @@ async function saveSet(){
     cancelEditLogV533();
     $("saveDebug").className = "msg ok";
     $("saveDebug").textContent = isEdit ? "แก้ไขข้อมูลสำเร็จ ✅" : "บันทึกสำเร็จ ✅";
+    try{ if(typeof __w5318RefreshLogState === "function") __w5318RefreshLogState(m[2]); }catch(_){}
     w534RenderCurrentPage("log");
     setTimeout(()=>{try{sync()}catch(_){}; __w534IsSaving=false; w534SetBusy(false);},120);
     [["v403Run",450],["plateauLiveRecompute",650],["stableRenderAllPanels",700]].forEach(([fn,ms])=>setTimeout(function(){try{
@@ -1402,7 +1403,7 @@ function bindLegacyMigration(){
   window.__migrationModuleReady = true;
 }
 
-/* ===== v5.3.17 PERFORMANCE / WHITE FLASH FIX ===== */
+/* ===== v5.3.18 PERFORMANCE / WHITE FLASH FIX ===== */
 let __w534RenderTimer = null;
 let __w534LastPage = "setup";
 let __w534IsSaving = false;
@@ -1421,7 +1422,7 @@ function w534SetBusy(on, text="กำลังโหลด..."){
     el.classList.toggle("show", !!on);
   }catch(_){}
 }
-function w534SafeCall(fn){try{ if(typeof fn==="function") fn(); }catch(e){console.warn("v5.3.17 safe render", e);}}
+function w534SafeCall(fn){try{ if(typeof fn==="function") fn(); }catch(e){console.warn("v5.3.18 safe render", e);}}
 function w534RenderCurrentPage(page=w534ActivePage()){
   __w534LastPage=page;
   w534SafeCall(renderRecent);
@@ -3170,7 +3171,7 @@ window.addEventListener("load", function(){
 });
 
 
-/* ===== v5.3.17 DAY_LOCK_HARD_FIX =====
+/* ===== v5.3.18 DAY_LOCK_HARD_FIX =====
    Critical: legacy override panel must never re-enable Save while REST_LOCK / DAY_DATE_LOCK is active. */
 function w535HardDayLockEnforce(){
   try{
@@ -3220,9 +3221,9 @@ window.addEventListener("load", function(){
 });
 
 
-/* ===== v5.3.17 NO_WHITE_SCREEN_CORE_FIX =====
+/* ===== v5.3.18 NO_WHITE_SCREEN_CORE_FIX =====
    Hard rule: never blank the current page while the next page is rendering.
-   Day Lock v5.3.17 remains active and is re-enforced after every navigation/save. */
+   Day Lock v5.3.18 remains active and is re-enforced after every navigation/save. */
 let __w536NavToken = 0;
 let __w536DashTimer = null;
 let __w536SyncTimer = null;
@@ -3361,8 +3362,8 @@ window.addEventListener("load", function(){
 });
 
 
-/* ===== v5.3.17 DATE FIELD DISPLAY-ONLY FIX =====
-   Base: v5.3.17 + v5.3.17 Day Lock runtime.
+/* ===== v5.3.18 DATE FIELD DISPLAY-ONLY FIX =====
+   Base: v5.3.18 + v5.3.18 Day Lock runtime.
    Purpose: fix desktop native date input visual clipping without touching Day Lock, sync, saveSet, REST_LOCK, or override logic.
 */
 (function(){
@@ -3405,13 +3406,13 @@ window.addEventListener("load", function(){
 
 
 
-/* ===== v5.3.17 DAY_LOCK_SINGLE_RENDERER_CLEAN_FIX =====
+/* ===== v5.3.18 DAY_LOCK_SINGLE_RENDERER_CLEAN_FIX =====
    Clean fix: removes legacy renderer race by keeping one Day Lock controller.
    Rules: Day 1 -> Day 2 -> Rest -> Day 4 -> Day 5 -> Rest -> Rest -> next Week Day 1.
    Manual override is explicit and scoped by team/user/date.
 */
 (function(){
-  const VERSION_5315 = "v5.3.17";
+  const VERSION_5315 = "v5.3.18";
   const DAYS = ["Day 1","Day 2","Day 4","Day 5"];
   const PANEL_ID = "dayLockSingleSourcePanel";
   const LOG_ID = "log";
@@ -3690,4 +3691,265 @@ window.addEventListener("load", function(){
     scheduleRender(160);
   }, true);
   setInterval(function(){ try{ if(document.querySelector("#log.page.active") && !userIsInteractingWithSelect()) renderNow(); }catch(_){ } }, 4000);
+})();
+
+
+/* ===== v5.3.18 WORKOUT STATE SYNC FIX =====
+   Fixes: set counter double increment after save, recent log not refreshing,
+   Daily Performance/summary using stale state, and debug panels stuck on checking.
+*/
+(function(){
+  const VERSION_5318 = "v5.3.18";
+  const byId = (id)=>document.getElementById(id);
+  const safe = (fn)=>{ try{ if(typeof fn === "function") return fn(); }catch(e){ console.warn("v5318", e); } };
+  function keyDate(){
+    const el=byId("date");
+    if(el && /^\d{4}-\d{2}-\d{2}$/.test(String(el.value||""))) return el.value;
+    try{ if(typeof today === "function") return today(); }catch(_){ }
+    try{return new Intl.DateTimeFormat("sv-SE",{timeZone:"Asia/Bangkok",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());}catch(_){return new Date().toISOString().slice(0,10);}
+  }
+  function plannedOf(x){ return (x && (x.plannedExercise || x.exercise)) || ""; }
+  function sortLogs(arr){
+    return (arr||[]).slice().sort((a,b)=>{
+      const ac = a && a.createdAt && a.createdAt.seconds ? a.createdAt.seconds : 0;
+      const bc = b && b.createdAt && b.createdAt.seconds ? b.createdAt.seconds : 0;
+      if(bc!==ac) return bc-ac;
+      return String(b.date||"").localeCompare(String(a.date||"")) || Number(b.setNo||0)-Number(a.setNo||0);
+    });
+  }
+  function currentExercise(){ const el=byId("exercise"); return el ? el.value : ""; }
+  function rowsForToday(ex){
+    const d=keyDate();
+    return (Array.isArray(logs)?logs:[]).filter(x=>x && x.date===d && (!ex || plannedOf(x)===ex));
+  }
+  function recalcCurrentSet(ex){
+    ex = ex || currentExercise();
+    if(!ex) return null;
+    let targetSets=3;
+    try{ if(typeof target === "function") targetSets=Number(target(ex))||3; }catch(_){ }
+    const rows=rowsForToday(ex);
+    const maxSet=Math.max(0,...rows.map(x=>Number(x.setNo||x.setNumber||x.set||0)));
+    const done=Math.min(targetSets, Math.max(rows.length, maxSet));
+    const next=Math.min(done+1,targetSets);
+    try{ currentSet=next; }catch(_){ }
+    if(byId("setNo")) byId("setNo").textContent=String(next);
+    if(byId("setTitle")) byId("setTitle").textContent=`Set ${next} / ${targetSets}`;
+    document.querySelectorAll("h2,h3,.set-title,.setTitle").forEach(el=>{
+      if(/^Set\s+\d+\s*\/\s*\d+/.test(String(el.textContent||"").trim())) el.textContent=`Set ${next} / ${targetSets}`;
+    });
+    const st=byId("setStatus");
+    if(st){
+      st.className=done>=targetSets?"msg ok":"msg";
+      st.innerHTML=done>=targetSets
+        ? `ท่านี้ครบแล้ว: <b>${ex}</b> (${done}/${targetSets})`
+        : `พร้อมบันทึก<br><b>${ex}</b>: เล่นไปแล้ว ${done}/${targetSets} เซต • เซตถัดไปคือ Set ${next}`;
+    }
+    try{ if(typeof exSessionWrite === "function") exSessionWrite(ex,{done,target:targetSets,next,complete:done>=targetSets}); }catch(_){ }
+    return {ex,done,target:targetSets,next,complete:done>=targetSets};
+  }
+  function renderRecentFixed(){
+    const box=byId("recent"); if(!box) return;
+    const unit=byId("unit")?byId("unit").value:"kg";
+    const rows=sortLogs(Array.isArray(logs)?logs:[]).slice(0,20);
+    box.innerHTML = rows.length ? rows.map(x=>`<div class="item"><h3>Week ${x.week||x.autoWeek||"-"} • Set ${x.setNo||"-"}/${x.targetSets||"-"} • ${x.exercise||"-"}</h3><div class="meta">${x.date||"-"} • ${x.day||"-"}<br>${typeof fromKg==="function"?fromKg(Number(x.weight||0),unit):Number(x.weight||0)} ${unit} × ${x.reps||"-"} • Vol ${(Number(x.volume||0)).toFixed(0)} kg${x.isAlternative?`<br>แทน: ${x.plannedExercise||"-"}`:""}${x.note?`<br>Note: ${String(x.note).replace(/[<>]/g,"")}`:""}</div><div class="row3"><button class="cyan" onclick="editLogV533('${x.id}')">แก้ไข</button><button class="red" onclick="deleteLog('${x.id}')">ลบ</button></div></div>`).join("") : "<p class='small'>ยังไม่มีข้อมูล</p>";
+  }
+  function renderDailyFixed(){
+    const box=byId("v5LogSummary");
+    if(!box) return;
+    const rows=rowsForToday();
+    if(!rows.length){ box.className="msg info"; box.innerHTML="ยังไม่มีข้อมูลวันนี้"; return; }
+    const vol=rows.reduce((a,x)=>a+Number(x.weight||0)*Number(x.reps||0),0);
+    const exs=[...new Set(rows.map(plannedOf).filter(Boolean))];
+    box.className="msg ok";
+    box.innerHTML=`วันนี้: <b>${rows.length}</b> sets • Volume <b>${Math.round(vol)}</b> kg<br>Exercises: ${exs.join(", ")}`;
+  }
+  function clearCheckingBoxes(){
+    ["cycleDebug","dayDateLockDebug","calendarSyncStatus"].forEach(id=>{
+      const el=byId(id); if(!el) return;
+      const txt=String(el.textContent||"");
+      if(txt.includes("กำลังตรวจสอบ")){
+        try{ if(id==="cycleDebug" && typeof updateCycleDebug==="function") updateCycleDebug(); }catch(_){ }
+        try{ if(id==="dayDateLockDebug" && typeof updateDayDateLockDebug==="function") updateDayDateLockDebug(); }catch(_){ }
+        try{ if(id==="calendarSyncStatus" && typeof calSyncUpdateStatus==="function") calSyncUpdateStatus(); }catch(_){ }
+      }
+    });
+  }
+  function syncLabels(){
+    try{ document.title="Workout PRO "+VERSION_5318; }catch(_){ }
+    try{ const ul=byId("userLine"); if(ul) ul.innerHTML=String(ul.innerHTML||"").replace(/v5\.3\.\d+/g,VERSION_5318); }catch(_){ }
+    try{ document.querySelectorAll(".version,.badge,.status-pill").forEach(el=>{el.innerHTML=String(el.innerHTML||"").replace(/v5\.3\.\d+/g,VERSION_5318);}); }catch(_){ }
+  }
+  window.__w5318RefreshLogState=function(ex){
+    syncLabels();
+    recalcCurrentSet(ex||currentExercise());
+    renderRecentFixed();
+    renderDailyFixed();
+    clearCheckingBoxes();
+    try{ if(typeof v5RenderLogSummary === "function") v5RenderLogSummary(); }catch(_){ }
+    try{ if(typeof updatePR === "function") updatePR(); }catch(_){ }
+    try{ if(typeof updateWeekly === "function") updateWeekly(); }catch(_){ }
+  };
+  // Override legacy canonical display with date-scoped calculation to avoid cross-date/cross-week ghost sets.
+  try{ applyCanonicalSetDisplay = function(ex){ return window.__w5318RefreshLogState(ex), recalcCurrentSet(ex); }; }catch(e){ console.warn("v5318 override applyCanonicalSetDisplay", e); }
+  // Keep recent/daily panels fresh after Firestore snapshot and page taps.
+  window.addEventListener("load",()=>{ [80,400,1200].forEach(t=>setTimeout(()=>window.__w5318RefreshLogState(),t)); });
+  document.addEventListener("click",()=>setTimeout(()=>window.__w5318RefreshLogState(),180),true);
+})();
+
+/* ===== v5.3.19 EXERCISE_RECOMMENDATION_ISOLATION_FIX =====
+   Fix: recommendation/PR/weekly/double progression must use the currently selected exercise only.
+   Do not fall back to same movement group (e.g. Barbell Bench Press -> Incline Dumbbell Press).
+   Day Lock / Save Guard / Date logic are intentionally untouched.
+*/
+(function(){
+  const V519 = "v5.3.19";
+  function $safe(id){ try{return document.getElementById(id);}catch(e){return null;} }
+  function cleanName(v){ return String(v||"").trim(); }
+  function currentSelectedExercise(){
+    const el=$safe("exercise");
+    return cleanName(el && el.value);
+  }
+  function rowActualExercise(x){ return cleanName(x && x.exercise); }
+  function rowPlannedExercise(x){ return cleanName(x && (x.plannedExercise || x.exercise)); }
+  function rowDateSeconds(x){ return Number((x && x.createdAt && x.createdAt.seconds) || 0); }
+  function rowWeek(x){ return Number((x && (x.week || x.autoWeek)) || 1); }
+  function hasWeightReps(x){ return Number(x && x.weight) > 0 && Number(x && x.reps) > 0; }
+  function exactRowsFor(ex, opts={}){
+    ex=cleanName(ex);
+    if(!ex) return [];
+    const rows=(Array.isArray(logs)?logs:[]).filter(x=>{
+      if(!hasWeightReps(x)) return false;
+      const actual=rowActualExercise(x);
+      const planned=rowPlannedExercise(x);
+      // Exact isolation: actual exercise wins. plannedExercise is accepted only for old rows where actual is empty or same.
+      const exactActual = actual === ex;
+      const legacyPlanned = (!actual || actual === planned) && planned === ex;
+      if(!(exactActual || legacyPlanned)) return false;
+      if(opts.week != null && rowWeek(x)!==Number(opts.week)) return false;
+      return true;
+    });
+    return rows.sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")) || rowDateSeconds(b)-rowDateSeconds(a));
+  }
+  function topRow(rows){
+    if(!rows || !rows.length) return null;
+    return rows.reduce((best,x)=>{
+      const bw=Number(best.weight||0), xw=Number(x.weight||0);
+      const bs=bw*Number(best.reps||0), xs=xw*Number(x.reps||0);
+      if(xw>bw) return x;
+      if(xw===bw && xs>bs) return x;
+      return best;
+    }, rows[0]);
+  }
+  function nextFromRow(row){
+    const base=Number(row && row.weight || 0), reps=Number(row && row.reps || 0), rir=Number(row && row.rir ?? 2);
+    let next=base, msg="คงน้ำหนักเดิม แล้วเพิ่ม reps ก่อน";
+    if(rir>=3 && reps>=8){ next=base+2.5; msg="เพิ่ม +2.5 kg เพราะยังเหลือแรงมาก"; }
+    else if(rir>=1 && reps>=12){ next=base+2.5; msg="เพิ่ม +2.5 kg เพราะถึงช่วงบนและ RIR ยังดี"; }
+    else if(rir>=2 && reps>=10){ next=base+2.5; msg="เพิ่ม +2.5 kg ได้"; }
+    else if(rir<=0){ next=Math.max(0,base-2.5); msg="ลด -2.5 kg หรือคงเดิมแต่ลด reps"; }
+    return {next,msg};
+  }
+  function unitNow(){ return ($safe("unit") && $safe("unit").value) || "kg"; }
+  function fmtKg(v,u){ try{return typeof fromKg==="function" ? fromKg(v,u) : v;}catch(e){return v;} }
+
+  // Override old mixed/fallback helpers with exact exercise matching.
+  window.__v5319ExactRowsFor = exactRowsFor;
+  try{ historyMatchesExercise = function(x, ex){ return exactRowsFor(ex).includes(x); }; }catch(e){}
+  try{ safeHistoryRows = function(ex){ return exactRowsFor(ex); }; }catch(e){}
+  try{ latestSetForExercise = function(ex){ return exactRowsFor(ex)[0] || null; }; }catch(e){}
+  try{ topSetForExerciseWeek = function(ex,w){ return topRow(exactRowsFor(ex,{week:w})); }; }catch(e){}
+  try{ topHistoricalSet = function(ex){ return topRow(exactRowsFor(ex)); }; }catch(e){}
+  try{ latestHistoricalSet = function(ex){ return exactRowsFor(ex)[0] || null; }; }catch(e){}
+
+  try{ updatePR = function(){
+    const ex=currentSelectedExercise(), u=unitNow(), box=$safe("prStatus");
+    if(!box) return;
+    const rows=exactRowsFor(ex);
+    if(!ex){ box.textContent="ยังไม่ได้เลือกท่า"; return; }
+    if(!rows.length){ box.textContent="สถิติเดิม: ยังไม่มีข้อมูลของ "+ex; return; }
+    const best=topRow(rows), latest=rows[0], rec=nextFromRow(latest);
+    box.innerHTML=`สถิติสูงสุด: <b>${fmtKg(best.weight,u)} ${u}</b> × ${best.reps} reps<br>แนะนำวันนี้: <b>${fmtKg(rec.next,u)} ${u}</b> — ${rec.msg}`;
+  }; }catch(e){}
+
+  try{ updateWeekly = function(){
+    const ex=currentSelectedExercise(), u=unitNow(), box=$safe("weekSuggest"), w=(typeof autoWeek==="function"?Number(autoWeek()):1)-1;
+    if(!box) return;
+    if(!ex){ box.textContent="ยังไม่ได้เลือกท่า"; return; }
+    if(w<1){ box.textContent="สัปดาห์ก่อน: ยังไม่มีข้อมูล"; return; }
+    const rows=exactRowsFor(ex,{week:w});
+    if(!rows.length){ box.textContent=`สัปดาห์ก่อน Week ${w}: ยังไม่มีข้อมูลของ ${ex}`; return; }
+    const top=topRow(rows), rec=nextFromRow(top);
+    box.innerHTML=`สัปดาห์ก่อน: ${fmtKg(top.weight,u)} ${u} × ${top.reps} reps (RIR ${top.rir??"-"})<br>แนะนำ Week นี้: <b>${fmtKg(rec.next,u)} ${u}</b> — ${rec.msg}`;
+  }; }catch(e){}
+
+  try{ progressionRecommendation = function(ex){
+    ex=cleanName(ex); const wk=typeof autoWeek==="function"?Number(autoWeek()):1, u=unitNow();
+    const thisW=topRow(exactRowsFor(ex,{week:wk}));
+    const prevW=topRow(exactRowsFor(ex,{week:wk-1}));
+    const latest=thisW || exactRowsFor(ex)[0];
+    if(!latest) return {html:`ยังไม่มีประวัติของ ${ex}<br>แนะนำ: เริ่มน้ำหนักที่ทำได้ RIR 1–2`, next:null};
+    const rec=nextFromRow(latest);
+    const prevTxt=prevW?`<br>Week ก่อน: ${fmtKg(prevW.weight,u)} ${u} × ${prevW.reps} reps (RIR ${prevW.rir??"-"})`:`<br>Week ก่อน: ยังไม่มีข้อมูล`;
+    const curTxt=thisW?`Week นี้: ${fmtKg(thisW.weight,u)} ${u} × ${thisW.reps} reps (RIR ${thisW.rir??"-"})`:`ล่าสุด: ${fmtKg(latest.weight,u)} ${u} × ${latest.reps} reps (RIR ${latest.rir??"-"})`;
+    return {html:`${curTxt}${prevTxt}<br><b>น้ำหนักแนะนำครั้งถัดไป:</b> ${fmtKg(rec.next,u)} ${u}<br>${rec.msg}`, next:rec.next};
+  }; }catch(e){}
+
+  try{ updateNextWeekRecommendation = function(){
+    const box=$safe("nextWeekBox"); if(!box) return;
+    const ex=currentSelectedExercise();
+    if(!ex){ box.textContent="ยังไม่ได้เลือกท่า"; return; }
+    const rec=progressionRecommendation(ex);
+    box.innerHTML=rec.html;
+  }; }catch(e){}
+
+  try{ doubleProgressionRecommendation = function(ex){
+    ex=cleanName(ex); const u=unitNow();
+    const range=(typeof parseRepRange==="function" ? parseRepRange(ex) : {min:8,max:12});
+    const wk=typeof autoWeek==="function"?Number(autoWeek()):1;
+    const top=topRow(exactRowsFor(ex,{week:wk})) || exactRowsFor(ex)[0];
+    if(!top) return `Double Progression: ยังไม่มีข้อมูลของ ${ex}<br>เริ่มที่น้ำหนักทำได้ ${range.min}-${range.max} reps และ RIR 1-2`;
+    const reps=Number(top.reps||0), rir=Number(top.rir??2), w=Number(top.weight||0);
+    let next=w, action="";
+    if(reps>=range.max && rir>=1){ next=w+2.5; action=`ถึง rep ceiling (${range.max}) และ RIR ยังดี → เพิ่มน้ำหนัก`; }
+    else if(reps<range.min){ next=w; action=`reps ยังต่ำกว่า ${range.min} → คงน้ำหนักและเพิ่ม reps ก่อน`; }
+    else if(rir<=0){ next=Math.max(0,w-2.5); action="RIR 0 / หนักเกิน → ลดน้ำหนักหรือคงเดิมแต่ลด reps"; }
+    else{ next=w; action=`อยู่ในช่วง ${range.min}-${range.max} → คงน้ำหนัก เพิ่ม reps`; }
+    return `Double Progression<br>ช่วงเป้าหมาย: ${range.min}-${range.max} reps<br>Top ล่าสุด: ${fmtKg(w,u)} ${u} × ${reps} (RIR ${rir})<br><b>ครั้งถัดไป:</b> ${fmtKg(next,u)} ${u}<br>${action}`;
+  }; }catch(e){}
+
+  function refreshRecommendationOnly(){
+    try{ if(typeof updatePR==="function") updatePR(); }catch(e){}
+    try{ if(typeof updateWeekly==="function") updateWeekly(); }catch(e){}
+    try{ if(typeof updateNextWeekRecommendation==="function") updateNextWeekRecommendation(); }catch(e){}
+    try{ if(typeof updateOrderGuidance==="function") updateOrderGuidance(); }catch(e){}
+    try{ if(typeof historySummaryForCurrent==="function") historySummaryForCurrent(); }catch(e){}
+    try{ if(typeof window.__v5317Status==="function") window.__v5317Status("พร้อมใช้งาน", "ok"); }catch(e){}
+  }
+  function bindExerciseRefresh(){
+    const ex=$safe("exercise"); if(!ex || ex.dataset.v5319Bound==="1") return;
+    ex.dataset.v5319Bound="1";
+    ex.addEventListener("change", function(){
+      try{ if(typeof window.__v5317Status==="function") window.__v5317Status("กำลังอัปเดตข้อมูลท่า...", "info"); }catch(e){}
+      setTimeout(refreshRecommendationOnly, 0);
+      setTimeout(refreshRecommendationOnly, 120);
+    });
+  }
+  window.__v5319RefreshRecommendationOnly = refreshRecommendationOnly;
+  window.addEventListener("load", function(){
+    setTimeout(function(){ bindExerciseRefresh(); refreshRecommendationOnly(); }, 350);
+    setTimeout(function(){ bindExerciseRefresh(); refreshRecommendationOnly(); }, 1500);
+  });
+  try{
+    const oldSync=sync;
+    sync=function(){ const r=oldSync.apply(this,arguments); setTimeout(function(){ bindExerciseRefresh(); refreshRecommendationOnly(); },120); return r; };
+  }catch(e){}
+  try{
+    const oldApply=window.__v5311ApplyAll;
+    if(typeof oldApply==="function") window.__v5311ApplyAll=function(){ const r=oldApply.apply(this,arguments); setTimeout(refreshRecommendationOnly,80); return r; };
+  }catch(e){}
+  try{
+    const userLine=$safe("userLine"); if(userLine) userLine.innerHTML=String(userLine.innerHTML).replace(/v5\.3\.\d+/g,V519);
+    document.querySelectorAll(".badge,.version,.status-pill").forEach(el=>{ el.innerHTML=String(el.innerHTML).replace(/v5\.3\.\d+/g,V519); });
+    document.title="Workout PRO "+V519;
+  }catch(e){}
 })();

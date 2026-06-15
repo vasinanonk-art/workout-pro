@@ -1,18 +1,5 @@
-QA REPORT - v5.3.17
-- Syntax check: app.module.js PASS, runtime.js PASS.
-- Status UX added without changing Firebase write logic.
-- Day Lock logic from v5.3.16 preserved.
-- Exercise dropdown listener preserved.
-
-Workout PRO v5.3.17 QA Report
-
-Fix scope:
-- Removed legacy duplicate Day Lock renderers from app.module.js.
-- Kept one canonical Day Lock Control panel only.
-- Added scoped Manual Override by team/user/date.
-- Save guard blocks Firebase writes while REST_LOCK / DAY_DATE_LOCK is active unless override is explicitly set.
-- Runtime/version labels synced to v5.3.17.
-
-Expected grep check:
-- grep -n "Day Lock Control" js/app.module.js should show one panel.innerHTML renderer plus debug/filter text only.
-- Runtime should stay v5.3.17 and should not bounce to older versions.
+QA v5.3.19
+- Syntax check: app.module.js PASS
+- Syntax check: runtime.js PASS
+- Verified exact exercise recommendation patch appended without touching Day Lock / Save Guard.
+- Expected fix: Incline Dumbbell Press no longer pulls Barbell Bench Press weights.
