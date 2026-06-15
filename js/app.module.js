@@ -56,7 +56,7 @@ function valueSafe(id, fallback=""){
   return el ? el.value : fallback;
 }
 
-const VERSION="v5.3.10", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
+const VERSION="v5.3.12", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
 
 /* ===== v5.2.6 Date Input Sanity Fix ===== */
 function safeKeyPart(v){
@@ -3367,7 +3367,7 @@ window.addEventListener("load", function(){
    Rules:
    Day 1 -> Day 2 -> Rest Day -> Day 4 -> Day 5 -> Rest -> Rest -> next Day 1.
 */
-const W537_VERSION = "v5.3.10";
+const W537_VERSION = "v5.3.12";
 function w537SelectedDate(){ return (document.getElementById("date") && document.getElementById("date").value) || today(); }
 function w537OverrideKey(day, date){ return "W537_DAY_LOCK_OVERRIDE::" + activeTeamLabel() + "::" + activeUserKey() + "::" + (date||w537SelectedDate()) + "::" + (day||""); }
 function w537HasOverride(day, date){ try{return localStorage.getItem(w537OverrideKey(day,date)) === "1";}catch(_){return false;} }
@@ -3579,7 +3579,7 @@ window.w537DayLockDebug=function(){ try{return {activeDay:activeDay(), raw:nextI
    Rules: while lock state is checking, Save and exercise dropdown are disabled. After check, only active/override Day options are selectable.
 */
 (function(){
-  const W5311_VERSION = "v5.3.11";
+  const W5311_VERSION = "v5.3.12";
   const W5311_DAYS = ["Day 1","Day 2","Day 4","Day 5"];
   let __w5311Ready = false;
   let __w5311Applying = false;
@@ -3760,5 +3760,25 @@ window.w537DayLockDebug=function(){ try{return {activeDay:activeDay(), raw:nextI
     }
   });
   document.addEventListener("click",()=>setTimeout(applyAll,0),true);
+  window.__W5311ApplyAll = applyAll;
+  window.__W5311RenderDayLockPanel = renderPanel;
+  window.__W5311CurrentLockInfo = currentLockInfo;
   window.w5311DayLockDebug=function(){ return {ready:logsLoaded(), manual:getSkipTarget(dateKey()), info:currentLockInfo(), allowed:rawAllowedDay(), exercise:el("exercise")?.value, exerciseDay:exerciseDayForValue(el("exercise")?.value||""), logs:(logs||[]).length}; };
 })();
+
+/* ===== v5.3.12 DAY_LOCK_RENDER_SINGLE_SOURCE_FIX =====
+   Older v5.3.7/5.3.10 timers were repainting the Day Lock panel after v5.3.11 rendered it,
+   causing the UI to jump back to the old Runtime label and hiding the skip controls.
+   Force all legacy Day Lock render/enforce calls to delegate to the v5.3.12 panel.
+*/
+try{
+  if(typeof window.__W5311ApplyAll === "function"){
+    w537RenderDayLockPanel = function(){ try{ window.__W5311RenderDayLockPanel(); }catch(e){ console.warn("w5312 render delegate", e); } };
+    w537HardEnforce = function(){ try{ window.__W5311ApplyAll(); const i=window.__W5311CurrentLockInfo?window.__W5311CurrentLockInfo():{}; return !(i&&i.locked); }catch(e){ console.warn("w5312 enforce delegate", e); return false; } };
+  }
+}catch(e){ console.warn("w5312 legacy day lock neutralizer", e); }
+window.addEventListener("load", function(){
+  setTimeout(()=>{try{ if(window.__W5311ApplyAll) window.__W5311ApplyAll(); }catch(_){ }}, 100);
+  setTimeout(()=>{try{ if(window.__W5311ApplyAll) window.__W5311ApplyAll(); }catch(_){ }}, 900);
+  setInterval(()=>{try{ if(document.querySelector("#log.page.active") && window.__W5311ApplyAll) window.__W5311ApplyAll(); }catch(_){ }}, 1200);
+});

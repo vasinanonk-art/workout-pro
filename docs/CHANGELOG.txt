@@ -1,8 +1,5 @@
-v5.3.11
-- Day Lock init guard: disable exercise/save while checking.
-- Only active or manually overridden Day options are selectable.
-- Restored explicit skip-day override selector.
-
-v5.3.11
-- Preserve v5.3.7 Day Lock runtime and v5.3.11 Bangkok date engine.
-- Fix desktop date input display without wrapping sync/save logic.
+v5.3.12
+- Fix Day Lock panel reverting from v5.3.11/v5.3.12 back to legacy v5.3.10 renderer.
+- Keep skip-day / override controls visible.
+- Force legacy Day Lock timers to delegate to the current runtime panel.
+- Preserve date display fix and Day Lock save guard.

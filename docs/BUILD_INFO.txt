@@ -1,4 +1,2 @@
-Workout PRO v5.3.11
-Build Date: 2026-06-13
-Build Type: Performance Patch
-Target: Cloudflare Pages / GitHub main
+Workout PRO v5.3.12
+Build: Day Lock Render Single Source Fix

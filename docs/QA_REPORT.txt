@@ -1,6 +1,5 @@
-QA v5.3.11
-- Based on v5.3.11 source with v5.3.7 Day Lock runtime preserved.
-- No modification to saveSet Day Lock guard.
-- No modification to REST_LOCK / DAY_DATE_LOCK logic.
-- Date field display-only patch added for desktop visual clipping.
-- JS syntax check required after package.
+QA v5.3.12
+- node --check app.module.js: PASS
+- node --check runtime.js: PASS
+- Legacy w537 render/enforce delegated to current w5311/w5312 controls.
+- Day Lock skip controls should no longer disappear after timer refresh.
