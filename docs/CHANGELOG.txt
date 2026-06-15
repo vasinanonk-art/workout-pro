@@ -1,4 +1,4 @@
-Workout PRO v5.4.3
+Workout PRO v5.4.4
 - Fix Calendar grid not rendering.
 - Fix Calendar daily insight not binding to selected date.
 - Fix Go Log button disabled while logs exist.

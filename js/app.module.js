@@ -1,10 +1,10 @@
-// Workout PRO v5.4.3 CLEAN REBUILD - CALENDAR + CYCLE DATE SYNC FIX
+// Workout PRO v5.4.4 CLEAN REBUILD - CALENDAR + CYCLE DATE SYNC FIX
 // Single state engine. No legacy render patches. No duplicate Day Lock / Dropdown renderers.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const VERSION = "v5.4.3";
+const VERSION = "v5.4.4";
 const $ = (id) => document.getElementById(id);
 const firebaseConfig = {"apiKey":"AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI","authDomain":"workout-program-9eea7.firebaseapp.com","projectId":"workout-program-9eea7","storageBucket":"workout-program-9eea7.firebasestorage.app","messagingSenderId":"315102427876","appId":"1:315102427876:web:d2d5d4c89eb78fae960af1","measurementId":"G-JHEKDYEY8B"};
 
@@ -90,6 +90,14 @@ function workoutDates(){ return [...new Set(state.logs.map(x=>x.date).filter(Boo
 function logsByDate(date){ return state.logs.filter(x=>x.date===date); }
 function completedDaysByDate(date){ return DAY_ORDER.filter(d=>dayCompleteOnDate(d,date)); }
 function lastDateWithCompletedDay(day){ return workoutDates().filter(date=>dayCompleteOnDate(day,date)).pop() || null; }
+function latestCompletedDayDateBeforeOrOn(day,date=state.selectedDate){
+  return workoutDates().filter(d=>dayDiff(d,date)<=0 && dayCompleteOnDate(day,d)).pop() || null;
+}
+function displayDateForExerciseProgress(day,date=state.selectedDate){
+  const allowed=allowedTrainingDaysForDate(date);
+  if(allowed.includes(day)) return date;
+  return latestCompletedDayDateBeforeOrOn(day,date) || date;
+}
 function completedDateBetween(day, afterDate=null, upToDate=state.selectedDate){
   return workoutDates()
     .filter(d=>dayCompleteOnDate(day,d))
@@ -175,18 +183,23 @@ function renderSetup(){
 function renderExerciseSelect(){
   const sel=$("exercise"); if(!sel) return;
   const old=state.selectedExercise;
-  const lock=calcDayLock();
-  // Source of truth: allowed day is calculated from the selected date, not the current selected exercise.
+  // Source of truth: allowed day is calculated from the selected date.
+  // Display progress for completed previous training days in the same cycle, not 0/target on the next date.
   const allowedDays = allowedTrainingDaysForDate(state.selectedDate);
   sel.innerHTML="";
   PROGRAM.forEach(p=>{
     const [day,,ex,tgt]=p;
-    const done=completedForExercise(ex,state.selectedDate);
+    const progressDate = displayDateForExerciseProgress(day,state.selectedDate);
+    const done=completedForExercise(ex,progressDate);
     const opt=document.createElement("option"); opt.value=ex;
+    opt.dataset.day=day;
+    opt.dataset.progressDate=progressDate;
     const isDone=done>=Number(tgt);
     const lockedDay = !allowedDays.includes(day);
     opt.disabled = isDone || lockedDay;
-    opt.textContent = `${isDone?"✓ ":""}${day} - ${ex} (${done}/${tgt})${isDone?" 🔒":(lockedDay?" 🔒":"")}`;
+    const mark = isDone ? "✓ " : (allowedDays.includes(day) ? "▶ " : "");
+    const dateNote = progressDate!==state.selectedDate && done>0 ? ` • ${dateLabelTH(progressDate)}` : "";
+    opt.textContent = `${mark}${day} - ${ex} (${done}/${tgt})${dateNote}${isDone||lockedDay?" 🔒":""}`;
     sel.appendChild(opt);
   });
   const preferred = [...sel.options].find(o=>o.value===old && !o.disabled) || [...sel.options].find(o=>!o.disabled);
@@ -198,9 +211,10 @@ function renderExerciseSelect(){
 function renderExerciseProgressList(){
   const host=$("orderStatus"); if(!host) return;
   const day=dayForExercise(state.selectedExercise);
+  const progressDate = displayDateForExerciseProgress(day,state.selectedDate);
   host.className="msg info";
-  host.innerHTML = `<b>Exercise Progress - ${day}</b><div class="exercise-progress-list">` + dayExercises(day).map(p=>{
-    const done=completedForExercise(p[2],state.selectedDate), tgt=Number(p[3]);
+  host.innerHTML = `<b>Exercise Progress - ${day}</b><div class="small">วันที่นับเซต: ${dateLabelTH(progressDate)} (${progressDate})</div><div class="exercise-progress-list">` + dayExercises(day).map(p=>{
+    const done=completedForExercise(p[2],progressDate), tgt=Number(p[3]);
     const cls=done>=tgt?"done":(p[2]===state.selectedExercise?"active":"");
     return `<div class="exercise-progress-item ${cls}">${done>=tgt?"✓":"▶"} ${p[2]} <span class="pill ${done>=tgt?"done":(p[2]===state.selectedExercise?"active":"")}">${done}/${tgt}</span></div>`;
   }).join("") + `</div>`;
@@ -408,5 +422,5 @@ function download(name,text,type){ const a=document.createElement("a"); a.href=U
 onAuthStateChanged(auth,u=>{ state.user=u; if(u && !state.teamId) state.teamId="Beer-Team"; subscribeLogs(); renderAll(); });
 
 window.addEventListener("DOMContentLoaded",()=>{
-  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); renderAll(); status("Workout PRO v5.4.3 พร้อมใช้งาน","ok",2500);
+  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); renderAll(); status("Workout PRO v5.4.4 พร้อมใช้งาน","ok",2500);
 });
