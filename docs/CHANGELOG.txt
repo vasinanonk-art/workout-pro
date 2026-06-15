@@ -1,4 +1,3 @@
-v5.3.9
-- Fix desktop Log Workout date field showing stale/locale-clipped date.
-- Force canonical YYYY-MM-DD date value across desktop/mobile.
-- Preserve v5.3.7 Day Lock runtime fix and v5.3.8 Asia/Bangkok date key.
+v5.3.10
+- Preserve v5.3.7 Day Lock runtime and v5.3.8 Bangkok date engine.
+- Fix desktop date input display without wrapping sync/save logic.

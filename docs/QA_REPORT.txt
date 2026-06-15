@@ -1,5 +1,6 @@
-QA v5.3.9
-- app.module.js syntax: PASS
-- runtime.js syntax: PASS
-- Day Lock code retained: PASS
-- Date canonical helper added: PASS
+QA v5.3.10
+- Based on v5.3.8 source with v5.3.7 Day Lock runtime preserved.
+- No modification to saveSet Day Lock guard.
+- No modification to REST_LOCK / DAY_DATE_LOCK logic.
+- Date field display-only patch added for desktop visual clipping.
+- JS syntax check required after package.
