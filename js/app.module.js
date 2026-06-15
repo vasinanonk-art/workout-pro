@@ -56,7 +56,7 @@ function valueSafe(id, fallback=""){
   return el ? el.value : fallback;
 }
 
-const VERSION="v5.3.21", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
+const VERSION="v5.3.22", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
 
 /* ===== v5.2.6 Date Input Sanity Fix ===== */
 function safeKeyPart(v){
@@ -1403,7 +1403,7 @@ function bindLegacyMigration(){
   window.__migrationModuleReady = true;
 }
 
-/* ===== v5.3.21 PERFORMANCE / WHITE FLASH FIX ===== */
+/* ===== v5.3.22 PERFORMANCE / WHITE FLASH FIX ===== */
 let __w534RenderTimer = null;
 let __w534LastPage = "setup";
 let __w534IsSaving = false;
@@ -1422,7 +1422,7 @@ function w534SetBusy(on, text="กำลังโหลด..."){
     el.classList.toggle("show", !!on);
   }catch(_){}
 }
-function w534SafeCall(fn){try{ if(typeof fn==="function") fn(); }catch(e){console.warn("v5.3.21 safe render", e);}}
+function w534SafeCall(fn){try{ if(typeof fn==="function") fn(); }catch(e){console.warn("v5.3.22 safe render", e);}}
 function w534RenderCurrentPage(page=w534ActivePage()){
   __w534LastPage=page;
   w534SafeCall(renderRecent);
@@ -3171,7 +3171,7 @@ window.addEventListener("load", function(){
 });
 
 
-/* ===== v5.3.21 DAY_LOCK_HARD_FIX =====
+/* ===== v5.3.22 DAY_LOCK_HARD_FIX =====
    Critical: legacy override panel must never re-enable Save while REST_LOCK / DAY_DATE_LOCK is active. */
 function w535HardDayLockEnforce(){
   try{
@@ -3221,9 +3221,9 @@ window.addEventListener("load", function(){
 });
 
 
-/* ===== v5.3.21 NO_WHITE_SCREEN_CORE_FIX =====
+/* ===== v5.3.22 NO_WHITE_SCREEN_CORE_FIX =====
    Hard rule: never blank the current page while the next page is rendering.
-   Day Lock v5.3.21 remains active and is re-enforced after every navigation/save. */
+   Day Lock v5.3.22 remains active and is re-enforced after every navigation/save. */
 let __w536NavToken = 0;
 let __w536DashTimer = null;
 let __w536SyncTimer = null;
@@ -3362,8 +3362,8 @@ window.addEventListener("load", function(){
 });
 
 
-/* ===== v5.3.21 DATE FIELD DISPLAY-ONLY FIX =====
-   Base: v5.3.21 + v5.3.21 Day Lock runtime.
+/* ===== v5.3.22 DATE FIELD DISPLAY-ONLY FIX =====
+   Base: v5.3.22 + v5.3.22 Day Lock runtime.
    Purpose: fix desktop native date input visual clipping without touching Day Lock, sync, saveSet, REST_LOCK, or override logic.
 */
 (function(){
@@ -3406,13 +3406,13 @@ window.addEventListener("load", function(){
 
 
 
-/* ===== v5.3.21 DAY_LOCK_SINGLE_RENDERER_CLEAN_FIX =====
+/* ===== v5.3.22 DAY_LOCK_SINGLE_RENDERER_CLEAN_FIX =====
    Clean fix: removes legacy renderer race by keeping one Day Lock controller.
    Rules: Day 1 -> Day 2 -> Rest -> Day 4 -> Day 5 -> Rest -> Rest -> next Week Day 1.
    Manual override is explicit and scoped by team/user/date.
 */
 (function(){
-  const VERSION_5315 = "v5.3.21";
+  const VERSION_5315 = "v5.3.22";
   const DAYS = ["Day 1","Day 2","Day 4","Day 5"];
   const PANEL_ID = "dayLockSingleSourcePanel";
   const LOG_ID = "log";
@@ -3694,12 +3694,12 @@ window.addEventListener("load", function(){
 })();
 
 
-/* ===== v5.3.21 WORKOUT STATE SYNC FIX =====
+/* ===== v5.3.22 WORKOUT STATE SYNC FIX =====
    Fixes: set counter double increment after save, recent log not refreshing,
    Daily Performance/summary using stale state, and debug panels stuck on checking.
 */
 (function(){
-  const VERSION_5318 = "v5.3.21";
+  const VERSION_5318 = "v5.3.22";
   const byId = (id)=>document.getElementById(id);
   const safe = (fn)=>{ try{ if(typeof fn === "function") return fn(); }catch(e){ console.warn("v5318", e); } };
   function keyDate(){
@@ -3796,13 +3796,13 @@ window.addEventListener("load", function(){
   document.addEventListener("click",()=>setTimeout(()=>window.__w5318RefreshLogState(),180),true);
 })();
 
-/* ===== v5.3.21 EXERCISE_RECOMMENDATION_ISOLATION_FIX =====
+/* ===== v5.3.22 EXERCISE_RECOMMENDATION_ISOLATION_FIX =====
    Fix: recommendation/PR/weekly/double progression must use the currently selected exercise only.
    Do not fall back to same movement group (e.g. Barbell Bench Press -> Incline Dumbbell Press).
    Day Lock / Save Guard / Date logic are intentionally untouched.
 */
 (function(){
-  const V519 = "v5.3.21";
+  const V519 = "v5.3.22";
   function $safe(id){ try{return document.getElementById(id);}catch(e){return null;} }
   function cleanName(v){ return String(v||"").trim(); }
   function currentSelectedExercise(){
@@ -3955,7 +3955,7 @@ window.addEventListener("load", function(){
 })();
 
 
-/* ===== v5.3.21 EXERCISE DROPDOWN PROGRESS / DONE LOCK FIX =====
+/* ===== v5.3.22 EXERCISE DROPDOWN PROGRESS / DONE LOCK FIX =====
    Purpose:
    - Show per-exercise progress in the exercise dropdown: (done/target)
    - Disable completed exercises so users cannot select a finished movement
@@ -3963,7 +3963,7 @@ window.addEventListener("load", function(){
    - Count alternative rows correctly via plannedExercise without changing Day Lock / Save Guard logic
 */
 (function(){
-  const V5321 = "v5.3.21";
+  const V5322 = "v5.3.22";
   const DAYS5321 = ["Day 1","Day 2","Day 4","Day 5"];
   let applying = false;
   let lastSig = "";
@@ -4089,7 +4089,7 @@ window.addEventListener("load", function(){
         if(ex.value!==planned) ex.value=planned;
         applySetCounter(planned);
       }
-    }catch(e){ console.warn("v5321 dropdown progress",e); }
+    }catch(e){ console.warn("v5322 dropdown progress",e); }
     finally{ applying=false; }
   }
   function refreshAll(){
@@ -4101,8 +4101,8 @@ window.addEventListener("load", function(){
     try{ if(typeof window.__v5317Status === "function") window.__v5317Status("พร้อมใช้งาน", "ok"); }catch(e){}
   }
   function bind(){
-    const ex=byId("exercise"); if(ex && ex.dataset.v5321Bound!=="1"){
-      ex.dataset.v5321Bound="1";
+    const ex=byId("exercise"); if(ex && ex.dataset.v5322Bound!=="1"){
+      ex.dataset.v5322Bound="1";
       ex.addEventListener("change",()=>{
         try{ if(typeof window.__v5317Status === "function") window.__v5317Status("กำลังอัปเดตสถานะท่า...", "info"); }catch(e){}
         setTimeout(refreshAll,30);
@@ -4129,15 +4129,145 @@ window.addEventListener("load", function(){
     };
   }catch(e){}
   function syncLabels(){
-    try{ document.title="Workout PRO "+V5321; }catch(e){}
-    try{ const u=byId("userLine"); if(u) u.innerHTML=String(u.innerHTML||"").replace(/v5\.3\.\d+/g,V5321); }catch(e){}
-    try{ document.querySelectorAll(".badge,.version,.status-pill").forEach(el=>{ el.innerHTML=String(el.innerHTML||"").replace(/v5\.3\.\d+/g,V5321); }); }catch(e){}
+    try{ document.title="Workout PRO "+V5322; }catch(e){}
+    try{ const u=byId("userLine"); if(u) u.innerHTML=String(u.innerHTML||"").replace(/v5\.3\.\d+/g,V5322); }catch(e){}
+    try{ document.querySelectorAll(".badge,.version,.status-pill").forEach(el=>{ el.innerHTML=String(el.innerHTML||"").replace(/v5\.3\.\d+/g,V5322); }); }catch(e){}
   }
-  window.__v5321RenderExerciseDropdownProgress=renderExerciseDropdownProgress;
-  window.__v5321RefreshExerciseProgress=refreshAll;
+  window.__v5322RenderExerciseDropdownProgress=renderExerciseDropdownProgress;
+  window.__v5322RefreshExerciseProgress=refreshAll;
   window.addEventListener("load",()=>{
     setTimeout(()=>{ syncLabels(); bind(); refreshAll(); },400);
     setTimeout(()=>{ syncLabels(); bind(); refreshAll(); },1500);
     setTimeout(()=>{ syncLabels(); bind(); refreshAll(); },3500);
+  });
+})();
+
+
+/* ===== v5.3.22 EXERCISE DROPDOWN STICKY PROGRESS FIX =====
+   Purpose:
+   - Keep exercise dropdown labels decorated after any legacy sync/render rewrites options.
+   - Preserve selected exercise while user opens the picker.
+   - Show (done/target) consistently and disable completed / locked-day exercises.
+*/
+(function(){
+  const VERSION_5322="v5.3.22";
+  const DAYS=["Day 1","Day 2","Day 4","Day 5"];
+  let applying=false;
+  let observer=null;
+  let lastUserPickAt=0;
+  let lastSelected="";
+  const $id=(id)=>{try{return document.getElementById(id)}catch(e){return null}};
+  const val=(v)=>String(v==null?"":v).trim();
+  function rows(){try{return Array.isArray(PROGRAM)?PROGRAM:[]}catch(e){return[]}}
+  function rowFor(ex){ex=val(ex);return rows().find(p=>p&&p[2]===ex)||null}
+  function dayFor(ex){const p=rowFor(ex);return p?p[0]:""}
+  function targetFor(ex){
+    try{if(typeof effectiveTargetSetsV522==="function")return Number(effectiveTargetSetsV522(ex))||1}catch(e){}
+    try{if(typeof target==="function")return Number(target(ex))||1}catch(e){}
+    const p=rowFor(ex);return p?Number(p[3]||1):1;
+  }
+  function dateKey(){
+    const d=$id("date");
+    if(d&&/^\d{4}-\d{2}-\d{2}$/.test(val(d.value)))return val(d.value);
+    try{if(typeof selectedDate!=="undefined"&&/^\d{4}-\d{2}-\d{2}$/.test(val(selectedDate)))return val(selectedDate)}catch(e){}
+    try{if(typeof today==="function")return today()}catch(e){}
+    const z=new Date();return z.getFullYear()+"-"+String(z.getMonth()+1).padStart(2,"0")+"-"+String(z.getDate()).padStart(2,"0");
+  }
+  function allowedDay(){
+    try{if(typeof activeDay==="function"){const d=activeDay();if(DAYS.includes(d))return d}}catch(e){}
+    const ex=$id("exercise");return ex?dayFor(ex.value):"Day 1";
+  }
+  function isSamePlanned(log, planned){
+    planned=val(planned); if(!planned) return false;
+    const p=val(log&&log.plannedExercise), ex=val(log&&log.exercise);
+    if(p) return p===planned;
+    return ex===planned;
+  }
+  function doneFor(planned){
+    const d=dateKey();
+    let r=[];
+    try{r=(Array.isArray(logs)?logs:[]).filter(x=>String(x.date||"")===String(d)&&isSamePlanned(x,planned))}catch(e){}
+    const maxSet=Math.max(0,...r.map(x=>Number(x.setNo||x.setNumber||x.set||0)||0));
+    return Math.max(r.length,maxSet);
+  }
+  function firstIncomplete(day){
+    for(const p of rows().filter(p=>p&&p[0]===day)){
+      if(doneFor(p[2]) < targetFor(p[2])) return p[2];
+    }
+    return "";
+  }
+  function labelFor(ex,day,done,target,complete,locked){
+    const mark=complete?"✓":(done>0?"▶":"○");
+    return `${mark} ${day} - ${ex} (${Math.min(done,target)}/${target})${locked?" 🔒":""}`;
+  }
+  function decorate(keepSelection=true){
+    if(applying) return;
+    const ex=$id("exercise"); if(!ex) return;
+    applying=true;
+    try{
+      const allowed=allowedDay()||dayFor(ex.value)||"Day 1";
+      const before=keepSelection?(lastSelected||ex.value):ex.value;
+      let beforeAllowed=false;
+      Array.from(ex.options).forEach(o=>{
+        const planned=val(o.value); const p=rowFor(planned);
+        if(!p) return;
+        const day=p[0], target=targetFor(planned), done=Math.min(doneFor(planned),target), complete=target>0&&done>=target;
+        const locked=day!==allowed;
+        o.textContent=labelFor(planned,day,done,target,complete,locked);
+        o.disabled=locked||complete;
+        o.hidden=locked;
+        if(planned===before && !o.disabled) beforeAllowed=true;
+      });
+      if(before && beforeAllowed) ex.value=before;
+      else {
+        const next=firstIncomplete(allowed);
+        if(next) ex.value=next;
+      }
+      lastSelected=ex.value;
+      updateSetInfo(ex.value);
+    }catch(e){console.warn("v5322 dropdown sticky",e)}
+    finally{applying=false;}
+  }
+  function updateSetInfo(planned){
+    planned=val(planned); if(!planned) return;
+    const t=targetFor(planned), d=Math.min(doneFor(planned),t), next=Math.min(d+1,t), complete=t>0&&d>=t;
+    const setNo=$id("setNo"); if(setNo) setNo.textContent=String(next);
+    const setTitle=$id("setTitle"); if(setTitle) setTitle.textContent=`Set ${next} / ${t}`;
+    const ready=$id("readyStatus")||$id("exerciseStatus")||$id("sessionStatus");
+    if(ready){
+      ready.className=complete?"msg ok":"msg";
+      ready.innerHTML=complete?`ท่านี้ครบแล้ว: <b>${planned}</b> (${d}/${t})<br><span class="small">เลือกท่าถัดไปที่ยังไม่ครบ</span>`:`พร้อมบันทึก<br><b>${planned}</b>: เล่นไปแล้ว ${d}/${t} เซต • เซตถัดไปคือ Set ${next}`;
+    }
+    const save=$id("saveBtn");
+    if(save){
+      if(complete){save.disabled=true;save.style.opacity=".45";save.dataset.exerciseComplete="1";}
+      else if(save.dataset.dayLock!=="1"){save.disabled=false;save.style.opacity="1";save.dataset.exerciseComplete="0";}
+    }
+  }
+  function schedule(ms=0){setTimeout(()=>decorate(true),ms)}
+  function bind(){
+    const ex=$id("exercise"); if(!ex) return;
+    if(ex.dataset.v5322Bound!=="1"){
+      ex.dataset.v5322Bound="1";
+      ["pointerdown","touchstart","mousedown","focus"].forEach(ev=>ex.addEventListener(ev,()=>{lastUserPickAt=Date.now(); lastSelected=ex.value; decorate(true); schedule(60);},{passive:true}));
+      ex.addEventListener("input",()=>{lastUserPickAt=Date.now(); lastSelected=ex.value; updateSetInfo(ex.value); schedule(80);});
+      ex.addEventListener("change",()=>{lastUserPickAt=Date.now(); lastSelected=ex.value; updateSetInfo(ex.value); schedule(80); schedule(250);});
+    }
+    if(!observer){
+      observer=new MutationObserver(()=>{ if(applying) return; schedule(30); });
+      observer.observe(ex,{childList:true,subtree:true,characterData:true});
+    }
+  }
+  function refresh(){bind(); decorate(true);}
+  try{const oldSync=sync; sync=function(){const r=oldSync.apply(this,arguments); [50,180,500,1200].forEach(schedule); return r;};}catch(e){}
+  try{const oldSave=saveSet; saveSet=async function(){const r=await oldSave.apply(this,arguments); [80,250,700,1400].forEach(schedule); return r;};}catch(e){}
+  function labels(){
+    try{document.title="Workout PRO "+VERSION_5322}catch(e){}
+    try{const u=$id("userLine"); if(u) u.innerHTML=String(u.innerHTML||"").replace(/v5\.3\.\d+/g,VERSION_5322)}catch(e){}
+    try{document.querySelectorAll(".badge,.version,.status-pill").forEach(el=>el.innerHTML=String(el.innerHTML||"").replace(/v5\.3\.\d+/g,VERSION_5322))}catch(e){}
+  }
+  window.__v5322ExerciseDropdownStickyRefresh=refresh;
+  window.addEventListener("load",()=>{
+    labels(); [100,400,900,1600,3000,6000].forEach(ms=>setTimeout(()=>{labels();refresh();},ms));
   });
 })();
