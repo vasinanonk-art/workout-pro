@@ -1,4 +1,4 @@
-v5.3.22
+v5.3.23
 - Show per-exercise progress in dropdown.
 - Disable completed exercises.
 - Keep set counter aligned with selected exercise.
