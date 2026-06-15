@@ -1,10 +1,10 @@
-// Workout PRO v5.4.2 CLEAN REBUILD - CALENDAR + STRICT LOCK + DROPDOWN FILTER FIX
+// Workout PRO v5.4.3 CLEAN REBUILD - CALENDAR + CYCLE DATE SYNC FIX
 // Single state engine. No legacy render patches. No duplicate Day Lock / Dropdown renderers.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const VERSION = "v5.4.2";
+const VERSION = "v5.4.3";
 const $ = (id) => document.getElementById(id);
 const firebaseConfig = {"apiKey":"AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI","authDomain":"workout-program-9eea7.firebaseapp.com","projectId":"workout-program-9eea7","storageBucket":"workout-program-9eea7.firebasestorage.app","messagingSenderId":"315102427876","appId":"1:315102427876:web:d2d5d4c89eb78fae960af1","measurementId":"G-JHEKDYEY8B"};
 
@@ -90,7 +90,39 @@ function workoutDates(){ return [...new Set(state.logs.map(x=>x.date).filter(Boo
 function logsByDate(date){ return state.logs.filter(x=>x.date===date); }
 function completedDaysByDate(date){ return DAY_ORDER.filter(d=>dayCompleteOnDate(d,date)); }
 function lastDateWithCompletedDay(day){ return workoutDates().filter(date=>dayCompleteOnDate(day,date)).pop() || null; }
+function completedDateBetween(day, afterDate=null, upToDate=state.selectedDate){
+  return workoutDates()
+    .filter(d=>dayCompleteOnDate(day,d))
+    .filter(d=>(!afterDate || dayDiff(d,afterDate)>0) && dayDiff(d,upToDate)<=0)
+    .pop() || null;
+}
+function currentCyclePlan(date=state.selectedDate){
+  // Single source of truth for program day by selected date.
+  // Uses the latest completed Day 5 before the selected date as the previous cycle boundary.
+  const previousD5 = completedDateBetween("Day 5", null, date);
+  let boundary = null;
+  if(previousD5 && dayDiff(date, previousD5) < 2){
+    return {allowedDays:[], code:"REST_LOCK", earliest:addDaysKey(previousD5,2), reason:`พักหลัง Day 5 ยังไม่ครบ เริ่มรอบใหม่ได้เร็วสุด ${addDaysKey(previousD5,2)}`};
+  }
+  if(previousD5 && dayDiff(date, previousD5) >= 2) boundary = previousD5;
 
+  const d1 = completedDateBetween("Day 1", boundary, date);
+  if(!d1) return {allowedDays:["Day 1"], code:"OPEN", earliest:date, reason:"เริ่ม Day 1 ได้"};
+  if(dayDiff(date,d1) < 1) return {allowedDays:[], code:"NEXT_DAY_LOCK", earliest:addDaysKey(d1,1), reason:`Day 1 วันนี้จบแล้ว แต่ Day 2 ต้องเริ่มได้เร็วสุด ${addDaysKey(d1,1)}`};
+
+  const d2 = completedDateBetween("Day 2", d1, date);
+  if(!d2) return {allowedDays:["Day 2"], code:"OPEN", earliest:addDaysKey(d1,1), reason:"Day 1 จบแล้ว เริ่ม Day 2 ได้"};
+  if(dayDiff(date,d2) < 2) return {allowedDays:[], code:"REST_LOCK", earliest:addDaysKey(d2,2), reason:`หลัง Day 2 ต้องพักก่อน 1 วัน เริ่ม Day 4 ได้เร็วสุด ${addDaysKey(d2,2)}`};
+
+  const d4 = completedDateBetween("Day 4", d2, date);
+  if(!d4) return {allowedDays:["Day 4"], code:"OPEN", earliest:addDaysKey(d2,2), reason:"พักครบแล้ว เริ่ม Day 4 ได้"};
+  if(dayDiff(date,d4) < 1) return {allowedDays:[], code:"NEXT_DAY_LOCK", earliest:addDaysKey(d4,1), reason:`Day 4 วันนี้จบแล้ว แต่ Day 5 ต้องเริ่มได้เร็วสุด ${addDaysKey(d4,1)}`};
+
+  const d5 = completedDateBetween("Day 5", d4, date);
+  if(!d5) return {allowedDays:["Day 5"], code:"OPEN", earliest:addDaysKey(d4,1), reason:"Day 4 จบแล้ว เริ่ม Day 5 ได้"};
+  if(dayDiff(date,d5) < 2) return {allowedDays:[], code:"REST_LOCK", earliest:addDaysKey(d5,2), reason:`พักหลัง Day 5 ยังไม่ครบ เริ่มรอบใหม่ได้เร็วสุด ${addDaysKey(d5,2)}`};
+  return {allowedDays:["Day 1"], code:"OPEN", earliest:addDaysKey(d5,2), reason:"พักครบแล้ว เริ่ม Day 1 รอบใหม่ได้"};
+}
 function calcDayLock(date=state.selectedDate){
   const today = todayTH();
   const keyBase = `${date}|${state.user?.uid||"guest"}|${state.teamId}`;
@@ -98,36 +130,18 @@ function calcDayLock(date=state.selectedDate){
   const overrideKey = `${keyBase}|${currentDay}`;
   if(state.overrideKeys.has(overrideKey)) return {status:"OPEN", reason:"Manual override active", allowedDays:DAY_ORDER, earliest:date, override:true};
   if(dayDiff(date,today) > 0) return {status:"LOCKED", code:"FUTURE_DATE", reason:"ยังไม่อนุญาตให้เล่นวันที่อนาคต", allowedDays:[], earliest:today};
-  const d1 = lastDateWithCompletedDay("Day 1");
-  const d2 = lastDateWithCompletedDay("Day 2");
-  const d4 = lastDateWithCompletedDay("Day 4");
-  const d5 = lastDateWithCompletedDay("Day 5");
-  let allowed = [];
-  // Strict sequence lock:
-  // Day 1 -> next calendar day Day 2 -> at least 1 rest day -> Day 4 -> next calendar day Day 5 -> rest before new Day 1.
-  // Do not unlock the next training day on the same selected date after finishing the previous day.
-  if(!d1 || !dayCompleteOnDate("Day 1", d1)) {
-    allowed=["Day 1"];
-  } else if(!d2 || !dayCompleteOnDate("Day 2", d2)) {
-    const earliest = addDaysKey(d1,1);
-    if(dayDiff(date,d1) >= 1) allowed=["Day 2"];
-    else return {status:"LOCKED", code:"NEXT_DAY_LOCK", reason:`Day 1 วันนี้จบแล้ว แต่ Day 2 ต้องเริ่มได้เร็วสุด ${earliest}`, allowedDays:[], earliest};
-  } else if(!d4 || !dayCompleteOnDate("Day 4", d4)) {
-    const earliest = addDaysKey(d2,2);
-    if(dayDiff(date,d2) >= 2) allowed=["Day 4"];
-    else return {status:"LOCKED", code:"REST_LOCK", reason:`หลัง Day 2 ต้องพักก่อน 1 วัน เริ่ม Day 4 ได้เร็วสุด ${earliest}`, allowedDays:[], earliest};
-  } else if(!d5 || !dayCompleteOnDate("Day 5", d5)) {
-    const earliest = addDaysKey(d4,1);
-    if(dayDiff(date,d4) >= 1) allowed=["Day 5"];
-    else return {status:"LOCKED", code:"NEXT_DAY_LOCK", reason:`Day 5 ต้องเริ่มได้เร็วสุด ${earliest}`, allowedDays:[], earliest};
-  } else {
-    const earliest = addDaysKey(d5,2);
-    allowed = dayDiff(date,d5)>=2 ? ["Day 1"] : [];
-    if(!allowed.length) return {status:"LOCKED", code:"REST_LOCK", reason:`พักหลัง Day 5 ยังไม่ครบ เริ่มรอบใหม่ได้เร็วสุด ${earliest}`, allowedDays:[], earliest};
-  }
-  if(!allowed.length) return {status:"LOCKED", code:"REST_LOCK", reason:"วันนี้ยังไม่ใช่วันฝึกถัดไปตามโปรแกรม", allowedDays:[], earliest:"-"};
-  if(!allowed.includes(currentDay)) return {status:"LOCKED", code:"DAY_LOCK", reason:`วันนี้อนุญาตเฉพาะ ${allowed.join(", ")}`, allowedDays:allowed, earliest:date};
-  return {status:"OPEN", reason:`อนุญาต: ${allowed.join(", ")}`, allowedDays:allowed, earliest:date};
+  const plan = currentCyclePlan(date);
+  const allowed = plan.allowedDays || [];
+  if(!allowed.length) return {status:"LOCKED", code:plan.code||"REST_LOCK", reason:plan.reason||"วันนี้ยังไม่ใช่วันฝึกถัดไปตามโปรแกรม", allowedDays:[], earliest:plan.earliest||"-"};
+  if(!allowed.includes(currentDay)) return {status:"LOCKED", code:"DAY_LOCK", reason:`วันนี้อนุญาตเฉพาะ ${allowed.join(", ")}`, allowedDays:allowed, earliest:plan.earliest||date};
+  return {status:"OPEN", reason:plan.reason || `อนุญาต: ${allowed.join(", ")}`, allowedDays:allowed, earliest:plan.earliest||date};
+}
+function allowedTrainingDaysForDate(date=state.selectedDate){
+  if(dayDiff(date,todayTH())>0) return [];
+  const keyBase = `${date}|${state.user?.uid||"guest"}|${state.teamId}`;
+  const overrides = DAY_ORDER.filter(d=>state.overrideKeys.has(`${keyBase}|${d}`));
+  const plan = currentCyclePlan(date);
+  return [...new Set([...(plan.allowedDays||[]), ...overrides])];
 }
 function grantOverride(day=dayForExercise(state.selectedExercise)){ const key=`${state.selectedDate}|${state.user?.uid||"guest"}|${state.teamId}|${day}`; state.overrideKeys.add(key); localStorage.setItem("dayLockOverridesV540", JSON.stringify([...state.overrideKeys])); status(`ปลดล็อก ${day} แล้ว`,"warn"); renderAll(); }
 
@@ -162,9 +176,8 @@ function renderExerciseSelect(){
   const sel=$("exercise"); if(!sel) return;
   const old=state.selectedExercise;
   const lock=calcDayLock();
-  // Source of truth: when locked, do NOT fall back to the old selected day.
-  // This prevents Day 2 from becoming selectable on the same date after Day 1 completes.
-  const allowedDays = lock.status==="OPEN" ? (lock.allowedDays?.length ? lock.allowedDays : DAY_ORDER) : [];
+  // Source of truth: allowed day is calculated from the selected date, not the current selected exercise.
+  const allowedDays = allowedTrainingDaysForDate(state.selectedDate);
   sel.innerHTML="";
   PROGRAM.forEach(p=>{
     const [day,,ex,tgt]=p;
@@ -311,8 +324,8 @@ function renderCalendar(){
       state.selectedDate=el.dataset.date;
       state.calendarMonth=state.selectedDate.slice(0,7);
       setVal("date",state.selectedDate);
-      const lock=calcDayLock();
-      const d=lock.status==="OPEN" && lock.allowedDays?.length ? lock.allowedDays[0] : dayForExercise(state.selectedExercise);
+      const allowed=allowedTrainingDaysForDate(state.selectedDate);
+      const d=allowed[0] || dayForExercise(state.selectedExercise);
       const next=nextIncompleteExercise(d,state.selectedDate);
       if(next) state.selectedExercise=next;
       status("เลือกวันที่ "+dateLabelTH(state.selectedDate),"ok");
@@ -368,8 +381,8 @@ function bind(){
   $("date")?.addEventListener("change",e=>{
     state.selectedDate=isValidDateKey(e.target.value)?e.target.value:todayTH();
     state.calendarMonth=state.selectedDate.slice(0,7);
-    const lock=calcDayLock();
-    const d=lock.status==="OPEN" && lock.allowedDays?.length ? lock.allowedDays[0] : dayForExercise(state.selectedExercise);
+    const allowed=allowedTrainingDaysForDate(state.selectedDate);
+    const d=allowed[0] || dayForExercise(state.selectedExercise);
     state.selectedExercise=nextIncompleteExercise(d,state.selectedDate);
     renderAll();
   });
@@ -395,5 +408,5 @@ function download(name,text,type){ const a=document.createElement("a"); a.href=U
 onAuthStateChanged(auth,u=>{ state.user=u; if(u && !state.teamId) state.teamId="Beer-Team"; subscribeLogs(); renderAll(); });
 
 window.addEventListener("DOMContentLoaded",()=>{
-  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); renderAll(); status("Workout PRO v5.4.2 พร้อมใช้งาน","ok",2500);
+  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); renderAll(); status("Workout PRO v5.4.3 พร้อมใช้งาน","ok",2500);
 });
