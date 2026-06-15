@@ -1,5 +1,4 @@
-QA v5.3.19
-- Syntax check: app.module.js PASS
-- Syntax check: runtime.js PASS
-- Verified exact exercise recommendation patch appended without touching Day Lock / Save Guard.
-- Expected fix: Incline Dumbbell Press no longer pulls Barbell Bench Press weights.
+QA v5.3.20
+- Fixed SyntaxError: Coalescing and logical operators used together.
+- Checked app.module.js with node --check.
+- Checked runtime.js with node --check.

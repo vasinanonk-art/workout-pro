@@ -1,24 +1,5 @@
-Workout PRO v5.3.19
-- Added visible loading/status feedback for Save, Day Lock override, page navigation, date sync, and exercise selection.
-- Added bottom UX status bar and inline status updates.
-- Preserved v5.3.19 Day Lock select/exercise dropdown fix.
-
-v5.3.19
-- Fix Day Lock panel reverting from v5.3.19/v5.3.19 back to legacy v5.3.19 renderer.
-- Keep skip-day / override controls visible.
-- Force legacy Day Lock timers to delegate to the current runtime panel.
-- Preserve date display fix and Day Lock save guard.
-
-v5.3.19
-- Adds Day Lock single-source renderer guard.
-- Removes visible duplicate Day Lock panels at runtime.
-- Keeps override selector visible and stable.
-- Prevents legacy renderers from repainting stale Runtime / Save Guard labels.
-
-- v5.3.19: Fix set counter double increment, recent log refresh, daily summary refresh, and checking status stale UI.
-
-v5.3.19
-- Fix exercise recommendation mixing data from other exercises in the same movement group.
-- PR / Weekly / Double Progression / Next Weight now use the selected exercise only.
-- Changing exercise refreshes recommendation panels immediately.
-- Day Lock, Date, Save Log and Loading Status patches are preserved.
+v5.3.20
+- Hotfix JavaScript SyntaxError from mixed ?? and logical operators.
+- Keeps v5.3.18 state sync fix.
+- Keeps v5.3.19 exercise recommendation isolation.
+- No Day Lock renderer changes.

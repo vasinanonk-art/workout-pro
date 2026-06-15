@@ -85,8 +85,8 @@ function uiPolishAddVersionPanel(){
   const d=document.createElement('div');
   d.id='versionQAPanel';
   d.className='card version-panel';
-  // Updated version panel for v5.3.19. Reflects current build and patch notes.
-  d.innerHTML='<div class="section-title">Build / QA</div><div class="msg info">Version: <b>v5.3.19</b><br>Build: Lite Date & Save Patch + Final Fix<br>QA: Heavy recomputations disabled; date always synchronized</div>';
+  // Updated version panel for v5.3.20. Reflects current build and patch notes.
+  d.innerHTML='<div class="section-title">Build / QA</div><div class="msg info">Version: <b>v5.3.20</b><br>Build: Lite Date & Save Patch + Final Fix<br>QA: Heavy recomputations disabled; date always synchronized</div>';
   donate.appendChild(d);
  }catch(e){console.warn(e)}
 }
@@ -120,8 +120,8 @@ function modernUiHeader(){
    hero.id='modernHero';
    hero.className='card';
    hero.style.marginBottom='18px';
-   // Display the current app version in the Modern UI header.  Updated to v5.3.19 in the lite patch.
-   hero.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><div><div style="font-size:28px;font-weight:800">Workout PRO</div><div style="opacity:.8;margin-top:4px">Modern Hypertrophy & Recovery System</div></div><div><span class="status-pill status-good">v5.3.19</span><span class="status-pill status-warn">Modern UI</span></div></div>';
+   // Display the current app version in the Modern UI header.  Updated to v5.3.20 in the lite patch.
+   hero.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><div><div style="font-size:28px;font-weight:800">Workout PRO</div><div style="opacity:.8;margin-top:4px">Modern Hypertrophy & Recovery System</div></div><div><span class="status-pill status-good">v5.3.20</span><span class="status-pill status-warn">Modern UI</span></div></div>';
    main.prepend(hero);
  }catch(e){console.warn(e)}
 }
@@ -623,7 +623,7 @@ document.addEventListener("click",function(e){
   });
 })();
 
-// ===== v5.3.19 Final Patch =====
+// ===== v5.3.20 Final Patch =====
 // Remove the legacy migration card to streamline the Setup page.
 (function(){
   try{
@@ -635,7 +635,7 @@ document.addEventListener("click",function(e){
 })();
 
 
-// ===== v5.3.19 User Feedback / Loading Status UX =====
+// ===== v5.3.20 User Feedback / Loading Status UX =====
 (function(){
   if(window.__w5317UxStatusPatch) return;
   window.__w5317UxStatusPatch = true;
@@ -760,7 +760,7 @@ document.addEventListener("click",function(e){
       }
     }catch(_){ }
   }, true);
-  window.addEventListener('load', function(){ setTimeout(function(){ show('พร้อมใช้งาน • v5.3.19', 'ok', 1200); }, 450); });
+  window.addEventListener('load', function(){ setTimeout(function(){ show('พร้อมใช้งาน • v5.3.20', 'ok', 1200); }, 450); });
   window.addEventListener('error', function(e){ fail('มี JavaScript error: ' + ((e && e.message) || 'unknown')); });
   window.addEventListener('unhandledrejection', function(e){ fail('โหลดข้อมูลไม่สำเร็จ / Firebase ตอบกลับช้า'); });
 })();

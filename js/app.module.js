@@ -56,7 +56,7 @@ function valueSafe(id, fallback=""){
   return el ? el.value : fallback;
 }
 
-const VERSION="v5.3.18", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
+const VERSION="v5.3.20", $=id=>document.getElementById(id), firebaseConfig={"apiKey": "AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI", "authDomain": "workout-program-9eea7.firebaseapp.com", "projectId": "workout-program-9eea7", "storageBucket": "workout-program-9eea7.firebasestorage.app", "messagingSenderId": "315102427876", "appId": "1:315102427876:web:d2d5d4c89eb78fae960af1", "measurementId": "G-JHEKDYEY8B"};
 
 /* ===== v5.2.6 Date Input Sanity Fix ===== */
 function safeKeyPart(v){
@@ -1403,7 +1403,7 @@ function bindLegacyMigration(){
   window.__migrationModuleReady = true;
 }
 
-/* ===== v5.3.18 PERFORMANCE / WHITE FLASH FIX ===== */
+/* ===== v5.3.20 PERFORMANCE / WHITE FLASH FIX ===== */
 let __w534RenderTimer = null;
 let __w534LastPage = "setup";
 let __w534IsSaving = false;
@@ -1422,7 +1422,7 @@ function w534SetBusy(on, text="กำลังโหลด..."){
     el.classList.toggle("show", !!on);
   }catch(_){}
 }
-function w534SafeCall(fn){try{ if(typeof fn==="function") fn(); }catch(e){console.warn("v5.3.18 safe render", e);}}
+function w534SafeCall(fn){try{ if(typeof fn==="function") fn(); }catch(e){console.warn("v5.3.20 safe render", e);}}
 function w534RenderCurrentPage(page=w534ActivePage()){
   __w534LastPage=page;
   w534SafeCall(renderRecent);
@@ -3171,7 +3171,7 @@ window.addEventListener("load", function(){
 });
 
 
-/* ===== v5.3.18 DAY_LOCK_HARD_FIX =====
+/* ===== v5.3.20 DAY_LOCK_HARD_FIX =====
    Critical: legacy override panel must never re-enable Save while REST_LOCK / DAY_DATE_LOCK is active. */
 function w535HardDayLockEnforce(){
   try{
@@ -3221,9 +3221,9 @@ window.addEventListener("load", function(){
 });
 
 
-/* ===== v5.3.18 NO_WHITE_SCREEN_CORE_FIX =====
+/* ===== v5.3.20 NO_WHITE_SCREEN_CORE_FIX =====
    Hard rule: never blank the current page while the next page is rendering.
-   Day Lock v5.3.18 remains active and is re-enforced after every navigation/save. */
+   Day Lock v5.3.20 remains active and is re-enforced after every navigation/save. */
 let __w536NavToken = 0;
 let __w536DashTimer = null;
 let __w536SyncTimer = null;
@@ -3362,8 +3362,8 @@ window.addEventListener("load", function(){
 });
 
 
-/* ===== v5.3.18 DATE FIELD DISPLAY-ONLY FIX =====
-   Base: v5.3.18 + v5.3.18 Day Lock runtime.
+/* ===== v5.3.20 DATE FIELD DISPLAY-ONLY FIX =====
+   Base: v5.3.20 + v5.3.20 Day Lock runtime.
    Purpose: fix desktop native date input visual clipping without touching Day Lock, sync, saveSet, REST_LOCK, or override logic.
 */
 (function(){
@@ -3406,13 +3406,13 @@ window.addEventListener("load", function(){
 
 
 
-/* ===== v5.3.18 DAY_LOCK_SINGLE_RENDERER_CLEAN_FIX =====
+/* ===== v5.3.20 DAY_LOCK_SINGLE_RENDERER_CLEAN_FIX =====
    Clean fix: removes legacy renderer race by keeping one Day Lock controller.
    Rules: Day 1 -> Day 2 -> Rest -> Day 4 -> Day 5 -> Rest -> Rest -> next Week Day 1.
    Manual override is explicit and scoped by team/user/date.
 */
 (function(){
-  const VERSION_5315 = "v5.3.18";
+  const VERSION_5315 = "v5.3.20";
   const DAYS = ["Day 1","Day 2","Day 4","Day 5"];
   const PANEL_ID = "dayLockSingleSourcePanel";
   const LOG_ID = "log";
@@ -3694,12 +3694,12 @@ window.addEventListener("load", function(){
 })();
 
 
-/* ===== v5.3.18 WORKOUT STATE SYNC FIX =====
+/* ===== v5.3.20 WORKOUT STATE SYNC FIX =====
    Fixes: set counter double increment after save, recent log not refreshing,
    Daily Performance/summary using stale state, and debug panels stuck on checking.
 */
 (function(){
-  const VERSION_5318 = "v5.3.18";
+  const VERSION_5318 = "v5.3.20";
   const byId = (id)=>document.getElementById(id);
   const safe = (fn)=>{ try{ if(typeof fn === "function") return fn(); }catch(e){ console.warn("v5318", e); } };
   function keyDate(){
@@ -3796,13 +3796,13 @@ window.addEventListener("load", function(){
   document.addEventListener("click",()=>setTimeout(()=>window.__w5318RefreshLogState(),180),true);
 })();
 
-/* ===== v5.3.19 EXERCISE_RECOMMENDATION_ISOLATION_FIX =====
+/* ===== v5.3.20 EXERCISE_RECOMMENDATION_ISOLATION_FIX =====
    Fix: recommendation/PR/weekly/double progression must use the currently selected exercise only.
    Do not fall back to same movement group (e.g. Barbell Bench Press -> Incline Dumbbell Press).
    Day Lock / Save Guard / Date logic are intentionally untouched.
 */
 (function(){
-  const V519 = "v5.3.19";
+  const V519 = "v5.3.20";
   function $safe(id){ try{return document.getElementById(id);}catch(e){return null;} }
   function cleanName(v){ return String(v||"").trim(); }
   function currentSelectedExercise(){
@@ -3841,7 +3841,7 @@ window.addEventListener("load", function(){
     }, rows[0]);
   }
   function nextFromRow(row){
-    const base=Number(row && row.weight || 0), reps=Number(row && row.reps || 0), rir=Number(row && row.rir ?? 2);
+    const base=Number(row && row.weight || 0), reps=Number(row && row.reps || 0), rir=Number((row && row.rir) ?? 2);
     let next=base, msg="คงน้ำหนักเดิม แล้วเพิ่ม reps ก่อน";
     if(rir>=3 && reps>=8){ next=base+2.5; msg="เพิ่ม +2.5 kg เพราะยังเหลือแรงมาก"; }
     else if(rir>=1 && reps>=12){ next=base+2.5; msg="เพิ่ม +2.5 kg เพราะถึงช่วงบนและ RIR ยังดี"; }
