@@ -177,3 +177,12 @@ input[type="date"]{
 @keyframes uxSpin{to{transform:rotate(360deg)}}
 button.ux-busy,select.ux-busy,input.ux-busy{opacity:.72;cursor:progress!important}
 .msg.ux-inline-status{border-color:rgba(96,165,250,.45)!important;background:rgba(30,64,175,.18)!important}
+
+/* ===== v5.4.0 clean rebuild additions ===== */
+.statusbar{position:fixed;left:12px;right:12px;bottom:74px;z-index:1000;padding:10px 12px;border:1px solid rgba(255,255,255,.14);border-radius:12px;background:rgba(7,14,30,.92);backdrop-filter:blur(8px);box-shadow:0 10px 30px rgba(0,0,0,.25);font-size:13px;color:#dfe7ff;display:none}.statusbar.show{display:block}.statusbar.ok{border-color:rgba(0,200,120,.5)}.statusbar.warn{border-color:rgba(255,180,0,.6)}.statusbar.err{border-color:rgba(255,80,80,.6)}
+.lock-panel{border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px;margin:10px 0;background:rgba(255,255,255,.04)}
+.lock-panel.locked{border-color:rgba(255,180,0,.6);background:rgba(255,180,0,.08)}
+.lock-panel.open{border-color:rgba(0,210,130,.55);background:rgba(0,210,130,.08)}
+.exercise-progress-list{display:grid;gap:8px;margin-top:10px}.exercise-progress-item{padding:10px;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:rgba(255,255,255,.04)}.exercise-progress-item.done{opacity:.58}.exercise-progress-item.active{border-color:rgba(64,180,255,.7)}
+.recent-card{padding:12px;border:1px solid rgba(255,255,255,.12);border-radius:12px;margin:8px 0;background:rgba(255,255,255,.04)}.recent-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.pill{display:inline-block;padding:3px 8px;border-radius:999px;background:rgba(255,255,255,.10);font-size:12px;margin:2px}.pill.done{background:rgba(0,210,130,.22)}.pill.active{background:rgba(64,180,255,.22)}.pill.lock{background:rgba(255,180,0,.22)}
+.hidden{display:none!important}.select-hint{font-size:12px;opacity:.75;margin-top:5px}.danger-text{color:#ff8f8f}.ok-text{color:#8dffc2}.warn-text{color:#ffd27a}

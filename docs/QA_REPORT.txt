@@ -1,4 +1,6 @@
-QA v5.3.23
-- node --check app.module.js: PASS
-- node --check runtime.js: PASS
-- Exercise dropdown progress patch appended without touching Day Lock core.
+QA v5.4.0
+[PASS] node --check js/app.module.js
+[PASS] node --check js/runtime.js
+[PASS] No duplicate Day Lock renderer in app.module.js
+[PASS] Single version label v5.4.0
+[NOTE] Firebase login/write must be tested in live browser after deploy.

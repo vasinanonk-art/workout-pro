@@ -1,1 +1,3 @@
-Workout PRO v5.3.23 - Loading Status UX Fix
+Build: Workout PRO v5.4.0 Clean Rebuild
+Date: 2026-06-15
+Runtime: clean single-state app.module.js

@@ -1,3 +1,13 @@
-# Workout PRO v5.3.23 Date / Timezone Fix
+# Workout PRO v5.4.0 Clean Rebuild
 
-Preserves v5.3.23 Day Lock runtime fix. Adds Asia/Bangkok canonical date key and desktop date input width fix.
+This build rewrites the app runtime instead of stacking legacy patches.
+
+Core fixes:
+- Single state engine for Log / Dashboard / Coach / Calendar
+- Single Day Lock renderer
+- Exercise dropdown progress from the same log source
+- Done exercises are disabled
+- Recent Log refreshes from live Firestore snapshot
+- Alternative exercises are saved as actual exercise while counting under planned exercise
+- Recommendation is isolated per planned exercise
+- Bangkok date key used globally
