@@ -1,2 +1,2 @@
-Version: v5.4.4
+Version: v5.4.5
 Build: Calendar + Strict Day Dropdown Fix

@@ -1,10 +1,10 @@
-// Workout PRO v5.4.4 CLEAN REBUILD - CALENDAR + CYCLE DATE SYNC FIX
+// Workout PRO v5.4.5 CLEAN REBUILD - DATE STATUS LABEL FIX
 // Single state engine. No legacy render patches. No duplicate Day Lock / Dropdown renderers.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const VERSION = "v5.4.4";
+const VERSION = "v5.4.5";
 const $ = (id) => document.getElementById(id);
 const firebaseConfig = {"apiKey":"AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI","authDomain":"workout-program-9eea7.firebaseapp.com","projectId":"workout-program-9eea7","storageBucket":"workout-program-9eea7.firebasestorage.app","messagingSenderId":"315102427876","appId":"1:315102427876:web:d2d5d4c89eb78fae960af1","measurementId":"G-JHEKDYEY8B"};
 
@@ -180,6 +180,16 @@ function renderSetup(){
   setHtml("debug", `Version: <b>${VERSION}</b><br>User: ${state.user?.email || "-"}<br>Team: ${state.teamId || "-"}<br>Logs: ${state.logs.length}<br>Date: ${state.selectedDate} (${dateLabelTH(state.selectedDate)})`);
   setHtml("teamSaveStatus", `Team ID: <b>${state.teamId || "-"}</b>`);
 }
+
+function selectedDateStatus(){
+  const today = todayTH();
+  const selected = isValidDateKey(state.selectedDate) ? state.selectedDate : today;
+  const diff = dayDiff(selected, today);
+  if(diff === 0) return {cls:"ok", text:"🟢 วันนี้", detail:`วันที่ปัจจุบัน ${dateLabelTH(selected)} (${selected})`};
+  if(diff > 0) return {cls:"warn", text:`🔵 ล่วงหน้า ${diff} วัน`, detail:`เลือกวันที่อนาคต ${dateLabelTH(selected)} (${selected}) • ระบบจะล็อกถ้ายังไม่ถึงรอบเล่น`};
+  return {cls:"info", text:`🟡 ย้อนหลัง ${Math.abs(diff)} วัน`, detail:`เลือกวันที่ย้อนหลัง ${dateLabelTH(selected)} (${selected}) • ใช้สำหรับแก้/บันทึกย้อนหลังเท่านั้น`};
+}
+
 function renderExerciseSelect(){
   const sel=$("exercise"); if(!sel) return;
   const old=state.selectedExercise;
@@ -245,6 +255,9 @@ function renderDayLock(){
 function updateFormDerived(){
   const m=metaByExercise();
   if($("date") && $("date").value!==state.selectedDate) $("date").value=state.selectedDate;
+  const ds = selectedDateStatus();
+  const dateStatusEl = $("dateStatus");
+  if(dateStatusEl){ dateStatusEl.className = `msg ${ds.cls}`; dateStatusEl.innerHTML = `<b>${ds.text}</b><br><span class="small">${ds.detail}</span>`; }
   setVal("week", autoWeek());
   setVal("targetSets", targetSets());
   setText("setNo", Math.min(completedForExercise(state.selectedExercise)+1, targetSets(state.selectedExercise)));
@@ -422,5 +435,5 @@ function download(name,text,type){ const a=document.createElement("a"); a.href=U
 onAuthStateChanged(auth,u=>{ state.user=u; if(u && !state.teamId) state.teamId="Beer-Team"; subscribeLogs(); renderAll(); });
 
 window.addEventListener("DOMContentLoaded",()=>{
-  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); renderAll(); status("Workout PRO v5.4.4 พร้อมใช้งาน","ok",2500);
+  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); renderAll(); status("Workout PRO v5.4.5 พร้อมใช้งาน","ok",2500);
 });
