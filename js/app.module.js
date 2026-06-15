@@ -3361,13 +3361,13 @@ window.addEventListener("load", function(){
 });
 
 
-/* ===== v5.3.7 DAY_LOCK_REAL_RUNTIME_FIX =====
+/* ===== v5.3.8 DAY_LOCK_REAL_RUNTIME_FIX =====
    Fix: ES-module scoped legacy Day Override was not reliably called/exposed.
    This patch makes Day Lock the runtime source of truth and keeps the override button visible.
    Rules:
    Day 1 -> Day 2 -> Rest Day -> Day 4 -> Day 5 -> Rest -> Rest -> next Day 1.
 */
-const W537_VERSION = "v5.3.7";
+const W537_VERSION = "v5.3.8";
 function w537SelectedDate(){ return (document.getElementById("date") && document.getElementById("date").value) || today(); }
 function w537OverrideKey(day, date){ return "W537_DAY_LOCK_OVERRIDE::" + activeTeamLabel() + "::" + activeUserKey() + "::" + (date||w537SelectedDate()) + "::" + (day||""); }
 function w537HasOverride(day, date){ try{return localStorage.getItem(w537OverrideKey(day,date)) === "1";}catch(_){return false;} }

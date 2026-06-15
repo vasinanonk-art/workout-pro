@@ -1,4 +1,4 @@
 v5.3.8
 - Force all date/day-lock logic to Asia/Bangkok canonical YYYY-MM-DD.
 - Fix desktop date input visual clipping where 15/6/26 may appear as 5/6/26.
-- Preserve v5.3.7 Day Lock runtime fix and performance fixes.
+- Preserve v5.3.8 Day Lock runtime fix and performance fixes.
