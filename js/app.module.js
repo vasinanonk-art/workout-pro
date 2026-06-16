@@ -1,10 +1,10 @@
-// Workout PRO v5.4.5 CLEAN REBUILD - DATE STATUS LABEL FIX
+// Workout PRO v5.4.8 FULL STABILIZATION - NOTIFICATION + EXERCISE DATA PIPELINE
 // Single state engine. No legacy render patches. No duplicate Day Lock / Dropdown renderers.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const VERSION = "v5.4.5";
+const VERSION = "v5.4.8";
 const $ = (id) => document.getElementById(id);
 const firebaseConfig = {"apiKey":"AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI","authDomain":"workout-program-9eea7.firebaseapp.com","projectId":"workout-program-9eea7","storageBucket":"workout-program-9eea7.firebasestorage.app","messagingSenderId":"315102427876","appId":"1:315102427876:web:d2d5d4c89eb78fae960af1","measurementId":"G-JHEKDYEY8B"};
 
@@ -35,6 +35,23 @@ const ALT = {
   "Standing Calf Raise":["Seated Calf Raise","Leg Press Calf Raise","Smith Machine Calf Raise","Single-leg Dumbbell Calf Raise"]
 };
 
+// v5.4.8: single exercise database / mapping source used by Alternative, Muscle Balance, Plateau, Coach and Recommendation.
+const EX_DB = (()=>{
+  const db = {};
+  PROGRAM.forEach(([day,type,exercise,target,reps,muscle,restMode])=>{
+    db[exercise] = {name:exercise, planned:exercise, day, type, target:Number(target)||0, reps, primaryMuscle:muscle, restMode, isAlternative:false, alternatives:[...(ALT[exercise]||[])]};
+    (ALT[exercise]||[]).forEach(alt=>{
+      if(!db[alt]) db[alt] = {name:alt, planned:exercise, day, type, target:Number(target)||0, reps, primaryMuscle:muscle, restMode, isAlternative:true, alternatives:[]};
+    });
+  });
+  return db;
+})();
+function exInfo(name){ return EX_DB[name] || EX_DB[canonicalExercise(name)] || {name, planned:name, day:"-", type:"Custom", target:0, reps:"-", primaryMuscle:"Other", restMode:"standard", isAlternative:false, alternatives:[]}; }
+function canonicalExercise(name){ return EX_DB[name]?.planned || (PROGRAM.find(p=>p[2]===name)?.[2]) || name || ""; }
+function getExerciseDbRows(){ return Object.values(EX_DB).sort((a,b)=>(a.day||"").localeCompare(b.day||"") || Number(a.isAlternative)-Number(b.isAlternative) || a.name.localeCompare(b.name)); }
+function uniqueBy(arr, fn){ const seen=new Set(); return arr.filter(x=>{ const k=fn(x); if(seen.has(k)) return false; seen.add(k); return true; }); }
+
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -53,6 +70,14 @@ let state = {
   page:"setup",
   timerId:null,
   timerLeft:0,
+  timerEndAt:0,
+  timerDuration:0,
+  notified10:false,
+  notifiedDone:false,
+  notificationsEnabled: localStorage.getItem("restNotifyEnabled") !== "0",
+  notify10Enabled: localStorage.getItem("restNotify10Enabled") !== "0",
+  soundEnabled: localStorage.getItem("restSoundEnabled") !== "0",
+  vibrateEnabled: localStorage.getItem("restVibrateEnabled") !== "0",
   lastRender:0,
   calendarMonth: todayTH().slice(0,7)
 };
@@ -64,10 +89,10 @@ function addDaysKey(key,n){ const d=parseKey(key); d.setDate(d.getDate()+n); ret
 function dayDiff(a,b){ return Math.round((parseKey(a)-parseKey(b))/86400000); }
 function safe(v){ return String(v||"default").trim().replace(/[^\w\-@.]/g,"_").slice(0,80) || "default"; }
 function collectionPath(){ const team=safe(state.teamId); const user=state.user?.uid ? "user_"+safe(state.user.uid) : "guest_"+team; return `teams/${team}/users/${user}/workouts`; }
-function metaByExercise(ex=state.selectedExercise){ return PROGRAM.find(p=>p[2]===ex) || PROGRAM[0]; }
+function metaByExercise(ex=state.selectedExercise){ const planned=canonicalExercise(ex); return PROGRAM.find(p=>p[2]===planned) || PROGRAM[0]; }
 function targetSets(ex=state.selectedExercise){ return Number(metaByExercise(ex)[3]) || 1; }
 function restSeconds(ex=state.selectedExercise){ const mode = metaByExercise(ex)[6] || "standard"; return REST_SECONDS[mode] || 75; }
-function plannedOf(log){ return log.plannedExercise || log.exercise || ""; }
+function plannedOf(log){ return canonicalExercise(log.plannedExercise || log.originalExercise || log.exercise || ""); }
 function actualOf(log){ return log.exercise || log.plannedExercise || ""; }
 function samePlanned(log, ex){ return plannedOf(log) === ex; }
 function byCreated(a,b){ return (a.createdMs||0) - (b.createdMs||0); }
@@ -172,7 +197,7 @@ function subscribeLogs(){
 }
 
 function renderAll(){
-  renderSetup(); renderDayLock(); renderExerciseSelect(); renderLogSummary(); renderRecent(); renderDashboard(); renderCoach(); renderProgram(); renderGuide(); renderCalendar(); renderBackup(); renderMediaPanel(); updateFormDerived();
+  renderSetup(); renderDayLock(); renderExerciseSelect(); renderExerciseDatabase(); renderLogSummary(); renderRecent(); renderDashboard(); renderCoach(); renderProgram(); renderGuide(); renderCalendar(); renderBackup(); renderMediaPanel(); updateFormDerived();
 }
 function renderSetup(){
   setVal("teamId", state.teamId);
@@ -193,11 +218,10 @@ function selectedDateStatus(){
 function renderExerciseSelect(){
   const sel=$("exercise"); if(!sel) return;
   const old=state.selectedExercise;
-  // Source of truth: allowed day is calculated from the selected date.
-  // Display progress for completed previous training days in the same cycle, not 0/target on the next date.
   const allowedDays = allowedTrainingDaysForDate(state.selectedDate);
   sel.innerHTML="";
-  PROGRAM.forEach(p=>{
+  const rows=uniqueBy(PROGRAM, p=>p[2]);
+  rows.forEach(p=>{
     const [day,,ex,tgt]=p;
     const progressDate = displayDateForExerciseProgress(day,state.selectedDate);
     const done=completedForExercise(ex,progressDate);
@@ -213,7 +237,7 @@ function renderExerciseSelect(){
     sel.appendChild(opt);
   });
   const preferred = [...sel.options].find(o=>o.value===old && !o.disabled) || [...sel.options].find(o=>!o.disabled);
-  if(preferred){ sel.value=preferred.value; state.selectedExercise=preferred.value; }
+  if(preferred){ sel.value=preferred.value; if(state.selectedExercise!==preferred.value){ state.selectedAlt=null; } state.selectedExercise=preferred.value; }
   else { sel.value = old; }
   sel.disabled = !preferred;
   renderExerciseProgressList();
@@ -258,6 +282,9 @@ function updateFormDerived(){
   const ds = selectedDateStatus();
   const dateStatusEl = $("dateStatus");
   if(dateStatusEl){ dateStatusEl.className = `msg ${ds.cls}`; dateStatusEl.innerHTML = `<b>${ds.text}</b><br><span class="small">${ds.detail}</span>`; }
+  setHtml("altStatus", state.selectedAlt ? `ใช้ท่าทดแทน: <b>${state.selectedAlt.name}</b><br><span class="small">นับ progress เข้า ${state.selectedExercise}</span>` : "ยังไม่ได้เลือกท่าทดแทน");
+  setHtml("persistentSubStatus", state.selectedAlt ? `Current substitute: ${state.selectedAlt.name} → ${state.selectedExercise}` : "Persistent Alternative: ไม่มี");
+  setHtml("historyRemapBox", `History Remap: ใช้ plannedExercise เป็นตัวนับหลัก • Actual: ${actualExerciseName()}`);
   setVal("week", autoWeek());
   setVal("targetSets", targetSets());
   setText("setNo", Math.min(completedForExercise(state.selectedExercise)+1, targetSets(state.selectedExercise)));
@@ -298,25 +325,63 @@ function renderRecent(){
   host.querySelectorAll(".edit-log").forEach(btn=>btn.addEventListener("click",()=>loadEdit(btn.dataset.id)));
   host.querySelectorAll(".del-log").forEach(btn=>btn.addEventListener("click",()=>deleteLog(btn.dataset.id)));
 }
+
+function logsForPlanned(ex){ const planned=canonicalExercise(ex); return state.logs.filter(x=>plannedOf(x)===planned).sort(byCreated); }
+function todayLogs(){ return logsOnDate(state.selectedDate); }
+function muscleBalanceHtml(){
+  const g=groupByMuscle(); const entries=Object.entries(g).sort((a,b)=>b[1]-a[1]);
+  if(!entries.length) return "ยังไม่มีข้อมูล Muscle Volume";
+  const total=entries.reduce((s,e)=>s+e[1],0)||1;
+  return entries.map(([m,v])=>`<span class="pill">${m}: ${v.toFixed(0)} kg (${Math.round(v/total*100)}%)</span>`).join(" ");
+}
+function plateauForExercise(ex=state.selectedExercise){
+  const rows=logsForPlanned(ex);
+  if(rows.length < 3) return {status:"รอข้อมูล", detail:`ต้องมีอย่างน้อย 3 sets ของ ${canonicalExercise(ex)}`, trend:"-"};
+  const last=rows.slice(-3).map(x=>(Number(x.weightKg)||0)*(Number(x.reps)||0));
+  const diff=last.at(-1)-last[0];
+  if(diff > 0) return {status:"Progress", detail:`แนวโน้มดีขึ้น +${diff.toFixed(0)} kg-volume จาก 3 set ล่าสุด`, trend:"up"};
+  if(diff === 0) return {status:"Stable", detail:`ผลงานคงที่ใน 3 set ล่าสุด`, trend:"flat"};
+  return {status:"Watch", detail:`ผลงานลดลง ${diff.toFixed(0)} kg-volume ใน 3 set ล่าสุด`, trend:"down"};
+}
+function aiDailySummary(){
+  const arr=todayLogs();
+  if(!arr.length) return "ยังไม่มีข้อมูลวันนี้";
+  const vol=volumeForLogs(arr).toFixed(0);
+  const exs=[...new Set(arr.map(plannedOf))];
+  const completed=completedDaysByDate(state.selectedDate);
+  const p=plateauForExercise(state.selectedExercise);
+  return `วันที่ ${dateLabelTH(state.selectedDate)} • ${arr.length} sets • Volume ${vol} kg<br>ท่าที่เล่น: ${exs.join(", ")}<br>Completed: ${completed.join(", ")||"-"}<br>Plateau: ${p.status} — ${p.detail}`;
+}
+function renderExerciseDatabase(){
+  const host=$("v430ExerciseDb"); if(!host) return;
+  const selected=state.selectedExercise, info=exInfo(selected);
+  const alt=(ALT[selected]||[]).map(a=>`<span class="pill">${a}</span>`).join(" ") || "ไม่มีท่าทดแทน";
+  host.innerHTML = `<b>${info.name}</b><br>Day: ${info.day} • Muscle: ${info.primaryMuscle} • Target: ${info.target} sets • Reps: ${info.reps}<br><div class="small">Alternatives: ${alt}</div><div class="small">Exercise DB loaded: ${getExerciseDbRows().length} records</div>`;
+}
 function renderDashboard(){
   setText("kVol", volumeForLogs(state.logs).toFixed(0)); setText("kSets", state.logs.length); setText("kUsers", state.user?1:0); setText("kWeek", autoWeek());
   drawSimpleChart("weekChart", groupByWeek()); drawSimpleChart("exChart", groupByExercise()); drawSimpleChart("v5MuscleChart", groupByMuscle()); drawSimpleChart("v5RecoveryChart", groupByDateSets());
-  setHtml("v5MuscleInsight", state.logs.length?"Muscle Balance คำนวณจาก Log ปัจจุบัน":"รอข้อมูล Muscle Balance");
+  setHtml("v5MuscleInsight", muscleBalanceHtml()); setHtml("muscleStatus", muscleBalanceHtml());
   const prs={}; state.logs.forEach(x=>{ const ex=plannedOf(x); const score=(x.weightKg||0)*(x.reps||0); if(!prs[ex] || score>prs[ex].score) prs[ex]={score,x}; });
   setHtml("v5PRBoard", Object.values(prs).slice(0,8).map(r=>`<span class="pill">${plannedOf(r.x)}: ${r.x.weightKg}×${r.x.reps}</span>`).join(" ")||"รอข้อมูล PR");
 }
 function groupByWeek(){ const g={}; state.logs.forEach(x=>{ const w=x.week||1; g["W"+w]=(g["W"+w]||0)+1; }); return g; }
 function groupByExercise(){ const g={}; state.logs.forEach(x=>{ const k=plannedOf(x); g[k]=(g[k]||0)+(x.weightKg||0)*(x.reps||0); }); return g; }
-function groupByMuscle(){ const g={}; state.logs.forEach(x=>{ const m=metaByExercise(plannedOf(x))[5]; g[m]=(g[m]||0)+1; }); return g; }
+function groupByMuscle(){ const g={}; state.logs.forEach(x=>{ const m=exInfo(plannedOf(x)).primaryMuscle || "Other"; g[m]=(g[m]||0)+(Number(x.weightKg)||0)*(Number(x.reps)||0); }); return g; }
 function groupByDateSets(){ const g={}; state.logs.forEach(x=>{ g[x.date]=(g[x.date]||0)+1; }); return g; }
 function drawSimpleChart(id,data){ const c=$(id); if(!c?.getContext) return; const ctx=c.getContext("2d"), w=c.width, h=c.height; ctx.clearRect(0,0,w,h); const entries=Object.entries(data).slice(-10); if(!entries.length){ ctx.fillStyle="#fff"; ctx.fillText("No data",20,30); return; } const max=Math.max(...entries.map(e=>e[1]),1); entries.forEach(([k,v],i)=>{ const bw=(w-40)/entries.length; const bh=(h-50)*(v/max); ctx.fillRect(20+i*bw,h-25-bh,bw*.7,bh); ctx.fillText(String(k).slice(0,10),20+i*bw,h-8); }); }
 function renderCoach(){
   const latest=state.logs[state.logs.length-1]; const sleep=Number($("sleepHours")?.value||7), soreness=Number($("soreness")?.value||2), stress=Number($("stress")?.value||2);
   const recovery=Math.max(0,Math.min(100,70+(sleep-7)*8-(soreness-2)*8-(stress-2)*8)); const fatigue=100-recovery;
-  setText("coachRecovery", Math.round(recovery)); setText("coachFatigue", Math.round(fatigue)); setText("coachProgress", latest?"OK":"-"); setText("coachDeload", fatigue>55?"WATCH":"NO");
-  setText("coachRecoveryText", recovery>=65?"พร้อมฝึก":"ลด volume หรือใช้ machine stable"); setText("coachFatigueText", fatigue>55?"เสี่ยงล้า":"ปกติ"); setText("coachProgressText", "ยึด RIR 1–2 และ double progression"); setText("coachDeloadText", fatigue>65?"พิจารณา deload":"ยังไม่จำเป็น");
-  setHtml("coachAdvice", `วันนี้: Recovery ${Math.round(recovery)} / Fatigue ${Math.round(fatigue)}<br>ถ้าท่าหนักให้คุม RIR 2 และเลือก machine ถ้า form เริ่มตก`);
-  setHtml("plateauBox", "Plateau check ใช้ข้อมูลท่าเดียวกันเท่านั้น"); setText("effectiveRepsScore", state.logs.length); setText("sfrScore", recovery>=65?"Good":"Moderate"); setText("volumeZone", state.logs.length<12?"Low":"OK");
+  const today=todayLogs(); const p=plateauForExercise(state.selectedExercise);
+  setText("coachRecovery", Math.round(recovery)); setText("coachFatigue", Math.round(fatigue)); setText("coachProgress", p.status==='Progress'?"UP":(latest?"OK":"-")); setText("coachDeload", fatigue>55?"WATCH":"NO");
+  setText("coachRecoveryText", recovery>=65?"พร้อมฝึก":"ลด volume หรือใช้ machine stable"); setText("coachFatigueText", fatigue>55?"เสี่ยงล้า":"ปกติ"); setText("coachProgressText", p.detail); setText("coachDeloadText", fatigue>65?"พิจารณา deload":"ยังไม่จำเป็น");
+  setHtml("coachAdvice", `Recovery ${Math.round(recovery)} / Fatigue ${Math.round(fatigue)}<br>${today.length?`วันนี้มี ${today.length} sets • Volume ${volumeForLogs(today).toFixed(0)} kg`:"ยังไม่มี log วันนี้"}<br>${p.status}: ${p.detail}`);
+  setHtml("plateauBox", `<b>${p.status}</b><br>${p.detail}<br><span class="small">Exercise: ${canonicalExercise(state.selectedExercise)}</span>`);
+  const effective=today.filter(x=>Number(x.rir)<=2).length;
+  setText("effectiveRepsScore", effective); setText("sfrScore", recovery>=65?"Good":"Moderate"); setText("volumeZone", today.length<8?"Low":(today.length>22?"High":"OK"));
+  setHtml("v430AiSummary", aiDailySummary());
+  setHtml("v430DeloadBox", fatigue>65 ? "Fatigue สูง แนะนำลด volume 20–30%" : "ยังไม่จำเป็นต้อง deload");
 }
 function renderProgram(){ const host=$("programList"); if(host) host.innerHTML=DAY_ORDER.map(d=>`<h3>${d}</h3>`+dayExercises(d).map(p=>`<div class="exercise-progress-item">${p[2]} • ${p[3]} sets • ${p[4]}</div>`).join("")).join(""); }
 function renderGuide(){ const host=$("guideList"); if(host) host.innerHTML=PROGRAM.map(p=>`<div class="exercise-progress-item"><b>${p[2]}</b><br><span class="small">${p[0]} • ${p[4]} reps • RIR 1–2</span></div>`).join(""); }
@@ -385,12 +450,20 @@ async function saveSet(){
   if(!state.user){ status("กรุณา Login ก่อน","err"); return; }
   const w=Number($("weight")?.value||0), reps=Number($("reps")?.value||0), rir=Number($("rir")?.value||2);
   if(!w || !reps){ status("กรอก Weight/Reps ก่อน","err"); return; }
+  const wasEditing=Boolean(state.editingId);
+  const shouldAutoRest=!wasEditing;
   state.saving=true; updateFormDerived(); status("กำลังบันทึกเซต...","warn",0);
   const payload={date:state.selectedDate, week:autoWeek(), day:dayForExercise(state.selectedExercise), plannedExercise:state.selectedExercise, exercise:actualExerciseName(), weightKg:w, reps, rir, tempo:$("tempo")?.value||"", repQuality:$("repQuality")?.value||"", biasMode:$("biasMode")?.value||"", note:$("note")?.value||"", targetSets:targetSets(), sleepHours:Number($("sleepHours")?.value||7), soreness:Number($("soreness")?.value||2), stress:Number($("stress")?.value||2), version:VERSION, updatedAt:serverTimestamp()};
   try{
     if(state.editingId){ await updateDoc(doc(db, collectionPath(), state.editingId), payload); state.editingId=null; }
     else { await addDoc(collection(db, collectionPath()), {...payload, createdAt:serverTimestamp()}); }
-    ["weight","reps","note"].forEach(id=>setVal(id,"")); status("บันทึกสำเร็จ","ok");
+    ["weight","reps","note"].forEach(id=>setVal(id,""));
+    if(shouldAutoRest && typeof startTimer === "function"){
+      startTimer();
+      status("บันทึกสำเร็จ • เริ่มจับเวลาพักแล้ว","ok");
+    }else{
+      status("บันทึกสำเร็จ","ok");
+    }
   }catch(e){ console.error(e); status("บันทึกไม่สำเร็จ: "+e.message,"err",0); }
   finally{ state.saving=false; renderAll(); }
 }
@@ -417,17 +490,102 @@ function bind(){
   $("nextM")?.addEventListener("click",()=>{ const [y,m]=state.calendarMonth.split("-").map(Number); const dt=new Date(y,m,1); state.calendarMonth=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}`; renderCalendar(); });
   $("exercise")?.addEventListener("change",e=>{ state.selectedExercise=e.target.value; state.selectedAlt=null; status("เลือกท่า: "+state.selectedExercise,"ok",900); renderAll(); });
   $("saveBtn")?.addEventListener("click",saveSet); $("resetBtn")?.addEventListener("click",resetForm);
-  $("altBtn")?.addEventListener("click",openAltModal); $("closeAlt")?.addEventListener("click",()=>$("altModal")?.classList.remove("show"));
+  $("altBtn")?.addEventListener("click",openAltModal); $("closeAlt")?.addEventListener("click",()=>{$("altModal")?.classList.remove("show"); document.body.classList.remove("modal-open");});
   $("clearAltBtn")?.addEventListener("click",()=>{ state.selectedAlt=null; renderAll(); });
   $("imageBtn")?.addEventListener("click",()=>window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(actualExerciseName()+" proper form")}`,"_blank"));
   $("videoBtn")?.addEventListener("click",()=>window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(actualExerciseName()+" proper form")}`,"_blank"));
-  $("startRest")?.addEventListener("click",startTimer); $("stopRest")?.addEventListener("click",stopTimer); $("add30")?.addEventListener("click",()=>{state.timerLeft+=30; renderTimer();});
+  $("startRest")?.addEventListener("click",startTimer); $("stopRest")?.addEventListener("click",stopTimer); $("add30")?.addEventListener("click",()=>{addRestTime(30);});
+  document.addEventListener("visibilitychange", renderTimer);
+  window.addEventListener("focus", renderTimer);
+  $("v430CopySummaryBtn")?.addEventListener("click",()=>{ navigator.clipboard?.writeText($("v430AiSummary")?.innerText||""); status("Copy Summary แล้ว","ok"); });
   $("exportJsonBtn")?.addEventListener("click",exportJson); $("v5ExportJsonBtn")?.addEventListener("click",exportJson); $("exportCsvBtn")?.addEventListener("click",exportCsv); $("v5ExportCsvBtn")?.addEventListener("click",exportCsv);
 }
-function openAltModal(){ const host=$("altList"); if(!host) return; const list=ALT[state.selectedExercise]||[]; host.innerHTML=list.map(name=>`<button class="secondary alt-choice" data-name="${name}" type="button">${name}</button>`).join(" ") || "ไม่มีท่าแทน"; host.querySelectorAll(".alt-choice").forEach(b=>b.addEventListener("click",()=>{ state.selectedAlt={name:b.dataset.name, original:state.selectedExercise}; $("altModal")?.classList.remove("show"); renderAll(); status("ใช้ท่าแทน: "+b.dataset.name,"ok"); })); $("altModal")?.classList.add("show"); }
-function startTimer(){ stopTimer(); state.timerLeft=Number($("restSec")?.value||75); renderTimer(); state.timerId=setInterval(()=>{ state.timerLeft=Math.max(0,state.timerLeft-1); renderTimer(); if(state.timerLeft<=0) stopTimer(); },1000); }
-function stopTimer(){ if(state.timerId) clearInterval(state.timerId); state.timerId=null; }
-function renderTimer(){ const m=String(Math.floor(state.timerLeft/60)).padStart(2,"0"), s=String(state.timerLeft%60).padStart(2,"0"); setText("timer",`${m}:${s}`); }
+function openAltModal(){
+  const host=$("altList"), modal=$("altModal"); if(!host || !modal) return;
+  const base=state.selectedExercise;
+  const list=uniqueBy(ALT[base]||[], x=>x);
+  const render=(q="")=>{
+    const filtered=list.filter(name=>name.toLowerCase().includes(String(q||"").toLowerCase()));
+    host.innerHTML=filtered.length ? filtered.map(name=>{
+      const info=exInfo(name);
+      return `<button class="secondary alt-choice" data-name="${name}" type="button"><b>${name}</b><br><span class="small">แทน ${base} • Muscle ${info.primaryMuscle}</span></button>`;
+    }).join("") : "ไม่มีท่าแทน";
+    host.querySelectorAll(".alt-choice").forEach(b=>b.addEventListener("click",()=>{
+      state.selectedAlt={name:b.dataset.name, original:base};
+      modal.classList.remove("show"); document.body.classList.remove("modal-open");
+      renderAll(); status("ใช้ท่าแทน: "+b.dataset.name,"ok");
+    }));
+  };
+  render("");
+  const search=$("altSearch"); if(search){ search.value=""; search.oninput=()=>render(search.value); }
+  modal.classList.add("show"); document.body.classList.add("modal-open");
+}
+
+function requestNotifyPermission(){
+  if(!("Notification" in window)) return Promise.resolve("unsupported");
+  if(Notification.permission === "granted") return Promise.resolve("granted");
+  if(Notification.permission === "denied") return Promise.resolve("denied");
+  return Notification.requestPermission();
+}
+function beep(kind="done"){
+  if(!state.soundEnabled) return;
+  try{
+    const Ctx=window.AudioContext||window.webkitAudioContext; if(!Ctx) return;
+    const ctx=new Ctx(); const osc=ctx.createOscillator(); const gain=ctx.createGain();
+    osc.type="sine"; osc.frequency.value=kind==="warn"?880:1175; gain.gain.value=.08;
+    osc.connect(gain); gain.connect(ctx.destination); osc.start(); setTimeout(()=>{osc.stop(); ctx.close();}, kind==="warn"?140:260);
+  }catch(e){}
+}
+function notifyRest(title, body, kind="done"){
+  if(state.vibrateEnabled && navigator.vibrate) navigator.vibrate(kind==="warn"?[120]:[120,80,120,80,120]);
+  beep(kind);
+  status(title+" • "+body, kind==="warn"?"warn":"ok", 3500);
+  if(state.notificationsEnabled && "Notification" in window && Notification.permission === "granted"){
+    try{ new Notification(title,{body, tag:"workout-rest-timer", renotify:true}); }catch(e){}
+  }
+}
+function startTimer(){
+  stopTimer(false);
+  const sec=Math.max(1, Number($("restSec")?.value||75));
+  state.timerDuration=sec;
+  state.timerEndAt=Date.now() + sec*1000;
+  state.notified10=false; state.notifiedDone=false;
+  requestNotifyPermission();
+  renderTimer();
+  state.timerId=setInterval(renderTimer,1000);
+}
+function stopTimer(clearEnd=true){
+  if(state.timerId) clearInterval(state.timerId);
+  state.timerId=null;
+  if(clearEnd){ state.timerEndAt=0; state.timerLeft=0; }
+  renderTimer();
+}
+function addRestTime(sec=30){
+  const now=Date.now();
+  if(state.timerEndAt && state.timerEndAt>now){ state.timerEndAt += sec*1000; }
+  else { state.timerEndAt = now + sec*1000; }
+  renderTimer();
+  if(!state.timerId) state.timerId=setInterval(renderTimer,1000);
+}
+function renderTimer(){
+  if(state.timerEndAt){
+    state.timerLeft=Math.max(0, Math.ceil((state.timerEndAt-Date.now())/1000));
+    if(state.notify10Enabled && !state.notified10 && state.timerLeft>0 && state.timerLeft<=10){
+      state.notified10=true;
+      notifyRest("⏳ เหลือ 10 วินาที", "เตรียมเล่นเซตถัดไป", "warn");
+    }
+    if(state.timerLeft<=0){
+      if(state.timerId) clearInterval(state.timerId);
+      state.timerId=null;
+      state.timerEndAt=0;
+      setText("timer","00:00");
+      if(!state.notifiedDone){ state.notifiedDone=true; notifyRest("🔔 Rest Complete", "พร้อมเล่นเซตถัดไปแล้ว", "done"); }
+      return;
+    }
+  }
+  const m=String(Math.floor((state.timerLeft||0)/60)).padStart(2,"0"), ss=String((state.timerLeft||0)%60).padStart(2,"0");
+  setText("timer",`${m}:${ss}`);
+}
 function exportJson(){ const data=JSON.stringify({version:VERSION, exportedAt:new Date().toISOString(), logs:state.logs},null,2); download("workout-pro-backup.json",data,"application/json"); status("Export JSON แล้ว","ok"); }
 function exportCsv(){ const cols=["date","week","day","plannedExercise","exercise","weightKg","reps","rir","note"]; const csv=[cols.join(","),...state.logs.map(x=>cols.map(c=>`"${String(x[c]??"").replaceAll('"','""')}"`).join(","))].join("\n"); download("workout-pro-log.csv",csv,"text/csv"); status("Export CSV แล้ว","ok"); }
 function download(name,text,type){ const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([text],{type})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
@@ -435,5 +593,5 @@ function download(name,text,type){ const a=document.createElement("a"); a.href=U
 onAuthStateChanged(auth,u=>{ state.user=u; if(u && !state.teamId) state.teamId="Beer-Team"; subscribeLogs(); renderAll(); });
 
 window.addEventListener("DOMContentLoaded",()=>{
-  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); renderAll(); status("Workout PRO v5.4.5 พร้อมใช้งาน","ok",2500);
+  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); renderAll(); status("Workout PRO v5.4.8 พร้อมใช้งาน","ok",2500);
 });

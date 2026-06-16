@@ -1,7 +1,7 @@
-Workout PRO v5.4.5 QA
-- node --check js/app.module.js: PASS
-- node --check js/runtime.js: PASS
-- Day Lock renderer count: 1
-- Calendar renderer count: 1
-- Exercise dropdown uses strict allowedDays; no fallback to locked old day
-- Calendar grid/insight/go-log binding added
+Workout PRO v5.4.8 Full Stabilization
+- JS syntax check: PASS
+- Runtime syntax check: PASS
+- Modal show CSS: PASS
+- Exercise DB / Alt Mapping helpers: PASS
+- Muscle Balance / Plateau / AI Summary renderers: PASS
+- Rest notifications hooks: PASS

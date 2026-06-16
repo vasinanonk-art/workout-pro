@@ -188,3 +188,9 @@ button.ux-busy,select.ux-busy,input.ux-busy{opacity:.72;cursor:progress!importan
 .hidden{display:none!important}.select-hint{font-size:12px;opacity:.75;margin-top:5px}.danger-text{color:#ff8f8f}.ok-text{color:#8dffc2}.warn-text{color:#ffd27a}
 /* v5.4.4 calendar visibility fix */
 .leg{display:inline-block;border-radius:999px;padding:6px 10px;margin:4px 4px 0 0;font-weight:800;font-size:12px}.leg.completed,.calTag.completed,.calDay.completed{border-color:#22c55e}.leg.completed,.calTag.completed{background:#14532d;color:#dcfce7}.leg.skip,.calTag.skip{background:#7c2d12;color:#fed7aa}.leg.miss,.calTag.miss{background:#7f1d1d;color:#fee2e2}.calDay.partial{border-color:#f97316}.calDay.completed{box-shadow:inset 0 0 0 2px #22c55e}.calendar-day-detail{margin-top:10px;display:grid;gap:6px}.disabled,[disabled]{opacity:.55;cursor:not-allowed!important}
+
+/* v5.4.8 stabilization */
+.modal.show{display:flex!important}
+.alt-choice{width:100%;margin:6px 0;text-align:left;white-space:normal}
+.pill{vertical-align:middle}
+.calTag.partial{background:#7c2d12;color:#fed7aa}

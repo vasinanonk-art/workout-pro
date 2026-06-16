@@ -1,8 +1,9 @@
-Workout PRO v5.4.5
-- Fix Calendar grid not rendering.
-- Fix Calendar daily insight not binding to selected date.
-- Fix Go Log button disabled while logs exist.
-- Fix exercise dropdown allowing locked next day after same-day completion.
-- Keep clean single state engine.
-
-- v5.4.5: Date Status Label Fix — Today / Past / Future status now shows correctly above Log form.
+v5.4.8 Full Stabilization
+- Fix Alternative Exercise modal not opening/selecting
+- Add unified Exercise Database / canonical mapping
+- Fix duplicate exercise counting via plannedExercise
+- Restore Muscle Volume Balance
+- Restore Plateau Detection v2
+- Restore AI Daily Coach Summary
+- Add Rest Timer notification at 10s remaining and completion
+- Fix timer completion error from missing showStatus
