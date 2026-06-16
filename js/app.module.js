@@ -1,10 +1,10 @@
-// Workout PRO v5.4.8 FULL STABILIZATION - NOTIFICATION + EXERCISE DATA PIPELINE
+// Workout PRO v5.5.0 CORE OPTIMIZED - DATA PIPELINE + FAST LOG SYNC
 // Single state engine. No legacy render patches. No duplicate Day Lock / Dropdown renderers.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const VERSION = "v5.4.8";
+const VERSION = "v5.5.0";
 const $ = (id) => document.getElementById(id);
 const firebaseConfig = {"apiKey":"AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI","authDomain":"workout-program-9eea7.firebaseapp.com","projectId":"workout-program-9eea7","storageBucket":"workout-program-9eea7.firebasestorage.app","messagingSenderId":"315102427876","appId":"1:315102427876:web:d2d5d4c89eb78fae960af1","measurementId":"G-JHEKDYEY8B"};
 
@@ -35,7 +35,7 @@ const ALT = {
   "Standing Calf Raise":["Seated Calf Raise","Leg Press Calf Raise","Smith Machine Calf Raise","Single-leg Dumbbell Calf Raise"]
 };
 
-// v5.4.8: single exercise database / mapping source used by Alternative, Muscle Balance, Plateau, Coach and Recommendation.
+// v5.5.0: single exercise database / mapping source used by Alternative, Muscle Balance, Plateau, Coach and Recommendation.
 const EX_DB = (()=>{
   const db = {};
   PROGRAM.forEach(([day,type,exercise,target,reps,muscle,restMode])=>{
@@ -50,6 +50,16 @@ function exInfo(name){ return EX_DB[name] || EX_DB[canonicalExercise(name)] || {
 function canonicalExercise(name){ return EX_DB[name]?.planned || (PROGRAM.find(p=>p[2]===name)?.[2]) || name || ""; }
 function getExerciseDbRows(){ return Object.values(EX_DB).sort((a,b)=>(a.day||"").localeCompare(b.day||"") || Number(a.isAlternative)-Number(b.isAlternative) || a.name.localeCompare(b.name)); }
 function uniqueBy(arr, fn){ const seen=new Set(); return arr.filter(x=>{ const k=fn(x); if(seen.has(k)) return false; seen.add(k); return true; }); }
+function mediaSearchUrl(name,type="image"){
+  const q=encodeURIComponent(`${name} proper form exercise`);
+  return type==="video" ? `https://www.youtube.com/results?search_query=${q}` : `https://www.google.com/search?tbm=isch&q=${q}`;
+}
+function exerciseMediaHtml(name){
+  const info=exInfo(name);
+  return `<div class="media-actions"><a class="miniBtn purple" href="${mediaSearchUrl(name,'image')}" target="_blank" rel="noopener">รูป</a><a class="miniBtn cyan" href="${mediaSearchUrl(name,'video')}" target="_blank" rel="noopener">วิดีโอ</a></div><div class="small">${info.isAlternative?`ท่าทดแทนของ ${info.planned}`:`ท่าหลัก`} • Muscle: ${info.primaryMuscle} • Target: ${info.target || '-'} sets</div>`;
+}
+function localNowMs(){ return Date.now(); }
+function tempId(){ return `local_${localNowMs()}_${Math.random().toString(36).slice(2,8)}`; }
 
 
 const app = initializeApp(firebaseConfig);
@@ -59,6 +69,8 @@ let state = {
   user:null,
   teamId: localStorage.getItem("teamId") || "Beer-Team",
   logs:[],
+  pendingWrites:new Map(),
+  lastSnapshotAt:0,
   selectedDate: todayTH(),
   selectedExercise: PROGRAM[0][2],
   selectedAlt:null,
@@ -179,7 +191,7 @@ function allowedTrainingDaysForDate(date=state.selectedDate){
 function grantOverride(day=dayForExercise(state.selectedExercise)){ const key=`${state.selectedDate}|${state.user?.uid||"guest"}|${state.teamId}|${day}`; state.overrideKeys.add(key); localStorage.setItem("dayLockOverridesV540", JSON.stringify([...state.overrideKeys])); status(`ปลดล็อก ${day} แล้ว`,"warn"); renderAll(); }
 
 function normalizeLog(raw,id){
-  let createdMs = Date.now();
+  let createdMs = Number(raw.createdMs || raw.updatedMs || 0) || Date.now();
   try{ if(raw.createdAt?.seconds) createdMs=raw.createdAt.seconds*1000; }catch(e){}
   const planned = raw.plannedExercise || raw.originalExercise || raw.exercise;
   return {...raw, id, plannedExercise:planned, exercise:raw.exercise||planned, date:isValidDateKey(raw.date)?raw.date:todayTH(), weightKg:Number(raw.weightKg ?? raw.weight ?? 0), reps:Number(raw.reps||0), rir:Number(raw.rir ?? 2), createdMs};
@@ -190,7 +202,11 @@ function subscribeLogs(){
   status("กำลังโหลด Log...","warn",0);
   const q=query(collection(db, collectionPath()), orderBy("date","asc"));
   state.unsub=onSnapshot(q,(snap)=>{
-    state.logs=snap.docs.map(d=>normalizeLog(d.data(), d.id));
+    const remote=snap.docs.map(d=>normalizeLog(d.data(), d.id));
+    const pending=[...state.pendingWrites.values()].filter(x=>!x.__removeOnSync);
+    const remoteKeys=new Set(remote.map(x=>`${x.date}|${plannedOf(x)}|${actualOf(x)}|${x.weightKg}|${x.reps}|${x.createdMs}`));
+    state.logs=[...remote, ...pending.filter(x=>!remoteKeys.has(`${x.date}|${plannedOf(x)}|${actualOf(x)}|${x.weightKg}|${x.reps}|${x.createdMs}`))];
+    state.lastSnapshotAt=Date.now();
     status("โหลดข้อมูลสำเร็จ","ok");
     renderAll();
   },(err)=>{ console.error(err); status("โหลด Log ไม่สำเร็จ: "+err.message,"err",0); });
@@ -436,7 +452,11 @@ function renderCalendar(){
   if(btn){ btn.disabled=false; btn.classList.remove("disabled"); btn.onclick=()=>{ show("log"); }; }
 }
 function renderBackup(){ const first=logsSorted()[0]?.date||"-", last=logsSorted().at(-1)?.date||"-"; setText("backupKpiSets", state.logs.length); setText("backupKpiVolume", volumeForLogs(state.logs).toFixed(0)); setText("backupKpiFirst", first); setText("backupKpiLast", last); setHtml("backupSummaryBox", `Backup ready • ${state.logs.length} logs • ${VERSION}`); }
-function renderMediaPanel(){ const ex=actualExerciseName(); setText("mediaTitle", `Media Reference: ${ex}`); setHtml("mediaCue", `Cue: คุมฟอร์ม ไม่ฝืนเจ็บ • Search: ${ex} proper form`); }
+function renderMediaPanel(){
+  const ex=actualExerciseName();
+  setText("mediaTitle", `Media Reference: ${ex}`);
+  setHtml("mediaCue", `Cue: คุมฟอร์ม ไม่ฝืนเจ็บ • Search: ${ex} proper form<br>${exerciseMediaHtml(ex)}`);
+}
 
 function autoWeek(){
   const dates=workoutDates(); if(!dates.length) return 1;
@@ -453,18 +473,41 @@ async function saveSet(){
   const wasEditing=Boolean(state.editingId);
   const shouldAutoRest=!wasEditing;
   state.saving=true; updateFormDerived(); status("กำลังบันทึกเซต...","warn",0);
+  const nowMs=localNowMs();
   const payload={date:state.selectedDate, week:autoWeek(), day:dayForExercise(state.selectedExercise), plannedExercise:state.selectedExercise, exercise:actualExerciseName(), weightKg:w, reps, rir, tempo:$("tempo")?.value||"", repQuality:$("repQuality")?.value||"", biasMode:$("biasMode")?.value||"", note:$("note")?.value||"", targetSets:targetSets(), sleepHours:Number($("sleepHours")?.value||7), soreness:Number($("soreness")?.value||2), stress:Number($("stress")?.value||2), version:VERSION, updatedAt:serverTimestamp()};
+  const localPayload=normalizeLog({...payload, createdMs:nowMs, updatedMs:nowMs}, wasEditing ? state.editingId : tempId());
+  localPayload.__pending=true;
   try{
-    if(state.editingId){ await updateDoc(doc(db, collectionPath(), state.editingId), payload); state.editingId=null; }
-    else { await addDoc(collection(db, collectionPath()), {...payload, createdAt:serverTimestamp()}); }
-    ["weight","reps","note"].forEach(id=>setVal(id,""));
+    if(wasEditing){
+      const idx=state.logs.findIndex(x=>x.id===state.editingId);
+      if(idx>=0) state.logs[idx]={...state.logs[idx], ...localPayload};
+      state.pendingWrites.set(state.editingId, {...localPayload, __removeOnSync:true});
+      renderAll();
+      await updateDoc(doc(db, collectionPath(), state.editingId), payload);
+      state.pendingWrites.delete(state.editingId);
+      state.editingId=null;
+    } else {
+      state.logs.push(localPayload);
+      state.pendingWrites.set(localPayload.id, localPayload);
+      ["weight","reps","note"].forEach(id=>setVal(id,""));
+      renderAll();
+      const ref=await addDoc(collection(db, collectionPath()), {...payload, createdAt:serverTimestamp()});
+      state.pendingWrites.delete(localPayload.id);
+      // Keep optimistic UI until Firestore snapshot arrives; if slow, replace temp id to avoid duplicates in edit/delete.
+      const temp=state.logs.find(x=>x.id===localPayload.id);
+      if(temp) temp.id=ref.id;
+    }
     if(shouldAutoRest && typeof startTimer === "function"){
       startTimer();
       status("บันทึกสำเร็จ • เริ่มจับเวลาพักแล้ว","ok");
     }else{
       status("บันทึกสำเร็จ","ok");
     }
-  }catch(e){ console.error(e); status("บันทึกไม่สำเร็จ: "+e.message,"err",0); }
+  }catch(e){
+    console.error(e);
+    if(!wasEditing){ state.logs=state.logs.filter(x=>x.id!==localPayload.id); state.pendingWrites.delete(localPayload.id); }
+    status("บันทึกไม่สำเร็จ: "+e.message,"err",0);
+  }
   finally{ state.saving=false; renderAll(); }
 }
 function loadEdit(id){ const x=state.logs.find(l=>l.id===id); if(!x) return; state.editingId=id; state.selectedDate=x.date; state.selectedExercise=plannedOf(x); state.selectedAlt=x.exercise!==plannedOf(x)?{name:x.exercise, original:plannedOf(x)}:null; setVal("weight",x.weightKg); setVal("reps",x.reps); setVal("rir",x.rir); setVal("note",x.note||""); status("โหลด Log เพื่อแก้ไขแล้ว","warn"); show("log"); renderAll(); }
@@ -488,7 +531,13 @@ function bind(){
   });
   $("prevM")?.addEventListener("click",()=>{ const [y,m]=state.calendarMonth.split("-").map(Number); const dt=new Date(y,m-2,1); state.calendarMonth=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}`; renderCalendar(); });
   $("nextM")?.addEventListener("click",()=>{ const [y,m]=state.calendarMonth.split("-").map(Number); const dt=new Date(y,m,1); state.calendarMonth=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}`; renderCalendar(); });
-  $("exercise")?.addEventListener("change",e=>{ state.selectedExercise=e.target.value; state.selectedAlt=null; status("เลือกท่า: "+state.selectedExercise,"ok",900); renderAll(); });
+  $("exercise")?.addEventListener("change",e=>{
+    if(!e.target.value) return;
+    state.selectedExercise=e.target.value;
+    state.selectedAlt=null;
+    status("เลือกท่า: "+state.selectedExercise,"ok",900);
+    renderAll();
+  });
   $("saveBtn")?.addEventListener("click",saveSet); $("resetBtn")?.addEventListener("click",resetForm);
   $("altBtn")?.addEventListener("click",openAltModal); $("closeAlt")?.addEventListener("click",()=>{$("altModal")?.classList.remove("show"); document.body.classList.remove("modal-open");});
   $("clearAltBtn")?.addEventListener("click",()=>{ state.selectedAlt=null; renderAll(); });
@@ -508,7 +557,7 @@ function openAltModal(){
     const filtered=list.filter(name=>name.toLowerCase().includes(String(q||"").toLowerCase()));
     host.innerHTML=filtered.length ? filtered.map(name=>{
       const info=exInfo(name);
-      return `<button class="secondary alt-choice" data-name="${name}" type="button"><b>${name}</b><br><span class="small">แทน ${base} • Muscle ${info.primaryMuscle}</span></button>`;
+      return `<button class="secondary alt-choice" data-name="${name}" type="button"><b>${name}</b><br><span class="small">แทน ${base} • Muscle ${info.primaryMuscle}</span><br>${exerciseMediaHtml(name)}</button>`;
     }).join("") : "ไม่มีท่าแทน";
     host.querySelectorAll(".alt-choice").forEach(b=>b.addEventListener("click",()=>{
       state.selectedAlt={name:b.dataset.name, original:base};
@@ -593,5 +642,5 @@ function download(name,text,type){ const a=document.createElement("a"); a.href=U
 onAuthStateChanged(auth,u=>{ state.user=u; if(u && !state.teamId) state.teamId="Beer-Team"; subscribeLogs(); renderAll(); });
 
 window.addEventListener("DOMContentLoaded",()=>{
-  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); renderAll(); status("Workout PRO v5.4.8 พร้อมใช้งาน","ok",2500);
+  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); renderAll(); status("Workout PRO v5.5.0 พร้อมใช้งาน","ok",2500);
 });

@@ -1,7 +1,29 @@
-Workout PRO v5.4.8 Full Stabilization
-- JS syntax check: PASS
-- Runtime syntax check: PASS
-- Modal show CSS: PASS
-- Exercise DB / Alt Mapping helpers: PASS
-- Muscle Balance / Plateau / AI Summary renderers: PASS
-- Rest notifications hooks: PASS
+Workout PRO v5.5.0 Core Optimized QA
+
+Static checks:
+- app.module.js: node --check PASS
+- runtime.js: node --check PASS
+- duplicate core renderer check: PASS
+  renderExerciseSelect: 1
+  renderDayLock: 1
+  renderExerciseDatabase: 1
+  renderDashboard: 1
+  renderCoach: 1
+  saveSet: 1
+  openAltModal: 1
+
+Fix scope:
+- Fast optimistic log sync after Save Set
+- Exercise dropdown interaction stability
+- Alternative exercise media links restored
+- Alternative exercise maps to planned exercise for progress and analytics
+- Exercise Database / Muscle Volume / Plateau / AI Coach use one EX_DB source
+- Rest notification remains included
+
+Manual QA required after deploy:
+1. Login
+2. Select exercise dropdown
+3. Select alternative exercise
+4. Save one set and confirm recent log appears immediately
+5. Check Dashboard / Coach / Muscle Volume / Plateau / AI Summary
+6. Check image/video buttons for main and alternative exercise
