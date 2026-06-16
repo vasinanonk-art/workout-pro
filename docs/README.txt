@@ -1,1 +1,1 @@
-Workout PRO v5.5.0 Clean Rebuild package.
+Workout PRO v5.5.1 Clean Rebuild package.

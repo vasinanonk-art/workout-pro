@@ -1,10 +1,10 @@
-// Workout PRO v5.5.0 CORE OPTIMIZED - DATA PIPELINE + FAST LOG SYNC
+// Workout PRO v5.5.1 EXERCISE SELECTOR STABILITY FIX
 // Single state engine. No legacy render patches. No duplicate Day Lock / Dropdown renderers.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const VERSION = "v5.5.0";
+const VERSION = "v5.5.1";
 const $ = (id) => document.getElementById(id);
 const firebaseConfig = {"apiKey":"AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI","authDomain":"workout-program-9eea7.firebaseapp.com","projectId":"workout-program-9eea7","storageBucket":"workout-program-9eea7.firebasestorage.app","messagingSenderId":"315102427876","appId":"1:315102427876:web:d2d5d4c89eb78fae960af1","measurementId":"G-JHEKDYEY8B"};
 
@@ -35,7 +35,7 @@ const ALT = {
   "Standing Calf Raise":["Seated Calf Raise","Leg Press Calf Raise","Smith Machine Calf Raise","Single-leg Dumbbell Calf Raise"]
 };
 
-// v5.5.0: single exercise database / mapping source used by Alternative, Muscle Balance, Plateau, Coach and Recommendation.
+// v5.5.1: single exercise database / mapping source used by Alternative, Muscle Balance, Plateau, Coach and Recommendation.
 const EX_DB = (()=>{
   const db = {};
   PROGRAM.forEach(([day,type,exercise,target,reps,muscle,restMode])=>{
@@ -235,8 +235,14 @@ function renderExerciseSelect(){
   const sel=$("exercise"); if(!sel) return;
   const old=state.selectedExercise;
   const allowedDays = allowedTrainingDaysForDate(state.selectedDate);
+  const lock = calcDayLock(state.selectedDate);
   sel.innerHTML="";
+
+  // v5.5.1: keep the selector clickable. Save Guard is the real lock.
+  // The previous build disabled the whole <select> when all currently allowed exercises were done/locked,
+  // which made mobile users think the exercise selector was broken.
   const rows=uniqueBy(PROGRAM, p=>p[2]);
+  let firstOpen=null, oldOption=null;
   rows.forEach(p=>{
     const [day,,ex,tgt]=p;
     const progressDate = displayDateForExerciseProgress(day,state.selectedDate);
@@ -245,18 +251,48 @@ function renderExerciseSelect(){
     opt.dataset.day=day;
     opt.dataset.progressDate=progressDate;
     const isDone=done>=Number(tgt);
-    const lockedDay = !allowedDays.includes(day);
+    const lockedDay = allowedDays.length ? !allowedDays.includes(day) : true;
+    const isOpen = !isDone && !lockedDay;
+    // Options that are completed or locked are still visible for status, but cannot be selected as the active workout.
     opt.disabled = isDone || lockedDay;
-    const mark = isDone ? "✓ " : (allowedDays.includes(day) ? "▶ " : "");
+    const mark = isDone ? "✓ " : (isOpen ? "▶ " : "🔒 ");
     const dateNote = progressDate!==state.selectedDate && done>0 ? ` • ${dateLabelTH(progressDate)}` : "";
-    opt.textContent = `${mark}${day} - ${ex} (${done}/${tgt})${dateNote}${isDone||lockedDay?" 🔒":""}`;
+    const lockNote = lockedDay ? " • locked" : "";
+    opt.textContent = `${mark}${day} - ${ex} (${done}/${tgt})${dateNote}${lockNote}`;
     sel.appendChild(opt);
+    if(ex===old) oldOption=opt;
+    if(isOpen && !firstOpen) firstOpen=opt;
   });
-  const preferred = [...sel.options].find(o=>o.value===old && !o.disabled) || [...sel.options].find(o=>!o.disabled);
-  if(preferred){ sel.value=preferred.value; if(state.selectedExercise!==preferred.value){ state.selectedAlt=null; } state.selectedExercise=preferred.value; }
-  else { sel.value = old; }
-  sel.disabled = !preferred;
+
+  // Do not force-bounce while user is trying to inspect the list.
+  // Only move to first open exercise when the current exercise is no longer selectable.
+  const keepOld = oldOption && !oldOption.disabled;
+  const chosen = keepOld ? oldOption : firstOpen;
+  if(chosen){
+    sel.value=chosen.value;
+    if(state.selectedExercise!==chosen.value){ state.selectedAlt=null; }
+    state.selectedExercise=chosen.value;
+  }else{
+    // All exercises are done or the selected date is locked. Keep selector enabled so user can open it and see why.
+    const placeholder=document.createElement("option");
+    placeholder.value="";
+    placeholder.textContent = lock.status==="OPEN" ? "วันนี้ท่าที่อนุญาตเล่นครบแล้ว" : `ยังล็อกอยู่: ${lock.reason}`;
+    placeholder.selected=true;
+    placeholder.disabled=false;
+    sel.insertBefore(placeholder, sel.firstChild);
+    sel.value="";
+  }
+  sel.disabled = false;
   renderExerciseProgressList();
+}
+
+function renderAfterExerciseChange(){
+  renderExerciseProgressList();
+  renderExerciseDatabase();
+  renderMediaPanel();
+  updateFormDerived();
+  renderDashboard();
+  renderCoach();
 }
 function renderExerciseProgressList(){
   const host=$("orderStatus"); if(!host) return;
@@ -536,7 +572,9 @@ function bind(){
     state.selectedExercise=e.target.value;
     state.selectedAlt=null;
     status("เลือกท่า: "+state.selectedExercise,"ok",900);
-    renderAll();
+    // v5.5.1: do not call renderAll() here. Rebuilding the select during a mobile change event
+    // caused the dropdown to close, bounce, or look unclickable. Update only dependent panels.
+    renderAfterExerciseChange();
   });
   $("saveBtn")?.addEventListener("click",saveSet); $("resetBtn")?.addEventListener("click",resetForm);
   $("altBtn")?.addEventListener("click",openAltModal); $("closeAlt")?.addEventListener("click",()=>{$("altModal")?.classList.remove("show"); document.body.classList.remove("modal-open");});
@@ -642,5 +680,5 @@ function download(name,text,type){ const a=document.createElement("a"); a.href=U
 onAuthStateChanged(auth,u=>{ state.user=u; if(u && !state.teamId) state.teamId="Beer-Team"; subscribeLogs(); renderAll(); });
 
 window.addEventListener("DOMContentLoaded",()=>{
-  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); renderAll(); status("Workout PRO v5.5.0 พร้อมใช้งาน","ok",2500);
+  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); renderAll(); status("Workout PRO v5.5.1 พร้อมใช้งาน","ok",2500);
 });

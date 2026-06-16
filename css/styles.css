@@ -196,7 +196,7 @@ button.ux-busy,select.ux-busy,input.ux-busy{opacity:.72;cursor:progress!importan
 .calTag.partial{background:#7c2d12;color:#fed7aa}
 
 
-/* v5.5.0 core optimization */
+/* v5.5.1 core optimization */
 .media-actions{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
 .miniBtn{display:inline-block;padding:6px 10px;border-radius:10px;text-decoration:none;color:#fff;font-weight:800;font-size:12px;border:1px solid rgba(255,255,255,.14)}
 .miniBtn.purple{background:rgba(124,58,237,.85)}

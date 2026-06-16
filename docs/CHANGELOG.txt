@@ -1,4 +1,4 @@
-v5.5.0 Core Optimized
+v5.5.1 Core Optimized
 - Reworked save path to optimistic local state so Recent Log / Dashboard / Coach update immediately before Firestore snapshot returns.
 - Kept single renderer for Day Lock, Exercise Select, Dashboard and Coach.
 - Restored alternative exercise media lookup through image/video search actions.
