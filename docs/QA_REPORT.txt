@@ -1,4 +1,4 @@
-Workout PRO v5.5.1 Core Optimized QA
+Workout PRO v5.5.2 Core Optimized QA
 
 Static checks:
 - app.module.js: node --check PASS

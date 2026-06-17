@@ -1,10 +1,10 @@
-// Workout PRO v5.5.1 EXERCISE SELECTOR STABILITY FIX
+// Workout PRO v5.5.2 EXERCISE SELECTOR STABILITY FIX
 // Single state engine. No legacy render patches. No duplicate Day Lock / Dropdown renderers.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const VERSION = "v5.5.1";
+const VERSION = "v5.5.2";
 const $ = (id) => document.getElementById(id);
 const firebaseConfig = {"apiKey":"AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI","authDomain":"workout-program-9eea7.firebaseapp.com","projectId":"workout-program-9eea7","storageBucket":"workout-program-9eea7.firebasestorage.app","messagingSenderId":"315102427876","appId":"1:315102427876:web:d2d5d4c89eb78fae960af1","measurementId":"G-JHEKDYEY8B"};
 
@@ -35,7 +35,7 @@ const ALT = {
   "Standing Calf Raise":["Seated Calf Raise","Leg Press Calf Raise","Smith Machine Calf Raise","Single-leg Dumbbell Calf Raise"]
 };
 
-// v5.5.1: single exercise database / mapping source used by Alternative, Muscle Balance, Plateau, Coach and Recommendation.
+// v5.5.2: single exercise database / mapping source used by Alternative, Muscle Balance, Plateau, Coach and Recommendation.
 const EX_DB = (()=>{
   const db = {};
   PROGRAM.forEach(([day,type,exercise,target,reps,muscle,restMode])=>{
@@ -238,9 +238,8 @@ function renderExerciseSelect(){
   const lock = calcDayLock(state.selectedDate);
   sel.innerHTML="";
 
-  // v5.5.1: keep the selector clickable. Save Guard is the real lock.
-  // The previous build disabled the whole <select> when all currently allowed exercises were done/locked,
-  // which made mobile users think the exercise selector was broken.
+  // v5.5.2 Stability: keep locked days selectable for inspection; Save Guard enforces lock.
+  // Only completed exercises are disabled. This prevents mobile select from appearing broken.
   const rows=uniqueBy(PROGRAM, p=>p[2]);
   let firstOpen=null, oldOption=null;
   rows.forEach(p=>{
@@ -253,8 +252,7 @@ function renderExerciseSelect(){
     const isDone=done>=Number(tgt);
     const lockedDay = allowedDays.length ? !allowedDays.includes(day) : true;
     const isOpen = !isDone && !lockedDay;
-    // Options that are completed or locked are still visible for status, but cannot be selected as the active workout.
-    opt.disabled = isDone || lockedDay;
+    opt.disabled = isDone;
     const mark = isDone ? "✓ " : (isOpen ? "▶ " : "🔒 ");
     const dateNote = progressDate!==state.selectedDate && done>0 ? ` • ${dateLabelTH(progressDate)}` : "";
     const lockNote = lockedDay ? " • locked" : "";
@@ -264,8 +262,6 @@ function renderExerciseSelect(){
     if(isOpen && !firstOpen) firstOpen=opt;
   });
 
-  // Do not force-bounce while user is trying to inspect the list.
-  // Only move to first open exercise when the current exercise is no longer selectable.
   const keepOld = oldOption && !oldOption.disabled;
   const chosen = keepOld ? oldOption : firstOpen;
   if(chosen){
@@ -273,7 +269,6 @@ function renderExerciseSelect(){
     if(state.selectedExercise!==chosen.value){ state.selectedAlt=null; }
     state.selectedExercise=chosen.value;
   }else{
-    // All exercises are done or the selected date is locked. Keep selector enabled so user can open it and see why.
     const placeholder=document.createElement("option");
     placeholder.value="";
     placeholder.textContent = lock.status==="OPEN" ? "วันนี้ท่าที่อนุญาตเล่นครบแล้ว" : `ยังล็อกอยู่: ${lock.reason}`;
@@ -406,10 +401,15 @@ function aiDailySummary(){
 }
 function renderExerciseDatabase(){
   const host=$("v430ExerciseDb"); if(!host) return;
-  const selected=state.selectedExercise, info=exInfo(selected);
-  const alt=(ALT[selected]||[]).map(a=>`<span class="pill">${a}</span>`).join(" ") || "ไม่มีท่าทดแทน";
-  host.innerHTML = `<b>${info.name}</b><br>Day: ${info.day} • Muscle: ${info.primaryMuscle} • Target: ${info.target} sets • Reps: ${info.reps}<br><div class="small">Alternatives: ${alt}</div><div class="small">Exercise DB loaded: ${getExerciseDbRows().length} records</div>`;
+  const selected=state.selectedExercise || PROGRAM[0][2];
+  const info=exInfo(selected);
+  const rows=getExerciseDbRows();
+  const selectedCard = `<div><b>${info.name}</b> ${info.isAlternative?`<span class="pill">Alternative</span>`:`<span class="pill">Main</span>`}<br>Day: ${info.day} • Muscle: ${info.primaryMuscle} • Target: ${info.target} sets • Reps: ${info.reps}<br>${exerciseMediaHtml(info.name)}</div>`;
+  const mainRows = rows.filter(r=>!r.isAlternative).map(r=>`<div class="exercise-progress-item"><b>${r.day}</b> - ${r.name}<span class="pill">${r.primaryMuscle}</span><span class="small">${r.target} sets • ${r.reps}</span></div>`).join("");
+  const altRows = rows.filter(r=>r.isAlternative).slice(0,60).map(r=>`<div class="exercise-progress-item"><b>${r.name}</b><span class="pill">แทน ${r.planned}</span><span class="small">${r.primaryMuscle}</span></div>`).join("");
+  host.innerHTML = `${selectedCard}<hr><div class="small">Exercise DB loaded: <b>${rows.length}</b> records • Main ${rows.filter(r=>!r.isAlternative).length} • Alternative ${rows.filter(r=>r.isAlternative).length}</div><h4>Program Exercises</h4>${mainRows || "ไม่มีข้อมูล"}<h4>Alternative Library</h4>${altRows || "ไม่มีข้อมูลท่าทดแทน"}`;
 }
+
 function renderDashboard(){
   setText("kVol", volumeForLogs(state.logs).toFixed(0)); setText("kSets", state.logs.length); setText("kUsers", state.user?1:0); setText("kWeek", autoWeek());
   drawSimpleChart("weekChart", groupByWeek()); drawSimpleChart("exChart", groupByExercise()); drawSimpleChart("v5MuscleChart", groupByMuscle()); drawSimpleChart("v5RecoveryChart", groupByDateSets());
@@ -428,7 +428,8 @@ function renderCoach(){
   const today=todayLogs(); const p=plateauForExercise(state.selectedExercise);
   setText("coachRecovery", Math.round(recovery)); setText("coachFatigue", Math.round(fatigue)); setText("coachProgress", p.status==='Progress'?"UP":(latest?"OK":"-")); setText("coachDeload", fatigue>55?"WATCH":"NO");
   setText("coachRecoveryText", recovery>=65?"พร้อมฝึก":"ลด volume หรือใช้ machine stable"); setText("coachFatigueText", fatigue>55?"เสี่ยงล้า":"ปกติ"); setText("coachProgressText", p.detail); setText("coachDeloadText", fatigue>65?"พิจารณา deload":"ยังไม่จำเป็น");
-  setHtml("coachAdvice", `Recovery ${Math.round(recovery)} / Fatigue ${Math.round(fatigue)}<br>${today.length?`วันนี้มี ${today.length} sets • Volume ${volumeForLogs(today).toFixed(0)} kg`:"ยังไม่มี log วันนี้"}<br>${p.status}: ${p.detail}`);
+  const muscleHtml = muscleBalanceHtml();
+  setHtml("coachAdvice", `Recovery ${Math.round(recovery)} / Fatigue ${Math.round(fatigue)}<br>${today.length?`วันนี้มี ${today.length} sets • Volume ${volumeForLogs(today).toFixed(0)} kg`:"ยังไม่มี log วันนี้"}<br>${p.status}: ${p.detail}<br><span class="small">Muscle Balance: ${muscleHtml}</span>`);
   setHtml("plateauBox", `<b>${p.status}</b><br>${p.detail}<br><span class="small">Exercise: ${canonicalExercise(state.selectedExercise)}</span>`);
   const effective=today.filter(x=>Number(x.rir)<=2).length;
   setText("effectiveRepsScore", effective); setText("sfrScore", recovery>=65?"Good":"Moderate"); setText("volumeZone", today.length<8?"Low":(today.length>22?"High":"OK"));
@@ -572,7 +573,7 @@ function bind(){
     state.selectedExercise=e.target.value;
     state.selectedAlt=null;
     status("เลือกท่า: "+state.selectedExercise,"ok",900);
-    // v5.5.1: do not call renderAll() here. Rebuilding the select during a mobile change event
+    // v5.5.2: do not call renderAll() here. Rebuilding the select during a mobile change event
     // caused the dropdown to close, bounce, or look unclickable. Update only dependent panels.
     renderAfterExerciseChange();
   });
@@ -680,5 +681,5 @@ function download(name,text,type){ const a=document.createElement("a"); a.href=U
 onAuthStateChanged(auth,u=>{ state.user=u; if(u && !state.teamId) state.teamId="Beer-Team"; subscribeLogs(); renderAll(); });
 
 window.addEventListener("DOMContentLoaded",()=>{
-  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); renderAll(); status("Workout PRO v5.5.1 พร้อมใช้งาน","ok",2500);
+  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); renderAll(); status("Workout PRO v5.5.2 พร้อมใช้งาน","ok",2500);
 });
