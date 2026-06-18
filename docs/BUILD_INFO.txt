@@ -1,1 +1,1 @@
-Workout PRO v5.5.2 AUTO REST TIMER BACKGROUND FIX
+Workout PRO v5.5.3 QA Debug Alternative Notification Fix

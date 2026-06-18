@@ -1,1 +1,1 @@
-Workout PRO v5.5.2 Clean Rebuild package.
+Workout PRO v5.5.3 QA Debug package.

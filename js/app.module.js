@@ -1,10 +1,10 @@
-// Workout PRO v5.5.2 EXERCISE SELECTOR STABILITY FIX
+// Workout PRO v5.5.3 QA DEBUG ALTERNATIVE NOTIFICATION FIX
 // Single state engine. No legacy render patches. No duplicate Day Lock / Dropdown renderers.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const VERSION = "v5.5.2";
+const VERSION = "v5.5.3";
 const $ = (id) => document.getElementById(id);
 const firebaseConfig = {"apiKey":"AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI","authDomain":"workout-program-9eea7.firebaseapp.com","projectId":"workout-program-9eea7","storageBucket":"workout-program-9eea7.firebasestorage.app","messagingSenderId":"315102427876","appId":"1:315102427876:web:d2d5d4c89eb78fae960af1","measurementId":"G-JHEKDYEY8B"};
 
@@ -17,25 +17,33 @@ const PROGRAM = [
 const DAY_ORDER = ["Day 1","Day 2","Day 4","Day 5"];
 const REST_SECONDS = { quick:45, standard:75, heavy:105 };
 const ALT = {
-  "Barbell Bench Press":["Machine Chest Press","Dumbbell Bench Press","Smith Machine Bench Press","Push-up"],
+  "Barbell Bench Press":["Machine Chest Press","Dumbbell Bench Press","Smith Machine Bench Press","Hammer Strength Chest Press","Push-up"],
+  "Machine Chest Press":["Barbell Bench Press","Dumbbell Bench Press","Smith Machine Bench Press","Hammer Strength Chest Press","Push-up"],
+  "Dumbbell Bench Press":["Barbell Bench Press","Machine Chest Press","Smith Machine Bench Press","Hammer Strength Chest Press","Push-up"],
   "Incline Dumbbell Press":["Incline Machine Press","Smith Machine Incline Press","Incline Barbell Press","Low-to-High Cable Fly"],
+  "Incline Machine Press":["Incline Dumbbell Press","Smith Machine Incline Press","Incline Barbell Press","Low-to-High Cable Fly"],
   "Seated Shoulder Press":["Machine Shoulder Press","Dumbbell Shoulder Press","Smith Machine Shoulder Press","Landmine Press"],
-  "Dumbbell Lateral Raise":["Cable Lateral Raise","Machine Lateral Raise","Seated Lateral Raise"],
+  "Machine Shoulder Press":["Seated Shoulder Press","Dumbbell Shoulder Press","Smith Machine Shoulder Press","Landmine Press"],
+  "Dumbbell Lateral Raise":["Cable Lateral Raise","Machine Lateral Raise","Seated Lateral Raise","Lean-away Lateral Raise"],
   "Cable Triceps Pushdown":["Rope Triceps Pushdown","Straight Bar Pushdown","Machine Triceps Extension","Close-grip Push-up"],
-  "Lat Pulldown":["Pull-up","Assisted Pull-up","Single-arm Cable Pulldown","Band Pulldown"],
+  "Overhead Triceps Extension":["Rope Overhead Extension","Machine Triceps Extension","Skull Crusher","Cable Triceps Pushdown"],
+  "Lat Pulldown":["Pull-up","Assisted Pull-up","Machine Pulldown","Single-arm Cable Pulldown","Band Pulldown"],
   "Barbell Row":["Chest Supported Row","Seated Cable Row","Machine Row","Dumbbell Row","T-Bar Row"],
-  "Seated Cable Row":["Machine Row","Chest Supported Dumbbell Row","Barbell Row","Resistance Band Row"],
+  "Chest Supported Row":["Machine Row","Seated Cable Row","T-Bar Row","Single-arm Dumbbell Row","Barbell Row"],
+  "Seated Cable Row":["Machine Row","Chest Supported Row","T-Bar Row","Single-arm Dumbbell Row","Barbell Row"],
   "Face Pull":["Reverse Pec Deck","Band Face Pull","Cable Rear Delt Fly","Bent-over Rear Delt Raise"],
-  "Dumbbell Curl":["Cable Curl","EZ Bar Curl","Machine Preacher Curl","Incline Dumbbell Curl"],
+  "Dumbbell Curl":["Cable Curl","EZ Bar Curl","Machine Preacher Curl","Incline Dumbbell Curl","Hammer Curl"],
+  "Hammer Curl":["Dumbbell Curl","Cable Rope Curl","EZ Bar Curl","Machine Curl","Preacher Curl"],
+  "Cable Fly":["Pec Deck","Dumbbell Fly","Low-to-High Cable Fly","Machine Chest Fly"],
   "Back Squat":["Hack Squat","V-Squat Machine","Leg Press","Goblet Squat","Smith Machine Squat"],
-  "Romanian Deadlift":["Dumbbell Romanian Deadlift","Seated Leg Curl","Lying Leg Curl","Hip Thrust"],
-  "Leg Press":["Hack Squat","V-Squat Machine","Goblet Squat","Leg Extension"],
-  "Walking Lunge":["Bulgarian Split Squat","Reverse Lunge","Static Lunge","Smith Split Squat","Goblet Squat"],
+  "Romanian Deadlift":["Dumbbell Romanian Deadlift","Smith Machine RDL","45 Degree Back Extension","Good Morning","Hip Hinge Machine"],
+  "Leg Press":["Hack Squat","V-Squat Machine","Back Squat","Smith Machine Squat","Pendulum Squat"],
+  "Walking Lunge":["Bulgarian Split Squat","Reverse Lunge","Static Lunge","Smith Split Squat","Step-up"],
   "Lying Leg Curl":["Seated Leg Curl","Standing Leg Curl","Prone Leg Curl","Swiss Ball Leg Curl"],
   "Standing Calf Raise":["Seated Calf Raise","Leg Press Calf Raise","Smith Machine Calf Raise","Single-leg Dumbbell Calf Raise"]
 };
 
-// v5.5.2: single exercise database / mapping source used by Alternative, Muscle Balance, Plateau, Coach and Recommendation.
+// v5.5.3: single exercise database / mapping source used by Alternative, Muscle Balance, Plateau, Coach and Recommendation.
 const EX_DB = (()=>{
   const db = {};
   PROGRAM.forEach(([day,type,exercise,target,reps,muscle,restMode])=>{
@@ -46,6 +54,30 @@ const EX_DB = (()=>{
   });
   return db;
 })();
+
+function alternativesForExercise(name){
+  const base=canonicalExercise(name) || name;
+  const direct=ALT[base] || ALT[name] || [];
+  const info=EX_DB[base] || EX_DB[name];
+  if(direct.length) return uniqueBy(direct.filter(x=>x && x!==base), x=>x);
+  if(!info) return [];
+  // v5.5.3 fallback: same muscle + same program type, excluding the exercise itself.
+  return uniqueBy(Object.values(EX_DB)
+    .filter(x=>x.name!==base && x.planned!==base && x.primaryMuscle===info.primaryMuscle && x.type===info.type)
+    .map(x=>x.name)
+    .slice(0,8), x=>x);
+}
+function qaExerciseCoverage(){
+  const programExercises=PROGRAM.map(p=>p[2]);
+  const missingAlt=programExercises.filter(ex=>!alternativesForExercise(ex).length);
+  const missingDb=programExercises.filter(ex=>!EX_DB[ex]);
+  const missingMedia=programExercises.filter(ex=>!exerciseMediaHtml(ex));
+  const result={version:VERSION, programExercises:programExercises.length, dbRecords:Object.keys(EX_DB).length, missingAlt, missingDb, missingMedia};
+  if(missingAlt.length || missingDb.length) console.warn("Workout PRO QA coverage", result);
+  else console.info("Workout PRO QA coverage OK", result);
+  return result;
+}
+window.workoutProQA=qaExerciseCoverage;
 function exInfo(name){ return EX_DB[name] || EX_DB[canonicalExercise(name)] || {name, planned:name, day:"-", type:"Custom", target:0, reps:"-", primaryMuscle:"Other", restMode:"standard", isAlternative:false, alternatives:[]}; }
 function canonicalExercise(name){ return EX_DB[name]?.planned || (PROGRAM.find(p=>p[2]===name)?.[2]) || name || ""; }
 function getExerciseDbRows(){ return Object.values(EX_DB).sort((a,b)=>(a.day||"").localeCompare(b.day||"") || Number(a.isAlternative)-Number(b.isAlternative) || a.name.localeCompare(b.name)); }
@@ -238,7 +270,7 @@ function renderExerciseSelect(){
   const lock = calcDayLock(state.selectedDate);
   sel.innerHTML="";
 
-  // v5.5.2 Stability: keep locked days selectable for inspection; Save Guard enforces lock.
+  // v5.5.3 Stability: keep locked days selectable for inspection; Save Guard enforces lock.
   // Only completed exercises are disabled. This prevents mobile select from appearing broken.
   const rows=uniqueBy(PROGRAM, p=>p[2]);
   let firstOpen=null, oldOption=null;
@@ -509,6 +541,7 @@ async function saveSet(){
   if(!w || !reps){ status("กรอก Weight/Reps ก่อน","err"); return; }
   const wasEditing=Boolean(state.editingId);
   const shouldAutoRest=!wasEditing;
+  if(shouldAutoRest) requestNotifyPermission();
   state.saving=true; updateFormDerived(); status("กำลังบันทึกเซต...","warn",0);
   const nowMs=localNowMs();
   const payload={date:state.selectedDate, week:autoWeek(), day:dayForExercise(state.selectedExercise), plannedExercise:state.selectedExercise, exercise:actualExerciseName(), weightKg:w, reps, rir, tempo:$("tempo")?.value||"", repQuality:$("repQuality")?.value||"", biasMode:$("biasMode")?.value||"", note:$("note")?.value||"", targetSets:targetSets(), sleepHours:Number($("sleepHours")?.value||7), soreness:Number($("soreness")?.value||2), stress:Number($("stress")?.value||2), version:VERSION, updatedAt:serverTimestamp()};
@@ -573,7 +606,7 @@ function bind(){
     state.selectedExercise=e.target.value;
     state.selectedAlt=null;
     status("เลือกท่า: "+state.selectedExercise,"ok",900);
-    // v5.5.2: do not call renderAll() here. Rebuilding the select during a mobile change event
+    // v5.5.3: do not call renderAll() here. Rebuilding the select during a mobile change event
     // caused the dropdown to close, bounce, or look unclickable. Update only dependent panels.
     renderAfterExerciseChange();
   });
@@ -591,7 +624,7 @@ function bind(){
 function openAltModal(){
   const host=$("altList"), modal=$("altModal"); if(!host || !modal) return;
   const base=state.selectedExercise;
-  const list=uniqueBy(ALT[base]||[], x=>x);
+  const list=uniqueBy(alternativesForExercise(base), x=>x);
   const render=(q="")=>{
     const filtered=list.filter(name=>name.toLowerCase().includes(String(q||"").toLowerCase()));
     host.innerHTML=filtered.length ? filtered.map(name=>{
@@ -681,5 +714,5 @@ function download(name,text,type){ const a=document.createElement("a"); a.href=U
 onAuthStateChanged(auth,u=>{ state.user=u; if(u && !state.teamId) state.teamId="Beer-Team"; subscribeLogs(); renderAll(); });
 
 window.addEventListener("DOMContentLoaded",()=>{
-  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); renderAll(); status("Workout PRO v5.5.2 พร้อมใช้งาน","ok",2500);
+  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); renderAll(); qaExerciseCoverage(); status("Workout PRO v5.5.3 พร้อมใช้งาน","ok",2500);
 });

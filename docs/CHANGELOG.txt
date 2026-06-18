@@ -1,6 +1,6 @@
-v5.5.2 Core Optimized
-- Reworked save path to optimistic local state so Recent Log / Dashboard / Coach update immediately before Firestore snapshot returns.
-- Kept single renderer for Day Lock, Exercise Select, Dashboard and Coach.
-- Restored alternative exercise media lookup through image/video search actions.
-- Kept plannedExercise as canonical key for progress, duplicate prevention, analytics and recommendation.
-- Added static QA notes and renderer duplicate checks.
+v5.5.3 QA Debug Alternative Notification Fix
+- Added missing alternative exercise mappings for Day 4 and related movement patterns.
+- Added fallback alternative lookup by muscle + program type.
+- Added workoutProQA() coverage debug helper.
+- Rest notification permission is requested earlier during Save action.
+- No Firestore schema/database changes.

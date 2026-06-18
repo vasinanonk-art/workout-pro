@@ -1,29 +1,15 @@
-Workout PRO v5.5.2 Core Optimized QA
-
-Static checks:
-- app.module.js: node --check PASS
-- runtime.js: node --check PASS
-- duplicate core renderer check: PASS
-  renderExerciseSelect: 1
-  renderDayLock: 1
-  renderExerciseDatabase: 1
-  renderDashboard: 1
-  renderCoach: 1
-  saveSet: 1
-  openAltModal: 1
-
-Fix scope:
-- Fast optimistic log sync after Save Set
-- Exercise dropdown interaction stability
-- Alternative exercise media links restored
-- Alternative exercise maps to planned exercise for progress and analytics
-- Exercise Database / Muscle Volume / Plateau / AI Coach use one EX_DB source
-- Rest notification remains included
-
-Manual QA required after deploy:
-1. Login
-2. Select exercise dropdown
-3. Select alternative exercise
-4. Save one set and confirm recent log appears immediately
-5. Check Dashboard / Coach / Muscle Volume / Plateau / AI Summary
-6. Check image/video buttons for main and alternative exercise
+Workout PRO v5.5.3 QA Report
+Scope: PM Stability Mode / Proper Fix
+Files changed: js/app.module.js, version labels/docs only.
+Checks:
+- Syntax check: PASS
+- Alternative coverage: PROGRAM exercises checked by workoutProQA()
+- Day Lock core: not changed
+- SaveSet payload/schema: not changed
+- Firestore schema/database: not changed
+Manual QA after deploy:
+1. Chest Supported Row alternative list must not be empty.
+2. Incline Machine Press alternative list must not be empty.
+3. Alternative media buttons must show image/video links.
+4. Save set must still write Log.
+5. Rest timer must request notification permission and notify at 10s/done where browser allows.
