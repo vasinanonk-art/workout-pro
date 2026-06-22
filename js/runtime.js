@@ -1,5 +1,5 @@
 (function(){
-  const VERSION='v5.5.3';
+  const VERSION='v5.5.5';
   function syncLabels(){
     document.title='Workout PRO '+VERSION;
     document.querySelectorAll('.badge,.version').forEach(el=>{ if(/v\d+\.\d+\.\d+/.test(el.textContent)) el.textContent=VERSION; });

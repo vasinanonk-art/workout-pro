@@ -1,1 +1,1 @@
-Workout PRO v5.5.3 QA Debug package.
+Workout PRO v5.5.6 Alternative Tier QA package.

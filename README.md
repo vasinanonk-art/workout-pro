@@ -1,4 +1,4 @@
-# Workout PRO v5.5.3 Clean Rebuild
+# Workout PRO v5.5.6 Clean Rebuild
 
 This build rewrites the app runtime instead of stacking legacy patches.
 

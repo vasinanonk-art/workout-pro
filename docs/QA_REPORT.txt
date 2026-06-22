@@ -1,15 +1,11 @@
-Workout PRO v5.5.3 QA Report
-Scope: PM Stability Mode / Proper Fix
-Files changed: js/app.module.js, version labels/docs only.
-Checks:
+Workout PRO v5.5.6 QA Report
 - Syntax check: PASS
-- Alternative coverage: PROGRAM exercises checked by workoutProQA()
-- Day Lock core: not changed
-- SaveSet payload/schema: not changed
-- Firestore schema/database: not changed
-Manual QA after deploy:
-1. Chest Supported Row alternative list must not be empty.
-2. Incline Machine Press alternative list must not be empty.
-3. Alternative media buttons must show image/video links.
-4. Save set must still write Log.
-5. Rest timer must request notification permission and notify at 10s/done where browser allows.
+- Alternative mapping: all PROGRAM exercises have alternatives.
+- Tier A/B/C: enabled in alternative modal.
+- Database/schema reset: NOT USED
+- Firestore payload: unchanged
+
+
+v5.5.6 QA: Log defaults ensured for rest, RIR, tempo, rep quality, bias mode, unit, recovery fields. No schema change.
+
+v5.5.6 QA: Added explicit notification permission button and session exercise persistence. No schema change.

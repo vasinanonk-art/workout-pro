@@ -1,10 +1,10 @@
-// Workout PRO v5.5.3 QA DEBUG ALTERNATIVE NOTIFICATION FIX
+// Workout PRO v5.5.6 SESSION NOTIFICATION STABILITY FIX
 // Single state engine. No legacy render patches. No duplicate Day Lock / Dropdown renderers.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const VERSION = "v5.5.3";
+const VERSION = "v5.5.6";
 const $ = (id) => document.getElementById(id);
 const firebaseConfig = {"apiKey":"AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI","authDomain":"workout-program-9eea7.firebaseapp.com","projectId":"workout-program-9eea7","storageBucket":"workout-program-9eea7.firebasestorage.app","messagingSenderId":"315102427876","appId":"1:315102427876:web:d2d5d4c89eb78fae960af1","measurementId":"G-JHEKDYEY8B"};
 
@@ -43,7 +43,39 @@ const ALT = {
   "Standing Calf Raise":["Seated Calf Raise","Leg Press Calf Raise","Smith Machine Calf Raise","Single-leg Dumbbell Calf Raise"]
 };
 
-// v5.5.3: single exercise database / mapping source used by Alternative, Muscle Balance, Plateau, Coach and Recommendation.
+// v5.5.4 Proper Fix: rank substitutes by biomechanics and hypertrophy similarity.
+// Tier A = closest pattern/stimulus, Tier B = similar muscle + acceptable machine/free-weight swap, Tier C = fallback for same primary muscle.
+const ALT_TIER = {
+  "Barbell Bench Press":{A:["Machine Chest Press","Smith Machine Bench Press","Dumbbell Bench Press"],B:["Hammer Strength Chest Press","Push-up"],C:["Pec Deck","Cable Fly"]},
+  "Machine Chest Press":{A:["Barbell Bench Press","Dumbbell Bench Press","Smith Machine Bench Press"],B:["Hammer Strength Chest Press","Push-up"],C:["Pec Deck","Cable Fly"]},
+  "Dumbbell Bench Press":{A:["Barbell Bench Press","Machine Chest Press","Smith Machine Bench Press"],B:["Hammer Strength Chest Press","Push-up"],C:["Pec Deck","Cable Fly"]},
+  "Incline Dumbbell Press":{A:["Incline Machine Press","Smith Machine Incline Press","Incline Barbell Press"],B:["Low-to-High Cable Fly","Machine Chest Press"],C:["Push-up"]},
+  "Incline Machine Press":{A:["Incline Dumbbell Press","Smith Machine Incline Press","Incline Barbell Press"],B:["Low-to-High Cable Fly","Machine Chest Press"],C:["Push-up"]},
+  "Seated Shoulder Press":{A:["Machine Shoulder Press","Dumbbell Shoulder Press","Smith Machine Shoulder Press"],B:["Arnold Press","Landmine Press"],C:["Cable Lateral Raise"]},
+  "Machine Shoulder Press":{A:["Seated Shoulder Press","Dumbbell Shoulder Press","Smith Machine Shoulder Press"],B:["Arnold Press","Landmine Press"],C:["Cable Lateral Raise"]},
+  "Dumbbell Lateral Raise":{A:["Cable Lateral Raise","Machine Lateral Raise","Seated Lateral Raise"],B:["Lean-away Lateral Raise","Single-arm Cable Lateral Raise"],C:["Upright Row"]},
+  "Cable Triceps Pushdown":{A:["Rope Triceps Pushdown","Straight Bar Pushdown","Machine Triceps Extension"],B:["Close-grip Push-up","Bench Dip"],C:["Overhead Triceps Extension","Skull Crusher"]},
+  "Overhead Triceps Extension":{A:["Rope Overhead Extension","Machine Triceps Extension","Skull Crusher"],B:["Cable Triceps Pushdown","Rope Triceps Pushdown"],C:["Close-grip Push-up","Bench Dip"]},
+  "Lat Pulldown":{A:["Machine Pulldown","Assisted Pull-up","Pull-up"],B:["Single-arm Cable Pulldown","Band Pulldown"],C:["Straight-arm Pulldown"]},
+  "Barbell Row":{A:["Chest Supported Row","T-Bar Row","Dumbbell Row"],B:["Seated Cable Row","Machine Row"],C:["Lat Pulldown"]},
+  "Chest Supported Row":{A:["Machine Row","Seated Cable Row","T-Bar Row"],B:["Single-arm Dumbbell Row","Barbell Row"],C:["Lat Pulldown"]},
+  "Seated Cable Row":{A:["Machine Row","Chest Supported Row","T-Bar Row"],B:["Single-arm Dumbbell Row","Barbell Row"],C:["Lat Pulldown"]},
+  "Face Pull":{A:["Reverse Pec Deck","Band Face Pull","Cable Rear Delt Fly"],B:["Bent-over Rear Delt Raise"],C:["Machine Row"]},
+  "Dumbbell Curl":{A:["Cable Curl","EZ Bar Curl","Machine Preacher Curl"],B:["Incline Dumbbell Curl","Hammer Curl"],C:["Chin-up"]},
+  "Hammer Curl":{A:["Cable Rope Curl","Cross-body Hammer Curl","Dumbbell Curl"],B:["EZ Bar Curl","Machine Curl","Preacher Curl"],C:["Cable Curl"]},
+  "Cable Fly":{A:["Pec Deck","Machine Chest Fly","Dumbbell Fly"],B:["Low-to-High Cable Fly"],C:["Push-up","Machine Chest Press"]},
+  "Back Squat":{A:["Hack Squat","Safety Bar Squat","Front Squat"],B:["Leg Press","Pendulum Squat","Smith Machine Squat"],C:["Leg Extension"]},
+  "Romanian Deadlift":{A:["Dumbbell Romanian Deadlift","Smith Machine RDL","Stiff-leg Deadlift"],B:["45 Degree Back Extension","Good Morning","Hip Hinge Machine"],C:["Seated Leg Curl","Lying Leg Curl"]},
+  "Leg Press":{A:["Hack Squat","Pendulum Squat","V-Squat Machine"],B:["Back Squat","Smith Machine Squat"],C:["Leg Extension"]},
+  "Walking Lunge":{A:["Bulgarian Split Squat","Reverse Lunge","Static Lunge","Step-up","Smith Split Squat"],B:["Leg Press","Hack Squat","Pendulum Squat","Goblet Squat"],C:["Leg Extension"]},
+  "Lying Leg Curl":{A:["Seated Leg Curl","Standing Leg Curl","Prone Leg Curl"],B:["Nordic Curl","Swiss Ball Leg Curl"],C:["Romanian Deadlift","45 Degree Back Extension"]},
+  "Standing Calf Raise":{A:["Smith Machine Calf Raise","Single-leg Dumbbell Calf Raise","Leg Press Calf Raise"],B:["Seated Calf Raise"],C:["Donkey Calf Raise"]}
+};
+Object.entries(ALT_TIER).forEach(([exercise,tiers])=>{
+  ALT[exercise] = uniqueBy([...(tiers.A||[]), ...(tiers.B||[]), ...(tiers.C||[]), ...(ALT[exercise]||[])].filter(Boolean), x=>x);
+});
+
+// v5.5.4: single exercise database / mapping source used by Alternative, Muscle Balance, Plateau, Coach and Recommendation.
 const EX_DB = (()=>{
   const db = {};
   PROGRAM.forEach(([day,type,exercise,target,reps,muscle,restMode])=>{
@@ -55,17 +87,29 @@ const EX_DB = (()=>{
   return db;
 })();
 
-function alternativesForExercise(name){
+function tieredAlternativesForExercise(name){
   const base=canonicalExercise(name) || name;
-  const direct=ALT[base] || ALT[name] || [];
   const info=EX_DB[base] || EX_DB[name];
-  if(direct.length) return uniqueBy(direct.filter(x=>x && x!==base), x=>x);
-  if(!info) return [];
-  // v5.5.3 fallback: same muscle + same program type, excluding the exercise itself.
-  return uniqueBy(Object.values(EX_DB)
+  const tiers = ALT_TIER[base] || ALT_TIER[name];
+  if(tiers){
+    return {
+      A: uniqueBy((tiers.A||[]).filter(x=>x && x!==base), x=>x),
+      B: uniqueBy((tiers.B||[]).filter(x=>x && x!==base), x=>x),
+      C: uniqueBy((tiers.C||[]).filter(x=>x && x!==base), x=>x)
+    };
+  }
+  const direct=ALT[base] || ALT[name] || [];
+  if(direct.length) return {A:uniqueBy(direct.filter(x=>x && x!==base), x=>x), B:[], C:[]};
+  if(!info) return {A:[], B:[], C:[]};
+  // Fallback: same muscle + same program type. Keep it visible but mark as fallback Tier C.
+  return {A:[], B:[], C:uniqueBy(Object.values(EX_DB)
     .filter(x=>x.name!==base && x.planned!==base && x.primaryMuscle===info.primaryMuscle && x.type===info.type)
     .map(x=>x.name)
-    .slice(0,8), x=>x);
+    .slice(0,8), x=>x)};
+}
+function alternativesForExercise(name){
+  const t=tieredAlternativesForExercise(name);
+  return uniqueBy([...(t.A||[]), ...(t.B||[]), ...(t.C||[])], x=>x);
 }
 function qaExerciseCoverage(){
   const programExercises=PROGRAM.map(p=>p[2]);
@@ -106,6 +150,7 @@ let state = {
   selectedDate: todayTH(),
   selectedExercise: PROGRAM[0][2],
   selectedAlt:null,
+  sessionExerciseByDate: JSON.parse(localStorage.getItem("sessionExerciseByDateV556") || "{}"),
   selectedDayForOverride:null,
   overrideKeys: new Set(JSON.parse(localStorage.getItem("dayLockOverridesV540") || "[]")),
   editingId:null,
@@ -146,6 +191,47 @@ function setHtml(id,html){ const el=$(id); if(el) el.innerHTML=html; }
 function setText(id,text){ const el=$(id); if(el) el.textContent=text; }
 function setVal(id,val){ const el=$(id); if(el) el.value=val; }
 function isValidDateKey(k){ return /^\d{4}-\d{2}-\d{2}$/.test(String(k||"")); }
+
+function hasOption(el, value){ return !!el && Array.from(el.options||[]).some(o=>o.value===String(value)); }
+function setDefaultIfEmpty(id, value){ const el=$(id); if(el && (el.value==="" || el.value==null)) el.value=String(value); }
+function setSelectDefaultIfInvalid(id, value){ const el=$(id); if(!el) return; if(!el.value || !hasOption(el,value)) el.value=String(value); }
+function ensureLogDefaults(){
+  // v5.5.5 Stability: keep Log form defaults present after render/reset/edit/mobile restore.
+  setDefaultIfEmpty("sleepHours", 7);
+  setDefaultIfEmpty("soreness", 2);
+  setDefaultIfEmpty("stress", 2);
+  setDefaultIfEmpty("rir", 2);
+  setSelectDefaultIfInvalid("tempo", "2-0-1");
+  setSelectDefaultIfInvalid("repQuality", "good");
+  setSelectDefaultIfInvalid("biasMode", "auto");
+  setSelectDefaultIfInvalid("restMode", "auto");
+  setSelectDefaultIfInvalid("unit", "kg");
+  const restMode=$("restMode")?.value || "auto";
+  if(restMode==="auto") setVal("restSec", restSeconds());
+  else if(["45","75","105"].includes(restMode)) setVal("restSec", restMode);
+  else setDefaultIfEmpty("restSec", restSeconds());
+}
+
+
+function rememberSessionExercise(ex=state.selectedExercise,date=state.selectedDate){
+  if(!ex || !isValidDateKey(date)) return;
+  state.sessionExerciseByDate[date]=ex;
+  localStorage.setItem("sessionExerciseByDateV556", JSON.stringify(state.sessionExerciseByDate));
+}
+function clearSessionExercise(date=state.selectedDate){
+  if(!isValidDateKey(date)) return;
+  delete state.sessionExerciseByDate[date];
+  localStorage.setItem("sessionExerciseByDateV556", JSON.stringify(state.sessionExerciseByDate));
+}
+function restoreSessionExercise(){
+  const ex=state.sessionExerciseByDate?.[state.selectedDate];
+  if(!ex) return;
+  const day=dayForExercise(ex);
+  const allowed=allowedTrainingDaysForDate(state.selectedDate);
+  if(allowed.length && allowed.includes(day) && completedForExercise(ex,state.selectedDate) < targetSets(ex)){
+    state.selectedExercise=ex;
+  }
+}
 
 function logsOnDate(date=state.selectedDate){ return state.logs.filter(x=>x.date===date); }
 function completedForExercise(ex,date=state.selectedDate){ return logsOnDate(date).filter(x=>samePlanned(x,ex)).length; }
@@ -247,7 +333,46 @@ function subscribeLogs(){
 function renderAll(){
   renderSetup(); renderDayLock(); renderExerciseSelect(); renderExerciseDatabase(); renderLogSummary(); renderRecent(); renderDashboard(); renderCoach(); renderProgram(); renderGuide(); renderCalendar(); renderBackup(); renderMediaPanel(); updateFormDerived();
 }
+
+function notificationPermissionText(){
+  if(!("Notification" in window)) return "Browser นี้ไม่รองรับ Notification";
+  if(Notification.permission==="granted") return "Notification: อนุญาตแล้ว";
+  if(Notification.permission==="denied") return "Notification: ถูกบล็อก ต้องเปิดใน Browser Settings";
+  return "Notification: ยังไม่ได้อนุญาต";
+}
+function renderNotificationControls(){
+  const setup=$("setup"); if(!setup) return;
+  let card=$("notificationCard");
+  if(!card){
+    card=document.createElement("div");
+    card.className="card";
+    card.id="notificationCard";
+    const debugCard=$("debug")?.closest(".card");
+    setup.insertBefore(card, debugCard || setup.children[2] || null);
+  }
+  const perm = ("Notification" in window) ? Notification.permission : "unsupported";
+  card.innerHTML = `<h3>Rest Notification</h3>
+    <div class="msg info" id="notifyStatus">${notificationPermissionText()}<br><span class="small">ใช้สำหรับแจ้งเตือนเหลือ 10 วิ และหมดเวลาพัก</span></div>
+    <div class="row3"><button id="enableNotifyBtn" class="cyan" type="button">🔔 Enable Notifications</button><button id="testNotifyBtn" class="secondary" type="button">Test</button><button id="toggleNotifyBtn" class="secondary" type="button">${state.notificationsEnabled?"ปิด Notify":"เปิด Notify"}</button></div>
+    <div class="small">Permission: ${perm} • 10s: ${state.notify10Enabled?"ON":"OFF"} • Sound: ${state.soundEnabled?"ON":"OFF"} • Vibrate: ${state.vibrateEnabled?"ON":"OFF"}</div>`;
+  $("enableNotifyBtn")?.addEventListener("click", async()=>{
+    const r=await requestNotifyPermission();
+    state.notificationsEnabled = r === "granted";
+    localStorage.setItem("restNotifyEnabled", state.notificationsEnabled ? "1" : "0");
+    status(r==="granted" ? "เปิด Notification แล้ว" : "ยังเปิด Notification ไม่ได้: "+r, r==="granted"?"ok":"warn", 2500);
+    renderNotificationControls();
+  });
+  $("testNotifyBtn")?.addEventListener("click", ()=>notifyRest("🔔 Test Notification", "ถ้าเห็นอันนี้ การแจ้งเตือนพร้อมใช้งาน", "done"));
+  $("toggleNotifyBtn")?.addEventListener("click", ()=>{
+    state.notificationsEnabled=!state.notificationsEnabled;
+    localStorage.setItem("restNotifyEnabled", state.notificationsEnabled ? "1" : "0");
+    status(state.notificationsEnabled?"เปิด Notify แล้ว":"ปิด Notify แล้ว", "ok", 1200);
+    renderNotificationControls();
+  });
+}
+
 function renderSetup(){
+  renderNotificationControls();
   setVal("teamId", state.teamId);
   setText("authState", state.user ? `Login: ${state.user.displayName || state.user.email}` : "ยังไม่ได้ login");
   setHtml("debug", `Version: <b>${VERSION}</b><br>User: ${state.user?.email || "-"}<br>Team: ${state.teamId || "-"}<br>Logs: ${state.logs.length}<br>Date: ${state.selectedDate} (${dateLabelTH(state.selectedDate)})`);
@@ -265,12 +390,13 @@ function selectedDateStatus(){
 
 function renderExerciseSelect(){
   const sel=$("exercise"); if(!sel) return;
+  restoreSessionExercise();
   const old=state.selectedExercise;
   const allowedDays = allowedTrainingDaysForDate(state.selectedDate);
   const lock = calcDayLock(state.selectedDate);
   sel.innerHTML="";
 
-  // v5.5.3 Stability: keep locked days selectable for inspection; Save Guard enforces lock.
+  // v5.5.4 Stability: keep locked days selectable for inspection; Save Guard enforces lock.
   // Only completed exercises are disabled. This prevents mobile select from appearing broken.
   const rows=uniqueBy(PROGRAM, p=>p[2]);
   let firstOpen=null, oldOption=null;
@@ -356,6 +482,7 @@ function renderDayLock(){
   setHtml("lockStatus", lock.status==="OPEN" ? `<span class="ok-text">พร้อมเล่น: ${dayForExercise(state.selectedExercise)}</span>` : `<span class="warn-text">ล็อกอยู่: ${lock.reason}</span>`);
 }
 function updateFormDerived(){
+  ensureLogDefaults();
   const m=metaByExercise();
   if($("date") && $("date").value!==state.selectedDate) $("date").value=state.selectedDate;
   const ds = selectedDateStatus();
@@ -368,7 +495,7 @@ function updateFormDerived(){
   setVal("targetSets", targetSets());
   setText("setNo", Math.min(completedForExercise(state.selectedExercise)+1, targetSets(state.selectedExercise)));
   setText("targetShow", targetSets());
-  setVal("restSec", restSeconds());
+  ensureLogDefaults();
   const prog=currentExerciseProgress();
   const lock=calcDayLock();
   const saveBtn=$("saveBtn"); if(saveBtn) saveBtn.disabled = state.saving || lock.status!=="OPEN" || prog.done>=prog.target;
@@ -533,6 +660,7 @@ function autoWeek(){
   return day5Dates.length + 1;
 }
 async function saveSet(){
+  ensureLogDefaults();
   const lock=calcDayLock(); const prog=currentExerciseProgress();
   if(lock.status!=="OPEN"){ status("ยังถูก Day Lock: "+lock.reason,"err"); return; }
   if(prog.done>=prog.target){ status("ท่านี้ครบแล้ว เลือกท่าอื่น","warn"); return; }
@@ -559,6 +687,8 @@ async function saveSet(){
     } else {
       state.logs.push(localPayload);
       state.pendingWrites.set(localPayload.id, localPayload);
+      if(completedForExercise(state.selectedExercise,state.selectedDate) < targetSets(state.selectedExercise)) rememberSessionExercise(state.selectedExercise,state.selectedDate);
+      else clearSessionExercise(state.selectedDate);
       ["weight","reps","note"].forEach(id=>setVal(id,""));
       renderAll();
       const ref=await addDoc(collection(db, collectionPath()), {...payload, createdAt:serverTimestamp()});
@@ -580,9 +710,9 @@ async function saveSet(){
   }
   finally{ state.saving=false; renderAll(); }
 }
-function loadEdit(id){ const x=state.logs.find(l=>l.id===id); if(!x) return; state.editingId=id; state.selectedDate=x.date; state.selectedExercise=plannedOf(x); state.selectedAlt=x.exercise!==plannedOf(x)?{name:x.exercise, original:plannedOf(x)}:null; setVal("weight",x.weightKg); setVal("reps",x.reps); setVal("rir",x.rir); setVal("note",x.note||""); status("โหลด Log เพื่อแก้ไขแล้ว","warn"); show("log"); renderAll(); }
+function loadEdit(id){ const x=state.logs.find(l=>l.id===id); if(!x) return; state.editingId=id; state.selectedDate=x.date; state.selectedExercise=plannedOf(x); state.selectedAlt=x.exercise!==plannedOf(x)?{name:x.exercise, original:plannedOf(x)}:null; setVal("weight",x.weightKg); setVal("reps",x.reps); setVal("rir",x.rir ?? 2); setVal("tempo",x.tempo || "2-0-1"); setVal("repQuality",x.repQuality || "good"); setVal("biasMode",x.biasMode || "auto"); setVal("sleepHours",x.sleepHours ?? 7); setVal("soreness",x.soreness ?? 2); setVal("stress",x.stress ?? 2); setVal("note",x.note||""); ensureLogDefaults(); status("โหลด Log เพื่อแก้ไขแล้ว","warn"); show("log"); renderAll(); }
 async function deleteLog(id){ if(!confirm("ลบ Log นี้?")) return; try{ await deleteDoc(doc(db, collectionPath(), id)); status("ลบแล้ว","ok"); }catch(e){ status("ลบไม่สำเร็จ: "+e.message,"err",0); } }
-function resetForm(){ state.editingId=null; state.selectedAlt=null; ["weight","reps","note"].forEach(id=>setVal(id,"")); renderAll(); status("Reset แล้ว","ok"); }
+function resetForm(){ state.editingId=null; state.selectedAlt=null; ["weight","reps","note"].forEach(id=>setVal(id,"")); setVal("rir",2); setVal("tempo","2-0-1"); setVal("repQuality","good"); setVal("biasMode","auto"); setVal("restMode","auto"); setVal("sleepHours",7); setVal("soreness",2); setVal("stress",2); ensureLogDefaults(); renderAll(); status("Reset แล้ว","ok"); }
 
 function show(page){ document.querySelectorAll(".page").forEach(p=>p.classList.remove("active")); $(page)?.classList.add("active"); document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active", b.dataset.page===page)); state.page=page; status("เปิดหน้า "+page,"ok",900); renderAll(); }
 window.show=show;
@@ -605,11 +735,13 @@ function bind(){
     if(!e.target.value) return;
     state.selectedExercise=e.target.value;
     state.selectedAlt=null;
+    rememberSessionExercise(state.selectedExercise,state.selectedDate);
     status("เลือกท่า: "+state.selectedExercise,"ok",900);
-    // v5.5.3: do not call renderAll() here. Rebuilding the select during a mobile change event
+    // v5.5.4: do not call renderAll() here. Rebuilding the select during a mobile change event
     // caused the dropdown to close, bounce, or look unclickable. Update only dependent panels.
     renderAfterExerciseChange();
   });
+  $("restMode")?.addEventListener("change",()=>{ ensureLogDefaults(); status("อัปเดตค่า Rest แล้ว","ok",900); });
   $("saveBtn")?.addEventListener("click",saveSet); $("resetBtn")?.addEventListener("click",resetForm);
   $("altBtn")?.addEventListener("click",openAltModal); $("closeAlt")?.addEventListener("click",()=>{$("altModal")?.classList.remove("show"); document.body.classList.remove("modal-open");});
   $("clearAltBtn")?.addEventListener("click",()=>{ state.selectedAlt=null; renderAll(); });
@@ -624,17 +756,26 @@ function bind(){
 function openAltModal(){
   const host=$("altList"), modal=$("altModal"); if(!host || !modal) return;
   const base=state.selectedExercise;
-  const list=uniqueBy(alternativesForExercise(base), x=>x);
+  const tiered=tieredAlternativesForExercise(base);
   const render=(q="")=>{
-    const filtered=list.filter(name=>name.toLowerCase().includes(String(q||"").toLowerCase()));
-    host.innerHTML=filtered.length ? filtered.map(name=>{
-      const info=exInfo(name);
-      return `<button class="secondary alt-choice" data-name="${name}" type="button"><b>${name}</b><br><span class="small">แทน ${base} • Muscle ${info.primaryMuscle}</span><br>${exerciseMediaHtml(name)}</button>`;
-    }).join("") : "ไม่มีท่าแทน";
+    const query=String(q||"").toLowerCase();
+    const sections=[
+      ["A","ใกล้เคียงมาก", tiered.A||[], "ok"],
+      ["B","ใกล้เคียง / เครื่องทดแทน", tiered.B||[], "warn"],
+      ["C","แก้ขัด / กล้ามเนื้อหลักใกล้เคียง", tiered.C||[], "info"]
+    ].map(([tier,label,list,cls])=>{
+      const filtered=uniqueBy(list.filter(name=>name && name.toLowerCase().includes(query)), x=>x);
+      if(!filtered.length) return "";
+      return `<div class="alt-tier"><div class="small"><b>Tier ${tier}</b> • ${label}</div>` + filtered.map(name=>{
+        const info=exInfo(name);
+        return `<button class="secondary alt-choice" data-name="${name}" data-tier="${tier}" type="button"><b>${name}</b> <span class="pill ${cls}">Tier ${tier}</span><br><span class="small">แทน ${base} • Muscle ${info.primaryMuscle}</span><br>${exerciseMediaHtml(name)}</button>`;
+      }).join("") + `</div>`;
+    }).join("");
+    host.innerHTML=sections || "ไม่มีท่าแทน";
     host.querySelectorAll(".alt-choice").forEach(b=>b.addEventListener("click",()=>{
-      state.selectedAlt={name:b.dataset.name, original:base};
+      state.selectedAlt={name:b.dataset.name, original:base, tier:b.dataset.tier};
       modal.classList.remove("show"); document.body.classList.remove("modal-open");
-      renderAll(); status("ใช้ท่าแทน: "+b.dataset.name,"ok");
+      renderAll(); status(`ใช้ท่าแทน Tier ${b.dataset.tier}: ${b.dataset.name}`,"ok");
     }));
   };
   render("");
@@ -663,6 +804,8 @@ function notifyRest(title, body, kind="done"){
   status(title+" • "+body, kind==="warn"?"warn":"ok", 3500);
   if(state.notificationsEnabled && "Notification" in window && Notification.permission === "granted"){
     try{ new Notification(title,{body, tag:"workout-rest-timer", renotify:true}); }catch(e){}
+  } else if(state.notificationsEnabled && "Notification" in window && Notification.permission === "default"){
+    status(title+" • กด Enable Notifications ในหน้า Setup เพื่อให้เด้งนอกเว็บ", "warn", 4000);
   }
 }
 function startTimer(){
@@ -714,5 +857,5 @@ function download(name,text,type){ const a=document.createElement("a"); a.href=U
 onAuthStateChanged(auth,u=>{ state.user=u; if(u && !state.teamId) state.teamId="Beer-Team"; subscribeLogs(); renderAll(); });
 
 window.addEventListener("DOMContentLoaded",()=>{
-  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); renderAll(); qaExerciseCoverage(); status("Workout PRO v5.5.3 พร้อมใช้งาน","ok",2500);
+  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); ensureLogDefaults(); renderAll(); qaExerciseCoverage(); status("Workout PRO v5.5.6 พร้อมใช้งาน","ok",2500);
 });
