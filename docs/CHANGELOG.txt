@@ -1,4 +1,4 @@
-v5.5.6 Session Notification Stability Fix
+v5.5.7 Session Notification Stability Fix
 - Added Tier A/B/C alternative exercise ranking.
 - Expanded movement-pattern alternatives for all program exercises.
 - Kept SaveSet, Firestore, Day Lock core, and schema unchanged.

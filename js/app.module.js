@@ -1,10 +1,10 @@
-// Workout PRO v5.5.6 SESSION NOTIFICATION STABILITY FIX
+// Workout PRO v5.5.7 PLANNED EXERCISE COMPLETION FIX
 // Single state engine. No legacy render patches. No duplicate Day Lock / Dropdown renderers.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const VERSION = "v5.5.6";
+const VERSION = "v5.5.7";
 const $ = (id) => document.getElementById(id);
 const firebaseConfig = {"apiKey":"AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI","authDomain":"workout-program-9eea7.firebaseapp.com","projectId":"workout-program-9eea7","storageBucket":"workout-program-9eea7.firebasestorage.app","messagingSenderId":"315102427876","appId":"1:315102427876:web:d2d5d4c89eb78fae960af1","measurementId":"G-JHEKDYEY8B"};
 
@@ -181,9 +181,22 @@ function collectionPath(){ const team=safe(state.teamId); const user=state.user?
 function metaByExercise(ex=state.selectedExercise){ const planned=canonicalExercise(ex); return PROGRAM.find(p=>p[2]===planned) || PROGRAM[0]; }
 function targetSets(ex=state.selectedExercise){ return Number(metaByExercise(ex)[3]) || 1; }
 function restSeconds(ex=state.selectedExercise){ const mode = metaByExercise(ex)[6] || "standard"; return REST_SECONDS[mode] || 75; }
-function plannedOf(log){ return canonicalExercise(log.plannedExercise || log.originalExercise || log.exercise || ""); }
+function inferPlannedExerciseFromActual(actual, day){
+  const a = canonicalExercise(actual || "");
+  if(!a) return "";
+  if(PROGRAM.some(p=>p[2]===a && (!day || p[0]===day))) return a;
+  const sameDay = PROGRAM.find(p=>p[0]===day && (ALT[p[2]]||[]).map(canonicalExercise).includes(a));
+  if(sameDay) return sameDay[2];
+  const any = PROGRAM.find(p=>(ALT[p[2]]||[]).map(canonicalExercise).includes(a));
+  return any ? any[2] : a;
+}
+function plannedOf(log){
+  const explicit = canonicalExercise(log?.plannedExercise || log?.originalExercise || "");
+  if(explicit) return explicit;
+  return inferPlannedExerciseFromActual(log?.exercise || "", log?.day || "");
+}
 function actualOf(log){ return log.exercise || log.plannedExercise || ""; }
-function samePlanned(log, ex){ return plannedOf(log) === ex; }
+function samePlanned(log, ex){ return plannedOf(log) === canonicalExercise(ex); }
 function byCreated(a,b){ return (a.createdMs||0) - (b.createdMs||0); }
 function logsSorted(){ return [...state.logs].sort((a,b)=>(a.date||"").localeCompare(b.date||"") || byCreated(a,b)); }
 function status(msg,type="ok",ms=1800){ const bar=$("appStatusBar"); if(!bar) return; bar.textContent=msg; bar.className=`statusbar show ${type}`; if(ms) setTimeout(()=>{ if(bar.textContent===msg) bar.className="statusbar"; }, ms); }
@@ -259,6 +272,9 @@ function completedDateBetween(day, afterDate=null, upToDate=state.selectedDate){
     .filter(d=>(!afterDate || dayDiff(d,afterDate)>0) && dayDiff(d,upToDate)<=0)
     .pop() || null;
 }
+function dayProgressDebug(day,date=state.selectedDate){
+  return dayExercises(day).map(p=>({day, exercise:p[2], done:completedForExercise(p[2],date), target:Number(p[3]), date}));
+}
 function currentCyclePlan(date=state.selectedDate){
   // Single source of truth for program day by selected date.
   // Uses the latest completed Day 5 before the selected date as the previous cycle boundary.
@@ -311,8 +327,9 @@ function grantOverride(day=dayForExercise(state.selectedExercise)){ const key=`$
 function normalizeLog(raw,id){
   let createdMs = Number(raw.createdMs || raw.updatedMs || 0) || Date.now();
   try{ if(raw.createdAt?.seconds) createdMs=raw.createdAt.seconds*1000; }catch(e){}
-  const planned = raw.plannedExercise || raw.originalExercise || raw.exercise;
-  return {...raw, id, plannedExercise:planned, exercise:raw.exercise||planned, date:isValidDateKey(raw.date)?raw.date:todayTH(), weightKg:Number(raw.weightKg ?? raw.weight ?? 0), reps:Number(raw.reps||0), rir:Number(raw.rir ?? 2), createdMs};
+  const actual = raw.exercise || raw.plannedExercise || raw.originalExercise || "";
+  const planned = raw.plannedExercise || raw.originalExercise || inferPlannedExerciseFromActual(actual, raw.day || "") || actual;
+  return {...raw, id, plannedExercise:planned, exercise:actual||planned, date:isValidDateKey(raw.date)?raw.date:todayTH(), weightKg:Number(raw.weightKg ?? raw.weight ?? 0), reps:Number(raw.reps||0), rir:Number(raw.rir ?? 2), createdMs};
 }
 function subscribeLogs(){
   if(state.unsub) state.unsub();
@@ -857,5 +874,5 @@ function download(name,text,type){ const a=document.createElement("a"); a.href=U
 onAuthStateChanged(auth,u=>{ state.user=u; if(u && !state.teamId) state.teamId="Beer-Team"; subscribeLogs(); renderAll(); });
 
 window.addEventListener("DOMContentLoaded",()=>{
-  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); ensureLogDefaults(); renderAll(); qaExerciseCoverage(); status("Workout PRO v5.5.6 พร้อมใช้งาน","ok",2500);
+  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); ensureLogDefaults(); renderAll(); qaExerciseCoverage(); status("Workout PRO v5.5.7 พร้อมใช้งาน","ok",2500);
 });

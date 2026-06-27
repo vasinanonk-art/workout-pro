@@ -1,4 +1,4 @@
-Workout PRO v5.5.6 QA Report
+Workout PRO v5.5.7 QA Report
 - Syntax check: PASS
 - Alternative mapping: all PROGRAM exercises have alternatives.
 - Tier A/B/C: enabled in alternative modal.
@@ -6,6 +6,8 @@ Workout PRO v5.5.6 QA Report
 - Firestore payload: unchanged
 
 
-v5.5.6 QA: Log defaults ensured for rest, RIR, tempo, rep quality, bias mode, unit, recovery fields. No schema change.
+v5.5.7 QA: Log defaults ensured for rest, RIR, tempo, rep quality, bias mode, unit, recovery fields. No schema change.
 
-v5.5.6 QA: Added explicit notification permission button and session exercise persistence. No schema change.
+v5.5.7 QA: Added explicit notification permission button and session exercise persistence. No schema change.
+
+v5.5.7 QA: Day completion now infers plannedExercise from actual alternative exercise using same-day ALT mapping. Fixes Day4 complete not advancing to Day5 when substitutes were used.
