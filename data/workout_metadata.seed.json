@@ -1,0 +1,35 @@
+{
+  "version": "v6-dev.001",
+  "metadata": {
+    "EX-PUSH-HORIZONTAL-BARBELL-BENCH-PRESS": {
+      "defaultRest": 105,
+      "defaultTempo": "2-1-1",
+      "defaultRIR": 2,
+      "volumeFactor": 1.0,
+      "fatigueScore": 7,
+      "recoveryHours": 48,
+      "plateauGroup": "horizontal_push",
+      "coachNotes": ["Use stable scapular position", "Track bar path and lockout consistency"]
+    },
+    "EX-PULL-HORIZONTAL-CHEST-SUPPORTED-ROW": {
+      "defaultRest": 75,
+      "defaultTempo": "2-1-2",
+      "defaultRIR": 2,
+      "volumeFactor": 1.0,
+      "fatigueScore": 5,
+      "recoveryHours": 36,
+      "plateauGroup": "horizontal_pull",
+      "coachNotes": ["Keep chest supported", "Drive elbows back without shrugging"]
+    },
+    "EX-LEGS-UNILATERAL-WALKING-LUNGE": {
+      "defaultRest": 75,
+      "defaultTempo": "2-0-2",
+      "defaultRIR": 2,
+      "volumeFactor": 1.0,
+      "fatigueScore": 6,
+      "recoveryHours": 48,
+      "plateauGroup": "unilateral_knee_dominant",
+      "coachNotes": ["Keep stride consistent", "Use controlled descent and stable knee tracking"]
+    }
+  }
+}
