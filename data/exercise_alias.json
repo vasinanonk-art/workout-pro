@@ -1,0 +1,15 @@
+{
+  "version": "v6-dev.001",
+  "aliases": {
+    "Bench Press": "EX-PUSH-HORIZONTAL-BARBELL-BENCH-PRESS",
+    "Flat Bench Press": "EX-PUSH-HORIZONTAL-BARBELL-BENCH-PRESS",
+    "BB Bench Press": "EX-PUSH-HORIZONTAL-BARBELL-BENCH-PRESS",
+    "Barbell Bench Press": "EX-PUSH-HORIZONTAL-BARBELL-BENCH-PRESS",
+    "Chest Supported Row": "EX-PULL-HORIZONTAL-CHEST-SUPPORTED-ROW",
+    "Chest Supported Machine Row": "EX-PULL-HORIZONTAL-CHEST-SUPPORTED-ROW",
+    "Chest Supported T-Bar Row": "EX-PULL-HORIZONTAL-CHEST-SUPPORTED-ROW",
+    "Walking Lunge": "EX-LEGS-UNILATERAL-WALKING-LUNGE",
+    "DB Walking Lunge": "EX-LEGS-UNILATERAL-WALKING-LUNGE",
+    "Dumbbell Walking Lunge": "EX-LEGS-UNILATERAL-WALKING-LUNGE"
+  }
+}
