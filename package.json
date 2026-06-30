@@ -1,0 +1,11 @@
+{
+  "name": "workout-pro",
+  "version": "6.0.0-dev.001",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "validate:exercise": "node tools/validate-exercise-data.js",
+    "qa": "npm run validate:exercise"
+  },
+  "devDependencies": {}
+}
