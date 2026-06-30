@@ -4,7 +4,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const VERSION = "v5.5.7";
+const VERSION = "v6.0.0-dev.001";
 const $ = (id) => document.getElementById(id);
 const firebaseConfig = {"apiKey":"AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI","authDomain":"workout-program-9eea7.firebaseapp.com","projectId":"workout-program-9eea7","storageBucket":"workout-program-9eea7.firebasestorage.app","messagingSenderId":"315102427876","appId":"1:315102427876:web:d2d5d4c89eb78fae960af1","measurementId":"G-JHEKDYEY8B"};
 
@@ -124,6 +124,27 @@ function qaExerciseCoverage(){
 window.workoutProQA=qaExerciseCoverage;
 function exInfo(name){ return EX_DB[name] || EX_DB[canonicalExercise(name)] || {name, planned:name, day:"-", type:"Custom", target:0, reps:"-", primaryMuscle:"Other", restMode:"standard", isAlternative:false, alternatives:[]}; }
 function canonicalExercise(name){ return EX_DB[name]?.planned || (PROGRAM.find(p=>p[2]===name)?.[2]) || name || ""; }
+
+// v6-dev foundation: stable exercise identity without changing existing Firestore schema.
+// Logs may still store names, but comparisons should resolve to a stable key first.
+const EXERCISE_ID_ALIAS = {
+  "bench press":"EX-PUSH-HORIZONTAL-BARBELL-BENCH-PRESS",
+  "flat bench press":"EX-PUSH-HORIZONTAL-BARBELL-BENCH-PRESS",
+  "bb bench press":"EX-PUSH-HORIZONTAL-BARBELL-BENCH-PRESS",
+  "barbell bench press":"EX-PUSH-HORIZONTAL-BARBELL-BENCH-PRESS",
+  "chest supported row":"EX-PULL-HORIZONTAL-CHEST-SUPPORTED-ROW",
+  "chest supported machine row":"EX-PULL-HORIZONTAL-CHEST-SUPPORTED-ROW",
+  "chest supported t-bar row":"EX-PULL-HORIZONTAL-CHEST-SUPPORTED-ROW",
+  "walking lunge":"EX-LEGS-UNILATERAL-WALKING-LUNGE",
+  "db walking lunge":"EX-LEGS-UNILATERAL-WALKING-LUNGE",
+  "dumbbell walking lunge":"EX-LEGS-UNILATERAL-WALKING-LUNGE"
+};
+function normalizeExerciseName(name){ return String(name||"").trim().replace(/\s+/g," ").toLowerCase(); }
+function fallbackExerciseId(name){ return `legacy:${normalizeExerciseName(canonicalExercise(name)||name)}`; }
+function exerciseIdForName(name){ const canonical=canonicalExercise(name||""); return EXERCISE_ID_ALIAS[normalizeExerciseName(canonical)] || EXERCISE_ID_ALIAS[normalizeExerciseName(name)] || fallbackExerciseId(canonical||name); }
+function sameExerciseIdentity(a,b){ return exerciseIdForName(a) === exerciseIdForName(b); }
+window.workoutProExerciseIdForName = exerciseIdForName;
+
 function getExerciseDbRows(){ return Object.values(EX_DB).sort((a,b)=>(a.day||"").localeCompare(b.day||"") || Number(a.isAlternative)-Number(b.isAlternative) || a.name.localeCompare(b.name)); }
 function uniqueBy(arr, fn){ const seen=new Set(); return arr.filter(x=>{ const k=fn(x); if(seen.has(k)) return false; seen.add(k); return true; }); }
 function mediaSearchUrl(name,type="image"){
@@ -143,30 +164,24 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 let state = {
   user:null,
-  teamId: localStorage.getItem("teamId") || "Beer-Team",
+  teamId:localStorage.getItem("teamId")||"Beer-Team",
   logs:[],
-  pendingWrites:new Map(),
-  lastSnapshotAt:0,
+  loading:false,
   selectedDate: todayTH(),
-  selectedExercise: PROGRAM[0][2],
-  selectedAlt:null,
-  sessionExerciseByDate: JSON.parse(localStorage.getItem("sessionExerciseByDateV556") || "{}"),
-  selectedDayForOverride:null,
-  overrideKeys: new Set(JSON.parse(localStorage.getItem("dayLockOverridesV540") || "[]")),
-  editingId:null,
-  saving:false,
-  unsub:null,
-  page:"setup",
-  timerId:null,
-  timerLeft:0,
-  timerEndAt:0,
-  timerDuration:0,
-  notified10:false,
-  notifiedDone:false,
-  notificationsEnabled: localStorage.getItem("restNotifyEnabled") !== "0",
-  notify10Enabled: localStorage.getItem("restNotify10Enabled") !== "0",
-  soundEnabled: localStorage.getItem("restSoundEnabled") !== "0",
-  vibrateEnabled: localStorage.getItem("restVibrateEnabled") !== "0",
+  selectedExercise:"Barbell Bench Press",
+  selectedAlternative:"",
+  route:"dashboard",
+  timerEndAt: Number(localStorage.getItem("timerEndAt")||0),
+  timerRunning:false,
+  timerLastCompleteNotifiedAt:0,
+  timerWarned10:false,
+  reminderIntervalMin: Number(localStorage.getItem("reminderIntervalMin")||0),
+  editId:null,
+  notifierEnabled:localStorage.getItem("notifierEnabled")==="1",
+  autoRest:localStorage.getItem("autoRest")!=="0",
+  soundEnabled:localStorage.getItem("soundEnabled")!=="0",
+  vibrateEnabled:localStorage.getItem("vibrateEnabled")!=="0",
+  rememberExerciseByDate: JSON.parse(localStorage.getItem("rememberExerciseByDate")||"{}"),
   lastRender:0,
   calendarMonth: todayTH().slice(0,7)
 };
@@ -196,7 +211,7 @@ function plannedOf(log){
   return inferPlannedExerciseFromActual(log?.exercise || "", log?.day || "");
 }
 function actualOf(log){ return log.exercise || log.plannedExercise || ""; }
-function samePlanned(log, ex){ return plannedOf(log) === canonicalExercise(ex); }
+function samePlanned(log, ex){ return sameExerciseIdentity(plannedOf(log), ex); }
 function byCreated(a,b){ return (a.createdMs||0) - (b.createdMs||0); }
 function logsSorted(){ return [...state.logs].sort((a,b)=>(a.date||"").localeCompare(b.date||"") || byCreated(a,b)); }
 function status(msg,type="ok",ms=1800){ const bar=$("appStatusBar"); if(!bar) return; bar.textContent=msg; bar.className=`statusbar show ${type}`; if(ms) setTimeout(()=>{ if(bar.textContent===msg) bar.className="statusbar"; }, ms); }
@@ -208,44 +223,42 @@ function isValidDateKey(k){ return /^\d{4}-\d{2}-\d{2}$/.test(String(k||"")); }
 function hasOption(el, value){ return !!el && Array.from(el.options||[]).some(o=>o.value===String(value)); }
 function setDefaultIfEmpty(id, value){ const el=$(id); if(el && (el.value==="" || el.value==null)) el.value=String(value); }
 function setSelectDefaultIfInvalid(id, value){ const el=$(id); if(!el) return; if(!el.value || !hasOption(el,value)) el.value=String(value); }
-function ensureLogDefaults(){
-  // v5.5.5 Stability: keep Log form defaults present after render/reset/edit/mobile restore.
-  setDefaultIfEmpty("sleepHours", 7);
-  setDefaultIfEmpty("soreness", 2);
-  setDefaultIfEmpty("stress", 2);
-  setDefaultIfEmpty("rir", 2);
-  setSelectDefaultIfInvalid("tempo", "2-0-1");
-  setSelectDefaultIfInvalid("repQuality", "good");
-  setSelectDefaultIfInvalid("biasMode", "auto");
-  setSelectDefaultIfInvalid("restMode", "auto");
-  setSelectDefaultIfInvalid("unit", "kg");
-  const restMode=$("restMode")?.value || "auto";
-  if(restMode==="auto") setVal("restSec", restSeconds());
-  else if(["45","75","105"].includes(restMode)) setVal("restSec", restMode);
-  else setDefaultIfEmpty("restSec", restSeconds());
-}
-
-
-function rememberSessionExercise(ex=state.selectedExercise,date=state.selectedDate){
-  if(!ex || !isValidDateKey(date)) return;
-  state.sessionExerciseByDate[date]=ex;
-  localStorage.setItem("sessionExerciseByDateV556", JSON.stringify(state.sessionExerciseByDate));
-}
-function clearSessionExercise(date=state.selectedDate){
-  if(!isValidDateKey(date)) return;
-  delete state.sessionExerciseByDate[date];
-  localStorage.setItem("sessionExerciseByDateV556", JSON.stringify(state.sessionExerciseByDate));
-}
-function restoreSessionExercise(){
-  const ex=state.sessionExerciseByDate?.[state.selectedDate];
-  if(!ex) return;
-  const day=dayForExercise(ex);
-  const allowed=allowedTrainingDaysForDate(state.selectedDate);
-  if(allowed.length && allowed.includes(day) && completedForExercise(ex,state.selectedDate) < targetSets(ex)){
-    state.selectedExercise=ex;
+function ensureLogDefaults({force=false}={}){
+  const rest=restSeconds(state.selectedExercise);
+  if(force){
+    setVal("restPreset", rest); setVal("rir",2); setVal("tempo","2-1-2"); setVal("repQuality","Good"); setVal("biasMode","Standard"); setVal("sleepHours",7); setVal("soreness",2); setVal("stress",2); return;
   }
+  setDefaultIfEmpty("restPreset", rest);
+  setDefaultIfEmpty("rir",2);
+  setDefaultIfEmpty("tempo","2-1-2");
+  setSelectDefaultIfInvalid("repQuality","Good");
+  setSelectDefaultIfInvalid("biasMode","Standard");
+  setDefaultIfEmpty("sleepHours",7);
+  setDefaultIfEmpty("soreness",2);
+  setDefaultIfEmpty("stress",2);
 }
+function lockByDateAndExercise(ex=state.selectedExercise,date=state.selectedDate){
+  const day = dayForExercise(ex);
+  const plan = currentCyclePlan(date);
+  const displayDate=displayDateForExerciseProgress(day,date);
+  const done = completedForExercise(ex,displayDate);
+  const target = targetSets(ex);
+  const completed = done >= target;
+  const dayAllowed = plan.allowedDays.includes(day);
+  const saveAllowed = dayAllowed && !completed && date===todayTH();
+  return {day, plan, displayDate, done, target, completed, dayAllowed, saveAllowed, reason: completed ? "ท่านี้ครบแล้ว" : (!dayAllowed ? plan.reason : (date!==todayTH()?"เลือกดูย้อนหลัง/ล่วงหน้าได้ แต่บันทึกได้เฉพาะวันนี้":"พร้อมบันทึก"))};
+}
+function isFutureDate(date=state.selectedDate){ return dayDiff(date,todayTH())>0; }
+function dateStatus(date=state.selectedDate){ const diff=dayDiff(date,todayTH()); if(diff===0) return {label:"🟢 วันนี้", cls:"ok"}; if(diff<0) return {label:`🟡 ย้อนหลัง ${Math.abs(diff)} วัน`, cls:"warn"}; return {label:`🔵 ล่วงหน้า ${diff} วัน`, cls:"info"}; }
 
+function saveRememberedExercise(){ state.rememberExerciseByDate[state.selectedDate]=state.selectedExercise; localStorage.setItem("rememberExerciseByDate",JSON.stringify(state.rememberExerciseByDate)); }
+function restoreRememberedExercise(date=state.selectedDate){
+  const saved=state.rememberExerciseByDate?.[date];
+  if(saved && PROGRAM.some(p=>p[2]===saved)) return saved;
+  const plan=currentCyclePlan(date);
+  if(plan.allowedDays?.length) return nextIncompleteExercise(plan.allowedDays[0],date);
+  return state.selectedExercise || PROGRAM[0][2];
+}
 function logsOnDate(date=state.selectedDate){ return state.logs.filter(x=>x.date===date); }
 function completedForExercise(ex,date=state.selectedDate){ return logsOnDate(date).filter(x=>samePlanned(x,ex)).length; }
 function volumeForLogs(arr){ return arr.reduce((s,x)=>s+(Number(x.weightKg)||0)*(Number(x.reps)||0),0); }
@@ -299,580 +312,207 @@ function currentCyclePlan(date=state.selectedDate){
 
   const d5 = completedDateBetween("Day 5", d4, date);
   if(!d5) return {allowedDays:["Day 5"], code:"OPEN", earliest:addDaysKey(d4,1), reason:"Day 4 จบแล้ว เริ่ม Day 5 ได้"};
-  if(dayDiff(date,d5) < 2) return {allowedDays:[], code:"REST_LOCK", earliest:addDaysKey(d5,2), reason:`พักหลัง Day 5 ยังไม่ครบ เริ่มรอบใหม่ได้เร็วสุด ${addDaysKey(d5,2)}`};
-  return {allowedDays:["Day 1"], code:"OPEN", earliest:addDaysKey(d5,2), reason:"พักครบแล้ว เริ่ม Day 1 รอบใหม่ได้"};
+  if(dayDiff(date,d5) < 2) return {allowedDays:[], code:"REST_LOCK", earliest:addDaysKey(d5,2), reason:`หลัง Day 5 ต้องพัก 2 วัน เริ่มรอบใหม่ได้เร็วสุด ${addDaysKey(d5,2)}`};
+  return {allowedDays:["Day 1"], code:"OPEN", earliest:addDaysKey(d5,2), reason:"เริ่มรอบใหม่ Day 1 ได้"};
 }
-function calcDayLock(date=state.selectedDate){
-  const today = todayTH();
-  const keyBase = `${date}|${state.user?.uid||"guest"}|${state.teamId}`;
-  const currentDay = dayForExercise(state.selectedExercise);
-  const overrideKey = `${keyBase}|${currentDay}`;
-  if(state.overrideKeys.has(overrideKey)) return {status:"OPEN", reason:"Manual override active", allowedDays:DAY_ORDER, earliest:date, override:true};
-  if(dayDiff(date,today) > 0) return {status:"LOCKED", code:"FUTURE_DATE", reason:"ยังไม่อนุญาตให้เล่นวันที่อนาคต", allowedDays:[], earliest:today};
-  const plan = currentCyclePlan(date);
-  const allowed = plan.allowedDays || [];
-  if(!allowed.length) return {status:"LOCKED", code:plan.code||"REST_LOCK", reason:plan.reason||"วันนี้ยังไม่ใช่วันฝึกถัดไปตามโปรแกรม", allowedDays:[], earliest:plan.earliest||"-"};
-  if(!allowed.includes(currentDay)) return {status:"LOCKED", code:"DAY_LOCK", reason:`วันนี้อนุญาตเฉพาะ ${allowed.join(", ")}`, allowedDays:allowed, earliest:plan.earliest||date};
-  return {status:"OPEN", reason:plan.reason || `อนุญาต: ${allowed.join(", ")}`, allowedDays:allowed, earliest:plan.earliest||date};
+function allowedTrainingDaysForDate(date=state.selectedDate){ return currentCyclePlan(date).allowedDays || []; }
+function exerciseOptionState(ex,date=state.selectedDate){
+  const day=dayForExercise(ex); const displayDate=displayDateForExerciseProgress(day,date); const done=completedForExercise(ex,displayDate); const target=targetSets(ex); const completed=done>=target;
+  const plan=currentCyclePlan(date); const allowed=plan.allowedDays.includes(day);
+  return {day, displayDate, done, target, completed, allowed, reason: completed?"ครบแล้ว":(!allowed?plan.reason:"พร้อม")};
 }
-function allowedTrainingDaysForDate(date=state.selectedDate){
-  if(dayDiff(date,todayTH())>0) return [];
-  const keyBase = `${date}|${state.user?.uid||"guest"}|${state.teamId}`;
-  const overrides = DAY_ORDER.filter(d=>state.overrideKeys.has(`${keyBase}|${d}`));
-  const plan = currentCyclePlan(date);
-  return [...new Set([...(plan.allowedDays||[]), ...overrides])];
+function dateSummary(date=state.selectedDate){
+  const arr=logsByDate(date); const vol=volumeForLogs(arr); const completed=completedDaysByDate(date);
+  return {date, sets:arr.length, volume:vol, completed, exercises:[...new Set(arr.map(plannedOf))]};
 }
-function grantOverride(day=dayForExercise(state.selectedExercise)){ const key=`${state.selectedDate}|${state.user?.uid||"guest"}|${state.teamId}|${day}`; state.overrideKeys.add(key); localStorage.setItem("dayLockOverridesV540", JSON.stringify([...state.overrideKeys])); status(`ปลดล็อก ${day} แล้ว`,"warn"); renderAll(); }
-
-function normalizeLog(raw,id){
-  let createdMs = Number(raw.createdMs || raw.updatedMs || 0) || Date.now();
-  try{ if(raw.createdAt?.seconds) createdMs=raw.createdAt.seconds*1000; }catch(e){}
+function normalizeLog(raw){
+  const id = raw.id || raw._id || tempId();
+  const createdMs = Number(raw.createdMs || raw.createdAtMs || (raw.createdAt?.toMillis?.()||0) || localNowMs());
   const actual = raw.exercise || raw.plannedExercise || raw.originalExercise || "";
   const planned = raw.plannedExercise || raw.originalExercise || inferPlannedExerciseFromActual(actual, raw.day || "") || actual;
   return {...raw, id, plannedExercise:planned, exercise:actual||planned, date:isValidDateKey(raw.date)?raw.date:todayTH(), weightKg:Number(raw.weightKg ?? raw.weight ?? 0), reps:Number(raw.reps||0), rir:Number(raw.rir ?? 2), createdMs};
 }
-function subscribeLogs(){
-  if(state.unsub) state.unsub();
-  if(!state.user || !state.teamId){ renderAll(); return; }
-  status("กำลังโหลด Log...","warn",0);
-  const q=query(collection(db, collectionPath()), orderBy("date","asc"));
-  state.unsub=onSnapshot(q,(snap)=>{
-    const remote=snap.docs.map(d=>normalizeLog(d.data(), d.id));
-    const pending=[...state.pendingWrites.values()].filter(x=>!x.__removeOnSync);
-    const remoteKeys=new Set(remote.map(x=>`${x.date}|${plannedOf(x)}|${actualOf(x)}|${x.weightKg}|${x.reps}|${x.createdMs}`));
-    state.logs=[...remote, ...pending.filter(x=>!remoteKeys.has(`${x.date}|${plannedOf(x)}|${actualOf(x)}|${x.weightKg}|${x.reps}|${x.createdMs}`))];
-    state.lastSnapshotAt=Date.now();
-    status("โหลดข้อมูลสำเร็จ","ok");
-    renderAll();
-  },(err)=>{ console.error(err); status("โหลด Log ไม่สำเร็จ: "+err.message,"err",0); });
-}
 
+function notify(title, body){
+  if(!state.notifierEnabled) return;
+  if("Notification" in window && Notification.permission==="granted"){
+    try{ new Notification(title,{body,tag:"workout-pro-rest",renotify:true}); }catch(e){}
+  }
+  if(state.vibrateEnabled && navigator.vibrate) navigator.vibrate(title.includes("Complete")?[120,60,120,60,120]:[100]);
+  if(state.soundEnabled) beep(title.includes("Complete")?880:660);
+}
+function beep(freq=740){ try{ const ctx=new (window.AudioContext||window.webkitAudioContext)(); const o=ctx.createOscillator(); const g=ctx.createGain(); o.frequency.value=freq; o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(0.0001,ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.08,ctx.currentTime+0.02); g.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.35); o.start(); o.stop(ctx.currentTime+0.36); }catch(e){} }
+async function enableNotifications(){
+  if(!("Notification" in window)){ status("Browser นี้ไม่รองรับ Notification","bad"); return; }
+  const perm = await Notification.requestPermission();
+  if(perm==="granted"){ state.notifierEnabled=true; localStorage.setItem("notifierEnabled","1"); status("เปิด Notification แล้ว","ok"); }
+  else { state.notifierEnabled=false; localStorage.setItem("notifierEnabled","0"); status("Notification ถูกปิด/ไม่อนุญาต","bad",3000); }
+  renderAll();
+}
+function startRestTimer(seconds=restSeconds()){
+  state.timerEndAt=Date.now()+seconds*1000; state.timerRunning=true; state.timerWarned10=false; localStorage.setItem("timerEndAt",String(state.timerEndAt));
+  status(`เริ่มพัก ${seconds}s`,"ok"); renderTimer();
+}
+function stopTimer(){ state.timerEndAt=0; state.timerRunning=false; state.timerWarned10=false; localStorage.removeItem("timerEndAt"); renderTimer(); }
+function timerRemaining(){ return Math.max(0, Math.ceil((Number(state.timerEndAt||0)-Date.now())/1000)); }
+function renderTimer(){
+  const remain=timerRemaining();
+  state.timerRunning=remain>0;
+  setText("timerText", state.timerRunning ? `${Math.floor(remain/60)}:${String(remain%60).padStart(2,"0")}` : "พร้อม");
+  if(state.timerRunning && remain<=10 && !state.timerWarned10){ state.timerWarned10=true; notify("⏳ เหลือ 10 วินาที","เตรียมเล่นเซตถัดไป"); status("เหลือ 10 วินาที","warn",1200); }
+  if(!state.timerRunning && state.timerEndAt){
+    const completedAt=Number(state.timerEndAt);
+    if(state.timerLastCompleteNotifiedAt!==completedAt){ state.timerLastCompleteNotifiedAt=completedAt; notify("Rest Complete","พร้อมเล่นเซตถัดไปแล้ว"); status("หมดเวลาพัก • พร้อมเล่นเซตถัดไป","ok",3000); }
+    localStorage.removeItem("timerEndAt"); state.timerEndAt=0;
+  }
+}
+setInterval(renderTimer,500);
+document.addEventListener("visibilitychange",()=>renderTimer());
+
+function initTabs(){ document.querySelectorAll(".tabBtn").forEach(btn=>btn.addEventListener("click",()=>{ state.route=btn.dataset.route; renderAll(); })); }
+function updateActiveTab(){ document.querySelectorAll(".tabBtn").forEach(b=>b.classList.toggle("active",b.dataset.route===state.route)); document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===`page-${state.route}`)); }
 function renderAll(){
-  renderSetup(); renderDayLock(); renderExerciseSelect(); renderExerciseDatabase(); renderLogSummary(); renderRecent(); renderDashboard(); renderCoach(); renderProgram(); renderGuide(); renderCalendar(); renderBackup(); renderMediaPanel(); updateFormDerived();
+  updateActiveTab();
+  setText("version",VERSION);
+  setText("userName", state.user?.displayName || "Guest");
+  renderDateControls(); renderDayLock(); renderExerciseSelect(); renderWorkoutForm(); renderRecentLog(); renderDashboard(); renderCalendar(); renderExerciseDatabase(); renderCoach(); renderPlateau(); renderTimer(); renderSettings(); qaExerciseCoverage();
 }
-
-function notificationPermissionText(){
-  if(!("Notification" in window)) return "Browser นี้ไม่รองรับ Notification";
-  if(Notification.permission==="granted") return "Notification: อนุญาตแล้ว";
-  if(Notification.permission==="denied") return "Notification: ถูกบล็อก ต้องเปิดใน Browser Settings";
-  return "Notification: ยังไม่ได้อนุญาต";
-}
-function renderNotificationControls(){
-  const setup=$("setup"); if(!setup) return;
-  let card=$("notificationCard");
-  if(!card){
-    card=document.createElement("div");
-    card.className="card";
-    card.id="notificationCard";
-    const debugCard=$("debug")?.closest(".card");
-    setup.insertBefore(card, debugCard || setup.children[2] || null);
-  }
-  const perm = ("Notification" in window) ? Notification.permission : "unsupported";
-  card.innerHTML = `<h3>Rest Notification</h3>
-    <div class="msg info" id="notifyStatus">${notificationPermissionText()}<br><span class="small">ใช้สำหรับแจ้งเตือนเหลือ 10 วิ และหมดเวลาพัก</span></div>
-    <div class="row3"><button id="enableNotifyBtn" class="cyan" type="button">🔔 Enable Notifications</button><button id="testNotifyBtn" class="secondary" type="button">Test</button><button id="toggleNotifyBtn" class="secondary" type="button">${state.notificationsEnabled?"ปิด Notify":"เปิด Notify"}</button></div>
-    <div class="small">Permission: ${perm} • 10s: ${state.notify10Enabled?"ON":"OFF"} • Sound: ${state.soundEnabled?"ON":"OFF"} • Vibrate: ${state.vibrateEnabled?"ON":"OFF"}</div>`;
-  $("enableNotifyBtn")?.addEventListener("click", async()=>{
-    const r=await requestNotifyPermission();
-    state.notificationsEnabled = r === "granted";
-    localStorage.setItem("restNotifyEnabled", state.notificationsEnabled ? "1" : "0");
-    status(r==="granted" ? "เปิด Notification แล้ว" : "ยังเปิด Notification ไม่ได้: "+r, r==="granted"?"ok":"warn", 2500);
-    renderNotificationControls();
-  });
-  $("testNotifyBtn")?.addEventListener("click", ()=>notifyRest("🔔 Test Notification", "ถ้าเห็นอันนี้ การแจ้งเตือนพร้อมใช้งาน", "done"));
-  $("toggleNotifyBtn")?.addEventListener("click", ()=>{
-    state.notificationsEnabled=!state.notificationsEnabled;
-    localStorage.setItem("restNotifyEnabled", state.notificationsEnabled ? "1" : "0");
-    status(state.notificationsEnabled?"เปิด Notify แล้ว":"ปิด Notify แล้ว", "ok", 1200);
-    renderNotificationControls();
-  });
-}
-
-function renderSetup(){
-  renderNotificationControls();
-  setVal("teamId", state.teamId);
-  setText("authState", state.user ? `Login: ${state.user.displayName || state.user.email}` : "ยังไม่ได้ login");
-  setHtml("debug", `Version: <b>${VERSION}</b><br>User: ${state.user?.email || "-"}<br>Team: ${state.teamId || "-"}<br>Logs: ${state.logs.length}<br>Date: ${state.selectedDate} (${dateLabelTH(state.selectedDate)})`);
-  setHtml("teamSaveStatus", `Team ID: <b>${state.teamId || "-"}</b>`);
-}
-
-function selectedDateStatus(){
-  const today = todayTH();
-  const selected = isValidDateKey(state.selectedDate) ? state.selectedDate : today;
-  const diff = dayDiff(selected, today);
-  if(diff === 0) return {cls:"ok", text:"🟢 วันนี้", detail:`วันที่ปัจจุบัน ${dateLabelTH(selected)} (${selected})`};
-  if(diff > 0) return {cls:"warn", text:`🔵 ล่วงหน้า ${diff} วัน`, detail:`เลือกวันที่อนาคต ${dateLabelTH(selected)} (${selected}) • ระบบจะล็อกถ้ายังไม่ถึงรอบเล่น`};
-  return {cls:"info", text:`🟡 ย้อนหลัง ${Math.abs(diff)} วัน`, detail:`เลือกวันที่ย้อนหลัง ${dateLabelTH(selected)} (${selected}) • ใช้สำหรับแก้/บันทึกย้อนหลังเท่านั้น`};
-}
-
-function renderExerciseSelect(){
-  const sel=$("exercise"); if(!sel) return;
-  restoreSessionExercise();
-  const old=state.selectedExercise;
-  const allowedDays = allowedTrainingDaysForDate(state.selectedDate);
-  const lock = calcDayLock(state.selectedDate);
-  sel.innerHTML="";
-
-  // v5.5.4 Stability: keep locked days selectable for inspection; Save Guard enforces lock.
-  // Only completed exercises are disabled. This prevents mobile select from appearing broken.
-  const rows=uniqueBy(PROGRAM, p=>p[2]);
-  let firstOpen=null, oldOption=null;
-  rows.forEach(p=>{
-    const [day,,ex,tgt]=p;
-    const progressDate = displayDateForExerciseProgress(day,state.selectedDate);
-    const done=completedForExercise(ex,progressDate);
-    const opt=document.createElement("option"); opt.value=ex;
-    opt.dataset.day=day;
-    opt.dataset.progressDate=progressDate;
-    const isDone=done>=Number(tgt);
-    const lockedDay = allowedDays.length ? !allowedDays.includes(day) : true;
-    const isOpen = !isDone && !lockedDay;
-    opt.disabled = isDone;
-    const mark = isDone ? "✓ " : (isOpen ? "▶ " : "🔒 ");
-    const dateNote = progressDate!==state.selectedDate && done>0 ? ` • ${dateLabelTH(progressDate)}` : "";
-    const lockNote = lockedDay ? " • locked" : "";
-    opt.textContent = `${mark}${day} - ${ex} (${done}/${tgt})${dateNote}${lockNote}`;
-    sel.appendChild(opt);
-    if(ex===old) oldOption=opt;
-    if(isOpen && !firstOpen) firstOpen=opt;
-  });
-
-  const keepOld = oldOption && !oldOption.disabled;
-  const chosen = keepOld ? oldOption : firstOpen;
-  if(chosen){
-    sel.value=chosen.value;
-    if(state.selectedExercise!==chosen.value){ state.selectedAlt=null; }
-    state.selectedExercise=chosen.value;
-  }else{
-    const placeholder=document.createElement("option");
-    placeholder.value="";
-    placeholder.textContent = lock.status==="OPEN" ? "วันนี้ท่าที่อนุญาตเล่นครบแล้ว" : `ยังล็อกอยู่: ${lock.reason}`;
-    placeholder.selected=true;
-    placeholder.disabled=false;
-    sel.insertBefore(placeholder, sel.firstChild);
-    sel.value="";
-  }
-  sel.disabled = false;
-  renderExerciseProgressList();
-}
-
-function renderAfterExerciseChange(){
-  renderExerciseProgressList();
-  renderExerciseDatabase();
-  renderMediaPanel();
-  updateFormDerived();
-  renderDashboard();
-  renderCoach();
-}
-function renderExerciseProgressList(){
-  const host=$("orderStatus"); if(!host) return;
-  const day=dayForExercise(state.selectedExercise);
-  const progressDate = displayDateForExerciseProgress(day,state.selectedDate);
-  host.className="msg info";
-  host.innerHTML = `<b>Exercise Progress - ${day}</b><div class="small">วันที่นับเซต: ${dateLabelTH(progressDate)} (${progressDate})</div><div class="exercise-progress-list">` + dayExercises(day).map(p=>{
-    const done=completedForExercise(p[2],progressDate), tgt=Number(p[3]);
-    const cls=done>=tgt?"done":(p[2]===state.selectedExercise?"active":"");
-    return `<div class="exercise-progress-item ${cls}">${done>=tgt?"✓":"▶"} ${p[2]} <span class="pill ${done>=tgt?"done":(p[2]===state.selectedExercise?"active":"")}">${done}/${tgt}</span></div>`;
-  }).join("") + `</div>`;
+function renderDateControls(){
+  const d=$("selectedDate"); if(d && d.value!==state.selectedDate) d.value=state.selectedDate;
+  const st=dateStatus(state.selectedDate);
+  setText("dateStatus",`${st.label} • ${state.selectedDate}`);
 }
 function renderDayLock(){
-  const lock=calcDayLock();
-  const box=$("dayDateLockDebug"); if(!box) return;
-  const current = dayForExercise(state.selectedExercise);
-  const days = DAY_ORDER.map(d=>`<option value="${d}" ${d===current?"selected":""}>${d}</option>`).join("");
-  box.className = `msg lock-panel ${lock.status==="OPEN"?"open":"locked"}`;
-  box.innerHTML = `<h3>Day Lock Control</h3>
-    <div>Status: <b>${lock.status}</b> <span class="pill">Runtime ${VERSION}</span></div>
-    <div class="small">Today: ${dateLabelTH(todayTH())} (${todayTH()}) • Selected: ${dateLabelTH(state.selectedDate)} (${state.selectedDate})</div>
-    <div class="small">Allowed: ${lock.allowedDays?.length ? lock.allowedDays.join(", ") : "-"}</div>
-    <div class="small">${lock.reason}</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><select id="overrideDaySelect">${days}</select><button id="overrideDayBtn" class="orange" type="button">ข้ามไปเล่น Day ที่เลือก</button></div>
-    <div class="select-hint">ถ้าข้ามวัน ต้องกดปุ่มนี้ก่อน Save ถึงจะทำงาน</div>`;
-  $("overrideDaySelect")?.addEventListener("change", e=>{ state.selectedDayForOverride=e.target.value; status("เลือก Day ที่จะข้าม: "+e.target.value,"warn",1200); });
-  $("overrideDayBtn")?.addEventListener("click",()=>{
-    const d=$("overrideDaySelect")?.value || current;
-    grantOverride(d);
-    const ex=nextIncompleteExercise(d,state.selectedDate);
-    state.selectedExercise=ex;
-    renderAll();
-  });
-  setHtml("lockStatus", lock.status==="OPEN" ? `<span class="ok-text">พร้อมเล่น: ${dayForExercise(state.selectedExercise)}</span>` : `<span class="warn-text">ล็อกอยู่: ${lock.reason}</span>`);
+  const plan=currentCyclePlan();
+  const allowed=plan.allowedDays.length?plan.allowedDays.join(", "):"Rest / Locked";
+  const completedToday=completedDaysByDate(state.selectedDate);
+  setHtml("dayLockBox", `<b>Day Lock Control</b><br><span class="pill ${plan.code==='OPEN'?'ok':'warn'}">${allowed}</span><div class="small">${plan.reason}</div><div class="small">Completed: ${completedToday.join(", ")||"-"}</div>`);
 }
-function updateFormDerived(){
+function renderExerciseSelect(){
+  const sel=$("exerciseSelect"); if(!sel) return;
+  const current=state.selectedExercise || restoreRememberedExercise();
+  const rows=PROGRAM.map(p=>{
+    const st=exerciseOptionState(p[2]);
+    const disabled = st.completed ? "disabled" : "";
+    const tag = st.allowed ? "" : " 🔒";
+    return `<option value="${p[2]}" ${disabled} title="${st.reason}">${p[0]} - ${p[2]} (${st.done}/${st.target})${tag}</option>`;
+  }).join("");
+  sel.innerHTML=rows;
+  if(hasOption(sel,current)) sel.value=current;
+  else sel.value=nextIncompleteExercise(currentCyclePlan().allowedDays[0]||"Day 1");
+  state.selectedExercise=sel.value;
+}
+function renderWorkoutForm(){
+  const lock=lockByDateAndExercise();
+  const info=exInfo(state.selectedExercise);
+  setHtml("exerciseInfo", `<b>${state.selectedExercise}</b><br>${exerciseMediaHtml(actualExerciseName())}<div class="small">Planned: ${info.planned} • Progress: ${lock.done}/${lock.target} • ${lock.reason}</div>`);
+  setText("saveGuard", lock.saveAllowed ? "พร้อมบันทึก" : lock.reason);
+  const btn=$("saveSetBtn"); if(btn) btn.disabled=!lock.saveAllowed;
+  renderAlternativePicker();
   ensureLogDefaults();
-  const m=metaByExercise();
-  if($("date") && $("date").value!==state.selectedDate) $("date").value=state.selectedDate;
-  const ds = selectedDateStatus();
-  const dateStatusEl = $("dateStatus");
-  if(dateStatusEl){ dateStatusEl.className = `msg ${ds.cls}`; dateStatusEl.innerHTML = `<b>${ds.text}</b><br><span class="small">${ds.detail}</span>`; }
-  setHtml("altStatus", state.selectedAlt ? `ใช้ท่าทดแทน: <b>${state.selectedAlt.name}</b><br><span class="small">นับ progress เข้า ${state.selectedExercise}</span>` : "ยังไม่ได้เลือกท่าทดแทน");
-  setHtml("persistentSubStatus", state.selectedAlt ? `Current substitute: ${state.selectedAlt.name} → ${state.selectedExercise}` : "Persistent Alternative: ไม่มี");
-  setHtml("historyRemapBox", `History Remap: ใช้ plannedExercise เป็นตัวนับหลัก • Actual: ${actualExerciseName()}`);
-  setVal("week", autoWeek());
-  setVal("targetSets", targetSets());
-  setText("setNo", Math.min(completedForExercise(state.selectedExercise)+1, targetSets(state.selectedExercise)));
-  setText("targetShow", targetSets());
-  ensureLogDefaults();
-  const prog=currentExerciseProgress();
-  const lock=calcDayLock();
-  const saveBtn=$("saveBtn"); if(saveBtn) saveBtn.disabled = state.saving || lock.status!=="OPEN" || prog.done>=prog.target;
-  setHtml("setStatus", prog.done>=prog.target ? `<span class="ok-text">ท่านี้ครบแล้ว ${prog.done}/${prog.target}</span>` : `พร้อมบันทึก: <b>${actualExerciseName()}</b> Set ${prog.done+1}/${prog.target}`);
-  setHtml("calendarSyncStatus", `Calendar Sync: Today ${dateLabelTH(todayTH())} • Selected ${dateLabelTH(state.selectedDate)}`);
-  setHtml("cycleDebug", `Cycle: Week ${autoWeek()} • Allowed ${calcDayLock().allowedDays?.join(", ") || "-"}`);
-  renderPRAndSuggestion();
 }
-function actualExerciseName(){ return state.selectedAlt?.name || state.selectedExercise; }
-function renderPRAndSuggestion(){
-  const ex=state.selectedExercise;
-  const rows=state.logs.filter(x=>plannedOf(x)===ex).sort(byCreated);
-  const best=rows.reduce((b,x)=>((x.weightKg||0)*(x.reps||0)>(b.weightKg||0)*(b.reps||0)?x:b),{});
-  setHtml("prStatus", rows.length ? `สถิติ ${ex}: สูงสุด ${best.weightKg||0} kg × ${best.reps||0}` : `ยังไม่มีสถิติของ ${ex}`);
-  const last=rows[rows.length-1];
-  setHtml("weekSuggest", last ? `ล่าสุด: ${last.weightKg} kg × ${last.reps} reps (RIR ${last.rir ?? "-"})` : `ยังไม่มีข้อมูลสัปดาห์ก่อนของท่านี้`);
-  let next="-";
-  if(last){ const reps=Number(last.reps||0), w=Number(last.weightKg||0); next = reps>=12 ? `${(w+2.5).toFixed(1)} kg` : `${w.toFixed(1)} kg / เพิ่ม reps`; }
-  setHtml("nextWeekBox", `น้ำหนักแนะนำครั้งถัดไป: <b>${next}</b>`);
-  setHtml("doubleProgressionBox", `Double Progression: ใช้เฉพาะข้อมูลของ <b>${ex}</b>`);
-  setHtml("sfrBox", `SFR / Machine Bias: ${state.selectedAlt?"ใช้ท่าแทน "+state.selectedAlt.name:"Auto"}`);
+function actualExerciseName(){ return state.selectedAlternative || state.selectedExercise; }
+function renderAlternativePicker(){
+  const box=$("alternativeBox"); if(!box) return;
+  const tiers=tieredAlternativesForExercise(state.selectedExercise);
+  const section=(label,items,cls)=>items?.length?`<div class="altTier"><b>${label}</b>${items.map(a=>`<button class="altBtn ${state.selectedAlternative===a?'active':''} ${cls}" data-alt="${a}">${a}<br><span>${exerciseMediaHtml(a)}</span></button>`).join("")}</div>`:"";
+  box.innerHTML=`<div class="small">เลือกท่าทดแทน</div>${section("Tier A • ใกล้เคียงมาก",tiers.A,"tierA")}${section("Tier B • ใกล้เคียง",tiers.B,"tierB")}${section("Tier C • แก้ขัด",tiers.C,"tierC")}${(!tiers.A.length&&!tiers.B.length&&!tiers.C.length)?'<div class="small">ไม่มีท่าแทน</div>':''}`;
+  box.querySelectorAll(".altBtn").forEach(b=>b.addEventListener("click",()=>{ state.selectedAlternative = state.selectedAlternative===b.dataset.alt ? "" : b.dataset.alt; renderWorkoutForm(); }));
 }
-function renderLogSummary(){
-  const arr=logsOnDate(state.selectedDate), sets=arr.length, vol=volumeForLogs(arr);
-  const exs=[...new Set(arr.map(plannedOf))];
-  setHtml("v5LogSummary", `วันที่ ${dateLabelTH(state.selectedDate)}<br>Sets: <b>${sets}</b> • Volume: <b>${vol.toFixed(0)} kg</b><br>Exercises: ${exs.length?exs.join(", "):"-"}`);
+function renderRecentLog(){
+  const arr=logsSorted().filter(x=>x.date===state.selectedDate).slice(-8).reverse();
+  setHtml("recentLog", arr.length?arr.map(x=>`<div class="logItem"><b>${plannedOf(x)}</b> ${actualOf(x)!==plannedOf(x)?`<span class="small">→ ${actualOf(x)}</span>`:""}<br>${x.weightKg}kg × ${x.reps} • RIR ${x.rir}<div class="row"><button class="miniBtn" data-edit="${x.id}">แก้</button><button class="miniBtn danger" data-del="${x.id}">ลบ</button></div></div>`).join(""):"<div class='small'>ยังไม่มี Log วันนี้</div>");
+  document.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>editLog(b.dataset.edit)));
+  document.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>deleteLog(b.dataset.del)));
 }
-function renderRecent(){
-  const host=$("recent"); if(!host) return;
-  const arr=[...state.logs].sort((a,b)=>(b.createdMs||0)-(a.createdMs||0)).slice(0,12);
-  if(!arr.length){ host.innerHTML="<div class='msg info'>ยังไม่มี Log</div>"; return; }
-  host.innerHTML=arr.map(x=>`<div class="recent-card"><b>${dateLabelTH(x.date)} • ${x.exercise}</b><br><span class="small">Planned: ${plannedOf(x)} • ${x.weightKg} kg × ${x.reps} • RIR ${x.rir ?? "-"}</span><br><span class="small">${x.note||""}</span><div class="recent-actions"><button class="secondary edit-log" data-id="${x.id}" type="button">แก้ไข</button><button class="orange del-log" data-id="${x.id}" type="button">ลบ</button></div></div>`).join("");
-  host.querySelectorAll(".edit-log").forEach(btn=>btn.addEventListener("click",()=>loadEdit(btn.dataset.id)));
-  host.querySelectorAll(".del-log").forEach(btn=>btn.addEventListener("click",()=>deleteLog(btn.dataset.id)));
-}
-
-function logsForPlanned(ex){ const planned=canonicalExercise(ex); return state.logs.filter(x=>plannedOf(x)===planned).sort(byCreated); }
-function todayLogs(){ return logsOnDate(state.selectedDate); }
-function muscleBalanceHtml(){
-  const g=groupByMuscle(); const entries=Object.entries(g).sort((a,b)=>b[1]-a[1]);
-  if(!entries.length) return "ยังไม่มีข้อมูล Muscle Volume";
-  const total=entries.reduce((s,e)=>s+e[1],0)||1;
-  return entries.map(([m,v])=>`<span class="pill">${m}: ${v.toFixed(0)} kg (${Math.round(v/total*100)}%)</span>`).join(" ");
-}
-function plateauForExercise(ex=state.selectedExercise){
-  const rows=logsForPlanned(ex);
-  if(rows.length < 3) return {status:"รอข้อมูล", detail:`ต้องมีอย่างน้อย 3 sets ของ ${canonicalExercise(ex)}`, trend:"-"};
-  const last=rows.slice(-3).map(x=>(Number(x.weightKg)||0)*(Number(x.reps)||0));
-  const diff=last.at(-1)-last[0];
-  if(diff > 0) return {status:"Progress", detail:`แนวโน้มดีขึ้น +${diff.toFixed(0)} kg-volume จาก 3 set ล่าสุด`, trend:"up"};
-  if(diff === 0) return {status:"Stable", detail:`ผลงานคงที่ใน 3 set ล่าสุด`, trend:"flat"};
-  return {status:"Watch", detail:`ผลงานลดลง ${diff.toFixed(0)} kg-volume ใน 3 set ล่าสุด`, trend:"down"};
-}
-function aiDailySummary(){
-  const arr=todayLogs();
-  if(!arr.length) return "ยังไม่มีข้อมูลวันนี้";
-  const vol=volumeForLogs(arr).toFixed(0);
-  const exs=[...new Set(arr.map(plannedOf))];
-  const completed=completedDaysByDate(state.selectedDate);
-  const p=plateauForExercise(state.selectedExercise);
-  return `วันที่ ${dateLabelTH(state.selectedDate)} • ${arr.length} sets • Volume ${vol} kg<br>ท่าที่เล่น: ${exs.join(", ")}<br>Completed: ${completed.join(", ")||"-"}<br>Plateau: ${p.status} — ${p.detail}`;
-}
-function renderExerciseDatabase(){
-  const host=$("v430ExerciseDb"); if(!host) return;
-  const selected=state.selectedExercise || PROGRAM[0][2];
-  const info=exInfo(selected);
-  const rows=getExerciseDbRows();
-  const selectedCard = `<div><b>${info.name}</b> ${info.isAlternative?`<span class="pill">Alternative</span>`:`<span class="pill">Main</span>`}<br>Day: ${info.day} • Muscle: ${info.primaryMuscle} • Target: ${info.target} sets • Reps: ${info.reps}<br>${exerciseMediaHtml(info.name)}</div>`;
-  const mainRows = rows.filter(r=>!r.isAlternative).map(r=>`<div class="exercise-progress-item"><b>${r.day}</b> - ${r.name}<span class="pill">${r.primaryMuscle}</span><span class="small">${r.target} sets • ${r.reps}</span></div>`).join("");
-  const altRows = rows.filter(r=>r.isAlternative).slice(0,60).map(r=>`<div class="exercise-progress-item"><b>${r.name}</b><span class="pill">แทน ${r.planned}</span><span class="small">${r.primaryMuscle}</span></div>`).join("");
-  host.innerHTML = `${selectedCard}<hr><div class="small">Exercise DB loaded: <b>${rows.length}</b> records • Main ${rows.filter(r=>!r.isAlternative).length} • Alternative ${rows.filter(r=>r.isAlternative).length}</div><h4>Program Exercises</h4>${mainRows || "ไม่มีข้อมูล"}<h4>Alternative Library</h4>${altRows || "ไม่มีข้อมูลท่าทดแทน"}`;
-}
-
 function renderDashboard(){
-  setText("kVol", volumeForLogs(state.logs).toFixed(0)); setText("kSets", state.logs.length); setText("kUsers", state.user?1:0); setText("kWeek", autoWeek());
-  drawSimpleChart("weekChart", groupByWeek()); drawSimpleChart("exChart", groupByExercise()); drawSimpleChart("v5MuscleChart", groupByMuscle()); drawSimpleChart("v5RecoveryChart", groupByDateSets());
-  setHtml("v5MuscleInsight", muscleBalanceHtml()); setHtml("muscleStatus", muscleBalanceHtml());
-  const prs={}; state.logs.forEach(x=>{ const ex=plannedOf(x); const score=(x.weightKg||0)*(x.reps||0); if(!prs[ex] || score>prs[ex].score) prs[ex]={score,x}; });
-  setHtml("v5PRBoard", Object.values(prs).slice(0,8).map(r=>`<span class="pill">${plannedOf(r.x)}: ${r.x.weightKg}×${r.x.reps}</span>`).join(" ")||"รอข้อมูล PR");
+  const today=dateSummary(state.selectedDate); const weekLogs=state.logs.filter(x=>Number(x.week)===autoWeek());
+  const vol=volumeForLogs(weekLogs); const sets=weekLogs.length;
+  setHtml("dashboardBox", `<div class="grid2"><div class="card"><b>Daily Summary</b><h2>${today.sets}</h2><div>Sets วันนี้</div><div class="small">Completed: ${today.completed.join(", ")||"-"}</div></div><div class="card"><b>Weekly Volume</b><h2>${Math.round(vol).toLocaleString()}</h2><div>kg×reps</div><div class="small">Sets: ${sets}</div></div></div>`);
+  renderMuscleBalance(weekLogs);
 }
-function groupByWeek(){ const g={}; state.logs.forEach(x=>{ const w=x.week||1; g["W"+w]=(g["W"+w]||0)+1; }); return g; }
-function groupByExercise(){ const g={}; state.logs.forEach(x=>{ const k=plannedOf(x); g[k]=(g[k]||0)+(x.weightKg||0)*(x.reps||0); }); return g; }
-function groupByMuscle(){ const g={}; state.logs.forEach(x=>{ const m=exInfo(plannedOf(x)).primaryMuscle || "Other"; g[m]=(g[m]||0)+(Number(x.weightKg)||0)*(Number(x.reps)||0); }); return g; }
-function groupByDateSets(){ const g={}; state.logs.forEach(x=>{ g[x.date]=(g[x.date]||0)+1; }); return g; }
-function drawSimpleChart(id,data){ const c=$(id); if(!c?.getContext) return; const ctx=c.getContext("2d"), w=c.width, h=c.height; ctx.clearRect(0,0,w,h); const entries=Object.entries(data).slice(-10); if(!entries.length){ ctx.fillStyle="#fff"; ctx.fillText("No data",20,30); return; } const max=Math.max(...entries.map(e=>e[1]),1); entries.forEach(([k,v],i)=>{ const bw=(w-40)/entries.length; const bh=(h-50)*(v/max); ctx.fillRect(20+i*bw,h-25-bh,bw*.7,bh); ctx.fillText(String(k).slice(0,10),20+i*bw,h-8); }); }
-function renderCoach(){
-  const latest=state.logs[state.logs.length-1]; const sleep=Number($("sleepHours")?.value||7), soreness=Number($("soreness")?.value||2), stress=Number($("stress")?.value||2);
-  const recovery=Math.max(0,Math.min(100,70+(sleep-7)*8-(soreness-2)*8-(stress-2)*8)); const fatigue=100-recovery;
-  const today=todayLogs(); const p=plateauForExercise(state.selectedExercise);
-  setText("coachRecovery", Math.round(recovery)); setText("coachFatigue", Math.round(fatigue)); setText("coachProgress", p.status==='Progress'?"UP":(latest?"OK":"-")); setText("coachDeload", fatigue>55?"WATCH":"NO");
-  setText("coachRecoveryText", recovery>=65?"พร้อมฝึก":"ลด volume หรือใช้ machine stable"); setText("coachFatigueText", fatigue>55?"เสี่ยงล้า":"ปกติ"); setText("coachProgressText", p.detail); setText("coachDeloadText", fatigue>65?"พิจารณา deload":"ยังไม่จำเป็น");
-  const muscleHtml = muscleBalanceHtml();
-  setHtml("coachAdvice", `Recovery ${Math.round(recovery)} / Fatigue ${Math.round(fatigue)}<br>${today.length?`วันนี้มี ${today.length} sets • Volume ${volumeForLogs(today).toFixed(0)} kg`:"ยังไม่มี log วันนี้"}<br>${p.status}: ${p.detail}<br><span class="small">Muscle Balance: ${muscleHtml}</span>`);
-  setHtml("plateauBox", `<b>${p.status}</b><br>${p.detail}<br><span class="small">Exercise: ${canonicalExercise(state.selectedExercise)}</span>`);
-  const effective=today.filter(x=>Number(x.rir)<=2).length;
-  setText("effectiveRepsScore", effective); setText("sfrScore", recovery>=65?"Good":"Moderate"); setText("volumeZone", today.length<8?"Low":(today.length>22?"High":"OK"));
-  setHtml("v430AiSummary", aiDailySummary());
-  setHtml("v430DeloadBox", fatigue>65 ? "Fatigue สูง แนะนำลด volume 20–30%" : "ยังไม่จำเป็นต้อง deload");
-}
-function renderProgram(){ const host=$("programList"); if(host) host.innerHTML=DAY_ORDER.map(d=>`<h3>${d}</h3>`+dayExercises(d).map(p=>`<div class="exercise-progress-item">${p[2]} • ${p[3]} sets • ${p[4]}</div>`).join("")).join(""); }
-function renderGuide(){ const host=$("guideList"); if(host) host.innerHTML=PROGRAM.map(p=>`<div class="exercise-progress-item"><b>${p[2]}</b><br><span class="small">${p[0]} • ${p[4]} reps • RIR 1–2</span></div>`).join(""); }
-function calendarDateClass(date){
-  const arr=logsOnDate(date);
-  if(!arr.length) return "";
-  const completed=completedDaysByDate(date);
-  if(completed.length) return "completed";
-  return "partial";
+function renderMuscleBalance(arr){
+  const by={}; arr.forEach(x=>{ const m=exInfo(plannedOf(x)).primaryMuscle; by[m]=(by[m]||0)+1; });
+  const html=Object.entries(by).sort((a,b)=>b[1]-a[1]).map(([m,v])=>`<div class="bar"><span>${m}</span><b>${v} sets</b></div>`).join("") || "<div class='small'>ยังไม่มีข้อมูล</div>";
+  setHtml("muscleBalance",html);
 }
 function renderCalendar(){
-  if(!state.calendarMonth) state.calendarMonth = state.selectedDate.slice(0,7);
-  const [yy,mm]=state.calendarMonth.split("-").map(Number);
-  const first=new Date(yy,mm-1,1);
-  const last=new Date(yy,mm,0);
-  setText("monthTitle", new Intl.DateTimeFormat("th-TH",{month:"long",year:"numeric",timeZone:"Asia/Bangkok"}).format(first));
-  const grid=$("calGrid");
-  if(grid){
-    const heads=["อา","จ","อ","พ","พฤ","ศ","ส"].map(h=>`<div class="calHead">${h}</div>`).join("");
-    let cells="";
-    for(let i=0;i<first.getDay();i++) cells += `<div class="calDay empty"></div>`;
-    for(let d=1; d<=last.getDate(); d++){
-      const key=`${yy}-${String(mm).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-      const arr=logsOnDate(key);
-      const completed=completedDaysByDate(key);
-      const cls=["calDay", key===state.selectedDate?"sel":"", key===todayTH()?"today":"", calendarDateClass(key)].join(" ");
-      const tag=arr.length?`<span class="calTag ${completed.length?"completed":"partial"}">${completed.length?completed.join(", "):arr.length+" sets"}</span>`:"";
-      cells += `<div class="${cls}" data-date="${key}"><b>${d}</b><br>${tag}</div>`;
-    }
-    grid.innerHTML=heads+cells;
-    grid.querySelectorAll(".calDay[data-date]").forEach(el=>el.addEventListener("click",()=>{
-      state.selectedDate=el.dataset.date;
-      state.calendarMonth=state.selectedDate.slice(0,7);
-      setVal("date",state.selectedDate);
-      const allowed=allowedTrainingDaysForDate(state.selectedDate);
-      const d=allowed[0] || dayForExercise(state.selectedExercise);
-      const next=nextIncompleteExercise(d,state.selectedDate);
-      if(next) state.selectedExercise=next;
-      status("เลือกวันที่ "+dateLabelTH(state.selectedDate),"ok");
-      renderAll();
-    }));
-  }
-  const arr=logsOnDate(state.selectedDate);
-  const completed=completedDaysByDate(state.selectedDate);
-  setText("dayTitle", `Daily Summary - ${dateLabelTH(state.selectedDate)}`);
-  setHtml("daySummary", `Sets: ${arr.length} • Completed: ${completed.join(", ")||"-"}`);
-  const vol=volumeForLogs(arr);
-  const exs=[...new Set(arr.map(plannedOf))];
-  setHtml("v5DayInsight", arr.length ? `Volume: <b>${vol.toFixed(0)} kg</b><br>Exercises: ${exs.join(", ")}<br>Completed: ${completed.join(", ")||"-"}` : "ยังไม่มีข้อมูลของวันนี้");
-  setHtml("calendarSelectedDayDetail", arr.length ? arr.slice(-8).reverse().map(x=>`<div class="small">${x.exercise}: ${x.weightKg} kg × ${x.reps} (${plannedOf(x)})</div>`).join("") : "");
-  const btn=$("calendarGoLogBtn");
-  if(btn){ btn.disabled=false; btn.classList.remove("disabled"); btn.onclick=()=>{ show("log"); }; }
+  const month=state.calendarMonth || state.selectedDate.slice(0,7);
+  const [y,m]=month.split("-").map(Number); const first=new Date(y,m-1,1); const last=new Date(y,m,0); const start=first.getDay();
+  let cells=""; for(let i=0;i<start;i++) cells+="<div></div>";
+  for(let d=1;d<=last.getDate();d++){ const key=`${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`; const sum=dateSummary(key); const cls=sum.completed.length?"done":(dayDiff(key,todayTH())<0 && !sum.sets?"miss":(key===state.selectedDate?"selected":"")); cells+=`<button class="calDay ${cls}" data-date="${key}">${d}<small>${sum.sets?sum.sets+" sets":""}</small></button>`; }
+  setHtml("calendarGrid",cells);
+  document.querySelectorAll(".calDay").forEach(b=>b.addEventListener("click",()=>{ state.selectedDate=b.dataset.date; state.selectedExercise=restoreRememberedExercise(state.selectedDate); renderAll(); }));
+  const sum=dateSummary(state.selectedDate);
+  setHtml("calendarInsight", `<b>${dateLabelTH(state.selectedDate)}</b><br>Sets: ${sum.sets} • Volume: ${Math.round(sum.volume).toLocaleString()}<br>Completed: ${sum.completed.join(", ")||"-"}<br>Exercises: ${sum.exercises.join(", ")||"-"}`);
 }
-function renderBackup(){ const first=logsSorted()[0]?.date||"-", last=logsSorted().at(-1)?.date||"-"; setText("backupKpiSets", state.logs.length); setText("backupKpiVolume", volumeForLogs(state.logs).toFixed(0)); setText("backupKpiFirst", first); setText("backupKpiLast", last); setHtml("backupSummaryBox", `Backup ready • ${state.logs.length} logs • ${VERSION}`); }
-function renderMediaPanel(){
-  const ex=actualExerciseName();
-  setText("mediaTitle", `Media Reference: ${ex}`);
-  setHtml("mediaCue", `Cue: คุมฟอร์ม ไม่ฝืนเจ็บ • Search: ${ex} proper form<br>${exerciseMediaHtml(ex)}`);
+function renderExerciseDatabase(){
+  const q=String($("exerciseSearch")?.value||"").toLowerCase();
+  const rows=getExerciseDbRows().filter(x=>!q || x.name.toLowerCase().includes(q) || x.primaryMuscle.toLowerCase().includes(q) || x.planned.toLowerCase().includes(q));
+  setHtml("exerciseDb", rows.slice(0,80).map(x=>`<div class="dbRow"><b>${x.name}</b> ${x.isAlternative?`<span class="pill warn">Alternative</span>`:`<span class="pill ok">Program</span>`}<br>${exerciseMediaHtml(x.name)}<div class="small">Day: ${x.day} • Planned: ${x.planned}</div></div>`).join("") || "<div class='small'>ไม่พบข้อมูล</div>");
 }
-
-function autoWeek(){
-  const dates=workoutDates(); if(!dates.length) return 1;
-  const day5Dates=dates.filter(d=>dayCompleteOnDate("Day 5",d));
-  return day5Dates.length + 1;
+function renderCoach(){
+  const arr=logsByDate(state.selectedDate); const last=arr[arr.length-1]; const week=state.logs.filter(x=>Number(x.week)===autoWeek());
+  const score=Math.max(30, Math.min(100, 80 - (Number(last?.soreness||2)*5) - (Number(last?.stress||2)*3) + (Number(last?.sleepHours||7)-7)*5));
+  const plateau=detectPlateau();
+  const muscles={}; week.forEach(x=>{ const m=exInfo(plannedOf(x)).primaryMuscle; muscles[m]=(muscles[m]||0)+1; });
+  setHtml("coachBox", `<div class="card"><b>AI Daily Coach Summary</b><h2>${Math.round(score)}</h2><div>Recovery Score</div><div class="small">${arr.length?"วันนี้มีข้อมูล log แล้ว":"ยังไม่มี log วันนี้"}</div><hr><b>Muscle Volume Balance</b>${Object.entries(muscles).map(([m,v])=>`<div>${m}: ${v} sets</div>`).join("")||"<div class='small'>ยังไม่มีข้อมูล</div>"}<hr><b>Plateau Detection v2</b><div>${plateau}</div></div>`);
 }
+function renderPlateau(){ setHtml("plateauBox", `<b>Plateau Detection v2</b><br>${detectPlateau()}`); }
+function detectPlateau(){
+  const groups={}; state.logs.forEach(x=>{ const k=plannedOf(x); (groups[k] ||= []).push(x); });
+  const notes=[]; Object.entries(groups).forEach(([ex,arr])=>{ if(arr.length<4) return; const sorted=arr.sort((a,b)=>(a.date||"").localeCompare(b.date||"")); const recent=sorted.slice(-4); const maxes=recent.map(x=>Number(x.weightKg)||0); if(Math.max(...maxes)-Math.min(...maxes)<=0) notes.push(`${ex}: น้ำหนักนิ่ง ${maxes[0]}kg`); });
+  return notes.length?notes.join("<br>"):"ยังไม่พบ plateau ชัดเจน";
+}
+function renderSettings(){
+  setHtml("settingsBox", `<div class="card"><button id="enableNoti" class="primary">🔔 Enable Notifications</button><label><input id="autoRest" type="checkbox" ${state.autoRest?"checked":""}/> Auto Start Rest Timer</label><label><input id="soundEnabled" type="checkbox" ${state.soundEnabled?"checked":""}/> Sound</label><label><input id="vibrateEnabled" type="checkbox" ${state.vibrateEnabled?"checked":""}/> Vibrate</label><hr><button id="runQaBtn">Run QA</button><pre id="qaOutput"></pre></div>`);
+  $("enableNoti")?.addEventListener("click",enableNotifications);
+  ["autoRest","soundEnabled","vibrateEnabled"].forEach(id=>$(id)?.addEventListener("change",e=>{ state[id]=e.target.checked; localStorage.setItem(id,e.target.checked?"1":"0"); }));
+  $("runQaBtn")?.addEventListener("click",()=>setText("qaOutput",JSON.stringify(qaExerciseCoverage(),null,2)));
+}
+function autoWeek(){ const start=new Date(new Date().getFullYear(),0,1); return Math.ceil((((parseKey(state.selectedDate)-start)/86400000)+start.getDay()+1)/7); }
+function hydrateInputsFromState(){ ensureLogDefaults(); }
 async function saveSet(){
-  ensureLogDefaults();
-  const lock=calcDayLock(); const prog=currentExerciseProgress();
-  if(lock.status!=="OPEN"){ status("ยังถูก Day Lock: "+lock.reason,"err"); return; }
-  if(prog.done>=prog.target){ status("ท่านี้ครบแล้ว เลือกท่าอื่น","warn"); return; }
-  if(!state.user){ status("กรุณา Login ก่อน","err"); return; }
-  const w=Number($("weight")?.value||0), reps=Number($("reps")?.value||0), rir=Number($("rir")?.value||2);
-  if(!w || !reps){ status("กรอก Weight/Reps ก่อน","err"); return; }
-  const wasEditing=Boolean(state.editingId);
-  const shouldAutoRest=!wasEditing;
-  if(shouldAutoRest) requestNotifyPermission();
-  state.saving=true; updateFormDerived(); status("กำลังบันทึกเซต...","warn",0);
-  const nowMs=localNowMs();
-  const payload={date:state.selectedDate, week:autoWeek(), day:dayForExercise(state.selectedExercise), plannedExercise:state.selectedExercise, exercise:actualExerciseName(), weightKg:w, reps, rir, tempo:$("tempo")?.value||"", repQuality:$("repQuality")?.value||"", biasMode:$("biasMode")?.value||"", note:$("note")?.value||"", targetSets:targetSets(), sleepHours:Number($("sleepHours")?.value||7), soreness:Number($("soreness")?.value||2), stress:Number($("stress")?.value||2), version:VERSION, updatedAt:serverTimestamp()};
-  const localPayload=normalizeLog({...payload, createdMs:nowMs, updatedMs:nowMs}, wasEditing ? state.editingId : tempId());
-  localPayload.__pending=true;
+  const lock=lockByDateAndExercise(); if(!lock.saveAllowed){ status(lock.reason,"bad",2600); return; }
+  const w=Number($("weightKg")?.value||0), reps=Number($("reps")?.value||0); if(!reps){ status("กรอก reps ก่อน","bad"); return; }
+  const payload={date:state.selectedDate, week:autoWeek(), day:dayForExercise(state.selectedExercise), plannedExercise:state.selectedExercise, exercise:actualExerciseName(), weightKg:w, reps, rir:Number($("rir")?.value||2), tempo:$("tempo")?.value||"", repQuality:$("repQuality")?.value||"", biasMode:$("biasMode")?.value||"", note:$("note")?.value||"", targetSets:targetSets(), sleepHours:Number($("sleepHours")?.value||7), soreness:Number($("soreness")?.value||2), stress:Number($("stress")?.value||2), version:VERSION, updatedAt:serverTimestamp()};
+  const local=normalizeLog({...payload, id:state.editId||tempId(), createdMs:localNowMs()});
+  if(state.editId){ state.logs=state.logs.map(x=>x.id===state.editId?local:x); }
+  else state.logs=[...state.logs,local];
+  renderAll(); status("บันทึกแล้ว • sync กำลังตามหลัง","ok");
   try{
-    if(wasEditing){
-      const idx=state.logs.findIndex(x=>x.id===state.editingId);
-      if(idx>=0) state.logs[idx]={...state.logs[idx], ...localPayload};
-      state.pendingWrites.set(state.editingId, {...localPayload, __removeOnSync:true});
-      renderAll();
-      await updateDoc(doc(db, collectionPath(), state.editingId), payload);
-      state.pendingWrites.delete(state.editingId);
-      state.editingId=null;
-    } else {
-      state.logs.push(localPayload);
-      state.pendingWrites.set(localPayload.id, localPayload);
-      if(completedForExercise(state.selectedExercise,state.selectedDate) < targetSets(state.selectedExercise)) rememberSessionExercise(state.selectedExercise,state.selectedDate);
-      else clearSessionExercise(state.selectedDate);
-      ["weight","reps","note"].forEach(id=>setVal(id,""));
-      renderAll();
-      const ref=await addDoc(collection(db, collectionPath()), {...payload, createdAt:serverTimestamp()});
-      state.pendingWrites.delete(localPayload.id);
-      // Keep optimistic UI until Firestore snapshot arrives; if slow, replace temp id to avoid duplicates in edit/delete.
-      const temp=state.logs.find(x=>x.id===localPayload.id);
-      if(temp) temp.id=ref.id;
-    }
-    if(shouldAutoRest && typeof startTimer === "function"){
-      startTimer();
-      status("บันทึกสำเร็จ • เริ่มจับเวลาพักแล้ว","ok");
-    }else{
-      status("บันทึกสำเร็จ","ok");
-    }
-  }catch(e){
-    console.error(e);
-    if(!wasEditing){ state.logs=state.logs.filter(x=>x.id!==localPayload.id); state.pendingWrites.delete(localPayload.id); }
-    status("บันทึกไม่สำเร็จ: "+e.message,"err",0);
-  }
-  finally{ state.saving=false; renderAll(); }
+    if(state.user){ if(state.editId){ await updateDoc(doc(db,collectionPath(),state.editId),payload); } else { await addDoc(collection(db,collectionPath()), {...payload, createdAt:serverTimestamp(), createdMs:local.createdMs}); } }
+    status("Sync สำเร็จ","ok");
+  }catch(e){ console.error(e); status("Sync ไม่สำเร็จ แต่ข้อมูลแสดงในเครื่องแล้ว","bad",3000); }
+  state.editId=null; state.selectedAlternative=""; saveRememberedExercise(); if(state.autoRest && completedForExercise(state.selectedExercise)<targetSets(state.selectedExercise)) startRestTimer(restSeconds());
+  ensureLogDefaults({force:false}); renderAll();
 }
-function loadEdit(id){ const x=state.logs.find(l=>l.id===id); if(!x) return; state.editingId=id; state.selectedDate=x.date; state.selectedExercise=plannedOf(x); state.selectedAlt=x.exercise!==plannedOf(x)?{name:x.exercise, original:plannedOf(x)}:null; setVal("weight",x.weightKg); setVal("reps",x.reps); setVal("rir",x.rir ?? 2); setVal("tempo",x.tempo || "2-0-1"); setVal("repQuality",x.repQuality || "good"); setVal("biasMode",x.biasMode || "auto"); setVal("sleepHours",x.sleepHours ?? 7); setVal("soreness",x.soreness ?? 2); setVal("stress",x.stress ?? 2); setVal("note",x.note||""); ensureLogDefaults(); status("โหลด Log เพื่อแก้ไขแล้ว","warn"); show("log"); renderAll(); }
-async function deleteLog(id){ if(!confirm("ลบ Log นี้?")) return; try{ await deleteDoc(doc(db, collectionPath(), id)); status("ลบแล้ว","ok"); }catch(e){ status("ลบไม่สำเร็จ: "+e.message,"err",0); } }
-function resetForm(){ state.editingId=null; state.selectedAlt=null; ["weight","reps","note"].forEach(id=>setVal(id,"")); setVal("rir",2); setVal("tempo","2-0-1"); setVal("repQuality","good"); setVal("biasMode","auto"); setVal("restMode","auto"); setVal("sleepHours",7); setVal("soreness",2); setVal("stress",2); ensureLogDefaults(); renderAll(); status("Reset แล้ว","ok"); }
-
-function show(page){ document.querySelectorAll(".page").forEach(p=>p.classList.remove("active")); $(page)?.classList.add("active"); document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active", b.dataset.page===page)); state.page=page; status("เปิดหน้า "+page,"ok",900); renderAll(); }
-window.show=show;
-function bind(){
-  document.querySelectorAll(".tab[data-page]").forEach(b=>b.addEventListener("click",()=>show(b.dataset.page)));
-  $("loginBtn")?.addEventListener("click",()=>signInWithPopup(auth,new GoogleAuthProvider()).catch(e=>status(e.message,"err",0)));
+function editLog(id){ const x=state.logs.find(l=>l.id===id); if(!x) return; state.editId=id; state.selectedDate=x.date; state.selectedExercise=plannedOf(x); state.selectedAlternative=actualOf(x)!==plannedOf(x)?actualOf(x):""; setVal("weightKg",x.weightKg); setVal("reps",x.reps); setVal("rir",x.rir); setVal("note",x.note||""); renderAll(); status("แก้ไข log เดิม","warn"); }
+async function deleteLog(id){ state.logs=state.logs.filter(x=>x.id!==id); renderAll(); try{ if(state.user) await deleteDoc(doc(db,collectionPath(),id)); status("ลบแล้ว","ok"); }catch(e){ status("ลบในเครื่องแล้ว แต่ sync fail","bad"); } }
+function bindEvents(){
+  $("loginBtn")?.addEventListener("click",()=>signInWithPopup(auth,new GoogleAuthProvider()));
   $("logoutBtn")?.addEventListener("click",()=>signOut(auth));
-  $("saveTeamBtn")?.addEventListener("click",()=>{ state.teamId=$("teamId")?.value.trim()||"Beer-Team"; localStorage.setItem("teamId",state.teamId); subscribeLogs(); status("บันทึก Team ID แล้ว","ok"); });
-  $("date")?.addEventListener("change",e=>{
-    state.selectedDate=isValidDateKey(e.target.value)?e.target.value:todayTH();
-    state.calendarMonth=state.selectedDate.slice(0,7);
-    const allowed=allowedTrainingDaysForDate(state.selectedDate);
-    const d=allowed[0] || dayForExercise(state.selectedExercise);
-    state.selectedExercise=nextIncompleteExercise(d,state.selectedDate);
-    renderAll();
-  });
-  $("prevM")?.addEventListener("click",()=>{ const [y,m]=state.calendarMonth.split("-").map(Number); const dt=new Date(y,m-2,1); state.calendarMonth=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}`; renderCalendar(); });
-  $("nextM")?.addEventListener("click",()=>{ const [y,m]=state.calendarMonth.split("-").map(Number); const dt=new Date(y,m,1); state.calendarMonth=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}`; renderCalendar(); });
-  $("exercise")?.addEventListener("change",e=>{
-    if(!e.target.value) return;
-    state.selectedExercise=e.target.value;
-    state.selectedAlt=null;
-    rememberSessionExercise(state.selectedExercise,state.selectedDate);
-    status("เลือกท่า: "+state.selectedExercise,"ok",900);
-    // v5.5.4: do not call renderAll() here. Rebuilding the select during a mobile change event
-    // caused the dropdown to close, bounce, or look unclickable. Update only dependent panels.
-    renderAfterExerciseChange();
-  });
-  $("restMode")?.addEventListener("change",()=>{ ensureLogDefaults(); status("อัปเดตค่า Rest แล้ว","ok",900); });
-  $("saveBtn")?.addEventListener("click",saveSet); $("resetBtn")?.addEventListener("click",resetForm);
-  $("altBtn")?.addEventListener("click",openAltModal); $("closeAlt")?.addEventListener("click",()=>{$("altModal")?.classList.remove("show"); document.body.classList.remove("modal-open");});
-  $("clearAltBtn")?.addEventListener("click",()=>{ state.selectedAlt=null; renderAll(); });
-  $("imageBtn")?.addEventListener("click",()=>window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(actualExerciseName()+" proper form")}`,"_blank"));
-  $("videoBtn")?.addEventListener("click",()=>window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(actualExerciseName()+" proper form")}`,"_blank"));
-  $("startRest")?.addEventListener("click",startTimer); $("stopRest")?.addEventListener("click",stopTimer); $("add30")?.addEventListener("click",()=>{addRestTime(30);});
-  document.addEventListener("visibilitychange", renderTimer);
-  window.addEventListener("focus", renderTimer);
-  $("v430CopySummaryBtn")?.addEventListener("click",()=>{ navigator.clipboard?.writeText($("v430AiSummary")?.innerText||""); status("Copy Summary แล้ว","ok"); });
-  $("exportJsonBtn")?.addEventListener("click",exportJson); $("v5ExportJsonBtn")?.addEventListener("click",exportJson); $("exportCsvBtn")?.addEventListener("click",exportCsv); $("v5ExportCsvBtn")?.addEventListener("click",exportCsv);
+  $("selectedDate")?.addEventListener("change",e=>{ state.selectedDate=e.target.value||todayTH(); state.selectedExercise=restoreRememberedExercise(state.selectedDate); renderAll(); });
+  $("exerciseSelect")?.addEventListener("change",e=>{ state.selectedExercise=e.target.value; state.selectedAlternative=""; saveRememberedExercise(); renderAll(); });
+  $("saveSetBtn")?.addEventListener("click",saveSet);
+  $("startTimerBtn")?.addEventListener("click",()=>startRestTimer(restSeconds()));
+  $("stopTimerBtn")?.addEventListener("click",stopTimer);
+  $("add30Btn")?.addEventListener("click",()=>{ state.timerEndAt=(state.timerEndAt||Date.now())+30000; localStorage.setItem("timerEndAt",String(state.timerEndAt)); renderTimer(); });
+  $("exerciseSearch")?.addEventListener("input",renderExerciseDatabase);
+  initTabs();
 }
-function openAltModal(){
-  const host=$("altList"), modal=$("altModal"); if(!host || !modal) return;
-  const base=state.selectedExercise;
-  const tiered=tieredAlternativesForExercise(base);
-  const render=(q="")=>{
-    const query=String(q||"").toLowerCase();
-    const sections=[
-      ["A","ใกล้เคียงมาก", tiered.A||[], "ok"],
-      ["B","ใกล้เคียง / เครื่องทดแทน", tiered.B||[], "warn"],
-      ["C","แก้ขัด / กล้ามเนื้อหลักใกล้เคียง", tiered.C||[], "info"]
-    ].map(([tier,label,list,cls])=>{
-      const filtered=uniqueBy(list.filter(name=>name && name.toLowerCase().includes(query)), x=>x);
-      if(!filtered.length) return "";
-      return `<div class="alt-tier"><div class="small"><b>Tier ${tier}</b> • ${label}</div>` + filtered.map(name=>{
-        const info=exInfo(name);
-        return `<button class="secondary alt-choice" data-name="${name}" data-tier="${tier}" type="button"><b>${name}</b> <span class="pill ${cls}">Tier ${tier}</span><br><span class="small">แทน ${base} • Muscle ${info.primaryMuscle}</span><br>${exerciseMediaHtml(name)}</button>`;
-      }).join("") + `</div>`;
-    }).join("");
-    host.innerHTML=sections || "ไม่มีท่าแทน";
-    host.querySelectorAll(".alt-choice").forEach(b=>b.addEventListener("click",()=>{
-      state.selectedAlt={name:b.dataset.name, original:base, tier:b.dataset.tier};
-      modal.classList.remove("show"); document.body.classList.remove("modal-open");
-      renderAll(); status(`ใช้ท่าแทน Tier ${b.dataset.tier}: ${b.dataset.name}`,"ok");
-    }));
-  };
-  render("");
-  const search=$("altSearch"); if(search){ search.value=""; search.oninput=()=>render(search.value); }
-  modal.classList.add("show"); document.body.classList.add("modal-open");
+function subscribe(){
+  if(!state.user){ state.logs=(JSON.parse(localStorage.getItem("guestLogs")||"[]")||[]).map(normalizeLog); renderAll(); return; }
+  const q=query(collection(db,collectionPath()),orderBy("date","asc"));
+  onSnapshot(q,snap=>{ state.logs=snap.docs.map(d=>normalizeLog({id:d.id,...d.data()})); renderAll(); },err=>{ console.error(err); status("โหลด Firestore ไม่สำเร็จ","bad"); });
 }
+function persistGuest(){ if(!state.user) localStorage.setItem("guestLogs",JSON.stringify(state.logs)); }
+setInterval(persistGuest,2000);
+onAuthStateChanged(auth,user=>{ state.user=user; subscribe(); renderAll(); });
 
-function requestNotifyPermission(){
-  if(!("Notification" in window)) return Promise.resolve("unsupported");
-  if(Notification.permission === "granted") return Promise.resolve("granted");
-  if(Notification.permission === "denied") return Promise.resolve("denied");
-  return Notification.requestPermission();
-}
-function beep(kind="done"){
-  if(!state.soundEnabled) return;
-  try{
-    const Ctx=window.AudioContext||window.webkitAudioContext; if(!Ctx) return;
-    const ctx=new Ctx(); const osc=ctx.createOscillator(); const gain=ctx.createGain();
-    osc.type="sine"; osc.frequency.value=kind==="warn"?880:1175; gain.gain.value=.08;
-    osc.connect(gain); gain.connect(ctx.destination); osc.start(); setTimeout(()=>{osc.stop(); ctx.close();}, kind==="warn"?140:260);
-  }catch(e){}
-}
-function notifyRest(title, body, kind="done"){
-  if(state.vibrateEnabled && navigator.vibrate) navigator.vibrate(kind==="warn"?[120]:[120,80,120,80,120]);
-  beep(kind);
-  status(title+" • "+body, kind==="warn"?"warn":"ok", 3500);
-  if(state.notificationsEnabled && "Notification" in window && Notification.permission === "granted"){
-    try{ new Notification(title,{body, tag:"workout-rest-timer", renotify:true}); }catch(e){}
-  } else if(state.notificationsEnabled && "Notification" in window && Notification.permission === "default"){
-    status(title+" • กด Enable Notifications ในหน้า Setup เพื่อให้เด้งนอกเว็บ", "warn", 4000);
-  }
-}
-function startTimer(){
-  stopTimer(false);
-  const sec=Math.max(1, Number($("restSec")?.value||75));
-  state.timerDuration=sec;
-  state.timerEndAt=Date.now() + sec*1000;
-  state.notified10=false; state.notifiedDone=false;
-  requestNotifyPermission();
-  renderTimer();
-  state.timerId=setInterval(renderTimer,1000);
-}
-function stopTimer(clearEnd=true){
-  if(state.timerId) clearInterval(state.timerId);
-  state.timerId=null;
-  if(clearEnd){ state.timerEndAt=0; state.timerLeft=0; }
-  renderTimer();
-}
-function addRestTime(sec=30){
-  const now=Date.now();
-  if(state.timerEndAt && state.timerEndAt>now){ state.timerEndAt += sec*1000; }
-  else { state.timerEndAt = now + sec*1000; }
-  renderTimer();
-  if(!state.timerId) state.timerId=setInterval(renderTimer,1000);
-}
-function renderTimer(){
-  if(state.timerEndAt){
-    state.timerLeft=Math.max(0, Math.ceil((state.timerEndAt-Date.now())/1000));
-    if(state.notify10Enabled && !state.notified10 && state.timerLeft>0 && state.timerLeft<=10){
-      state.notified10=true;
-      notifyRest("⏳ เหลือ 10 วินาที", "เตรียมเล่นเซตถัดไป", "warn");
-    }
-    if(state.timerLeft<=0){
-      if(state.timerId) clearInterval(state.timerId);
-      state.timerId=null;
-      state.timerEndAt=0;
-      setText("timer","00:00");
-      if(!state.notifiedDone){ state.notifiedDone=true; notifyRest("🔔 Rest Complete", "พร้อมเล่นเซตถัดไปแล้ว", "done"); }
-      return;
-    }
-  }
-  const m=String(Math.floor((state.timerLeft||0)/60)).padStart(2,"0"), ss=String((state.timerLeft||0)%60).padStart(2,"0");
-  setText("timer",`${m}:${ss}`);
-}
-function exportJson(){ const data=JSON.stringify({version:VERSION, exportedAt:new Date().toISOString(), logs:state.logs},null,2); download("workout-pro-backup.json",data,"application/json"); status("Export JSON แล้ว","ok"); }
+document.addEventListener("DOMContentLoaded",()=>{ bindEvents(); hydrateInputsFromState(); subscribe(); renderAll(); });
+
+function download(name,text,type="text/plain"){ const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([text],{type})); a.download=name; a.click(); URL.revokeObjectURL(a.href); }
 function exportCsv(){ const cols=["date","week","day","plannedExercise","exercise","weightKg","reps","rir","note"]; const csv=[cols.join(","),...state.logs.map(x=>cols.map(c=>`"${String(x[c]??"").replaceAll('"','""')}"`).join(","))].join("\n"); download("workout-pro-log.csv",csv,"text/csv"); status("Export CSV แล้ว","ok"); }
-function download(name,text,type){ const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([text],{type})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
-
-onAuthStateChanged(auth,u=>{ state.user=u; if(u && !state.teamId) state.teamId="Beer-Team"; subscribeLogs(); renderAll(); });
-
-window.addEventListener("DOMContentLoaded",()=>{
-  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); ensureLogDefaults(); renderAll(); qaExerciseCoverage(); status("Workout PRO v5.5.7 พร้อมใช้งาน","ok",2500);
-});
+window.exportWorkoutCsv=exportCsv;
+window.workoutProDebug=()=>({state, qa:qaExerciseCoverage(), plan:currentCyclePlan(), progress:dayProgressDebug(dayForExercise(state.selectedExercise)), exerciseId:exerciseIdForName(state.selectedExercise)});
