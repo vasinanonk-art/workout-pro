@@ -1,0 +1,41 @@
+{
+  "version": "v6-dev.001",
+  "source": "Workout PRO curated seed",
+  "rules": {
+    "primaryKey": "exerciseId",
+    "nameIsNotPrimaryKey": true,
+    "backwardCompatible": true
+  },
+  "exercises": [
+    {
+      "exerciseId": "EX-PUSH-HORIZONTAL-BARBELL-BENCH-PRESS",
+      "name": "Barbell Bench Press",
+      "aliases": ["Bench Press", "Flat Bench Press", "BB Bench Press"],
+      "primaryMuscles": ["chest"],
+      "secondaryMuscles": ["front_delts", "triceps"],
+      "movementPattern": "horizontal_push",
+      "equipment": ["barbell", "bench"],
+      "difficulty": "intermediate"
+    },
+    {
+      "exerciseId": "EX-PULL-HORIZONTAL-CHEST-SUPPORTED-ROW",
+      "name": "Chest Supported Row",
+      "aliases": ["Chest Supported Machine Row", "Chest Supported T-Bar Row"],
+      "primaryMuscles": ["lats", "mid_back"],
+      "secondaryMuscles": ["rear_delts", "biceps"],
+      "movementPattern": "horizontal_pull",
+      "equipment": ["machine", "bench", "dumbbell"],
+      "difficulty": "intermediate"
+    },
+    {
+      "exerciseId": "EX-LEGS-UNILATERAL-WALKING-LUNGE",
+      "name": "Walking Lunge",
+      "aliases": ["DB Walking Lunge", "Dumbbell Walking Lunge"],
+      "primaryMuscles": ["quads", "glutes"],
+      "secondaryMuscles": ["adductors", "hamstrings", "calves"],
+      "movementPattern": "unilateral_knee_dominant",
+      "equipment": ["bodyweight", "dumbbell"],
+      "difficulty": "intermediate"
+    }
+  ]
+}
