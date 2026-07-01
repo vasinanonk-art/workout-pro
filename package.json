@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "validate:exercise": "node tools/validate-exercise-data.js",
-    "check:runtime": "node --check js/app.module.js && node --check js/exercise-identity.js",
+    "check:runtime": "node --check js/app.module.js && node --check js/exercise-identity.js && node --check js/alternative-engine.js",
     "qa": "npm run validate:exercise && npm run check:runtime"
   },
   "devDependencies": {}
