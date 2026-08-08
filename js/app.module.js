@@ -82,6 +82,17 @@ const ALT_TIER = {
 Object.entries(ALT_TIER).forEach(([exercise,tiers])=>{
   ALT[exercise] = uniqueBy([...(tiers.A||[]), ...(tiers.B||[]), ...(tiers.C||[]), ...(ALT[exercise]||[])].filter(Boolean), x=>x);
 });
+const PLANNED_BY_ALTERNATIVE=(()=>{
+  const candidates=new Map();
+  PROGRAM.forEach(([, ,planned])=>{
+    (ALT[planned]||[]).forEach(alternative=>{
+      if(!candidates.has(alternative)) candidates.set(alternative,[]);
+      const list=candidates.get(alternative);
+      if(!list.includes(planned)) list.push(planned);
+    });
+  });
+  return candidates;
+})();
 
 // v5.5.4: single exercise database / mapping source used by Alternative, Muscle Balance, Plateau, Coach and Recommendation.
 const EX_DB = (()=>{
@@ -220,18 +231,22 @@ function collectionPath(){ const team=safe(state.teamId); const user=state.user?
 function metaByExercise(ex=state.selectedExercise){ const planned=canonicalExercise(ex); return PROGRAM.find(p=>p[2]===planned) || PROGRAM[0]; }
 function targetSets(ex=state.selectedExercise){ return Number(metaByExercise(ex)[3]) || 1; }
 function restSeconds(ex=state.selectedExercise){ const mode = metaByExercise(ex)[6] || "standard"; return REST_SECONDS[mode] || 75; }
-function inferPlannedExerciseFromActual(actual, day){
-  const a = canonicalExercise(actual || "");
-  if(!a) return "";
-  if(PROGRAM.some(p=>p[2]===a && (!day || p[0]===day))) return a;
-  const sameDay = PROGRAM.find(p=>p[0]===day && (ALT[p[2]]||[]).map(canonicalExercise).includes(a));
-  if(sameDay) return sameDay[2];
-  const any = PROGRAM.find(p=>(ALT[p[2]]||[]).map(canonicalExercise).includes(a));
-  return any ? any[2] : a;
+function plannedCandidatesForAlternative(actual){ return [...(PLANNED_BY_ALTERNATIVE.get(String(actual||"").trim())||[])]; }
+function inferPlannedExerciseFromActual(actual,day){
+  const name=String(actual||"").trim();
+  if(!name) return "";
+  if(PROGRAM.some(p=>p[2]===name)) return name;
+  const candidates=plannedCandidatesForAlternative(name);
+  const sameDay=day ? candidates.filter(planned=>dayForExercise(planned)===day) : [];
+  if(sameDay.length===1) return sameDay[0];
+  if(sameDay.length>1) return name;
+  return candidates.length===1 ? candidates[0] : name;
 }
 function plannedOf(log){
-  const explicit = canonicalExercise(log?.plannedExercise || log?.originalExercise || "");
-  if(explicit) return explicit;
+  const explicitPlanned=String(log?.plannedExercise||"").trim();
+  if(explicitPlanned) return explicitPlanned;
+  const explicitOriginal=String(log?.originalExercise||"").trim();
+  if(explicitOriginal) return explicitOriginal;
   return inferPlannedExerciseFromActual(log?.exercise || "", log?.day || "");
 }
 function actualOf(log){ return log.exercise || log.plannedExercise || ""; }
@@ -385,7 +400,7 @@ function normalizeLog(raw,id){
   let createdMs = Number(raw.createdMs || raw.updatedMs || 0) || Date.now();
   try{ if(raw.createdAt?.seconds) createdMs=raw.createdAt.seconds*1000; }catch(e){}
   const actual = raw.exercise || raw.plannedExercise || raw.originalExercise || "";
-  const planned = raw.plannedExercise || raw.originalExercise || inferPlannedExerciseFromActual(actual, raw.day || "") || actual;
+  const planned = plannedOf({...raw,exercise:actual}) || actual;
   return {...raw, id, plannedExercise:planned, exercise:actual||planned, date:isValidDateKey(raw.date)?raw.date:todayTH(), weightKg:Number(raw.weightKg ?? raw.weight ?? 0), reps:Number(raw.reps||0), rir:Number(raw.rir ?? 2), createdMs};
 }
 function clearScopedWorkoutState(){

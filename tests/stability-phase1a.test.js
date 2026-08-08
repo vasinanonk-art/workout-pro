@@ -61,7 +61,7 @@ function loadApp(storageSeed={},storageUnavailable=false){
   context.window.document=document;
   context.window.Notification=context.Notification;
   context.globalThis=context;
-  const expose=`\n;globalThis.__app={state,bind,saveSet,subscribeLogs,renderExerciseSelect,resolveSelectedExercise,renderCalendar,renderRecent,renderSetup,updateFormDerived,restorePersistentAlt,readPersistentAlt,writePersistentAlt,clearPersistentAlt,isValidDateKey,clearScopedWorkoutState,setRender(fn){renderAll=fn},setTimer(fn){startTimer=fn}};`;
+  const expose=`\n;globalThis.__app={state,bind,saveSet,subscribeLogs,renderExerciseSelect,resolveSelectedExercise,renderCalendar,renderRecent,renderSetup,updateFormDerived,restorePersistentAlt,readPersistentAlt,writePersistentAlt,clearPersistentAlt,isValidDateKey,clearScopedWorkoutState,plannedOf,samePlanned,inferPlannedExerciseFromActual,plannedCandidatesForAlternative,alternativeInventory:()=>[...PLANNED_BY_ALTERNATIVE.entries()],setRender(fn){renderAll=fn},setTimer(fn){startTimer=fn}};`;
   vm.runInNewContext(source+expose,context,{filename:"js/app.module.js"});
   context.__app.setRender(()=>{});
   context.__app.setTimer(()=>{});
@@ -94,6 +94,48 @@ test("real date validation rejects impossible dates",()=>{
   assert.equal(api.isValidDateKey("2024-02-29"),true);
   assert.equal(api.isValidDateKey("2026-02-29"),false);
   assert.equal(api.isValidDateKey("2026-13-01"),false);
+});
+
+test("shared alternative inventory includes same-day and cross-day owners",()=>{
+  const {api}=loadApp();
+  assert.deepEqual(
+    Array.from(api.plannedCandidatesForAlternative("Machine Chest Press")),
+    ["Barbell Bench Press","Incline Dumbbell Press","Incline Machine Press","Cable Fly"]
+  );
+  assert.deepEqual(
+    Array.from(api.plannedCandidatesForAlternative("Dumbbell Shoulder Press")),
+    ["Seated Shoulder Press","Machine Shoulder Press"]
+  );
+});
+
+test("explicit plannedExercise wins over ambiguous alternative inference",()=>{
+  const {api}=loadApp();
+  assert.equal(api.plannedOf({plannedExercise:"Incline Machine Press",originalExercise:"Barbell Bench Press",exercise:"Machine Chest Press",day:"Day 1"}),"Incline Machine Press");
+});
+
+test("explicit originalExercise wins when plannedExercise is absent",()=>{
+  const {api}=loadApp();
+  assert.equal(api.plannedOf({originalExercise:"Cable Fly",exercise:"Machine Chest Press",day:"Day 1"}),"Cable Fly");
+});
+
+test("day-specific unique owner resolves a shared alternative",()=>{
+  const {api}=loadApp();
+  assert.deepEqual(Array.from(api.plannedCandidatesForAlternative("Cable Lateral Raise")),["Seated Shoulder Press","Dumbbell Lateral Raise","Machine Shoulder Press"]);
+  assert.equal(api.inferPlannedExerciseFromActual("Cable Lateral Raise","Day 4"),"Machine Shoulder Press");
+});
+
+test("globally unique alternative resolves without day context",()=>{
+  const {api}=loadApp();
+  assert.deepEqual(Array.from(api.plannedCandidatesForAlternative("Machine Pulldown")),["Lat Pulldown"]);
+  assert.equal(api.inferPlannedExerciseFromActual("Machine Pulldown",""),"Lat Pulldown");
+});
+
+test("ambiguous legacy alternative remains unassigned and cannot complete a planned exercise",()=>{
+  const {api}=loadApp();
+  const legacy={exercise:"Machine Chest Press",day:"Day 1"};
+  assert.equal(api.plannedOf(legacy),"Machine Chest Press");
+  assert.equal(api.samePlanned(legacy,"Barbell Bench Press"),false);
+  assert.equal(api.samePlanned(legacy,"Incline Dumbbell Press"),false);
 });
 
 test("completed historical edit keeps exercise and bypasses new-set guards",async()=>{
