@@ -61,7 +61,7 @@ function loadApp(storageSeed={},storageUnavailable=false){
   context.window.document=document;
   context.window.Notification=context.Notification;
   context.globalThis=context;
-  const expose=`\n;globalThis.__app={state,bind,saveSet,subscribeLogs,renderExerciseSelect,resolveSelectedExercise,renderCalendar,renderRecent,renderSetup,updateFormDerived,restorePersistentAlt,readPersistentAlt,writePersistentAlt,clearPersistentAlt,isValidDateKey,clearScopedWorkoutState,plannedOf,samePlanned,inferPlannedExerciseFromActual,plannedCandidatesForAlternative,alternativeInventory:()=>[...PLANNED_BY_ALTERNATIVE.entries()],setRender(fn){renderAll=fn},setTimer(fn){startTimer=fn}};`;
+  const expose=`\n;globalThis.__app={state,bind,show,saveSet,subscribeLogs,renderExerciseSelect,resolveSelectedExercise,renderCalendar,renderRecent,renderSetup,updateFormDerived,updateTimerState,restorePersistentAlt,readPersistentAlt,writePersistentAlt,clearPersistentAlt,isValidDateKey,clearScopedWorkoutState,plannedOf,samePlanned,inferPlannedExerciseFromActual,plannedCandidatesForAlternative,logsOnDate,logsForPlanned,completedForExercise,latestSetForPlanned,previousSetForPlanned,previousWorkoutForPlanned,replaceWorkoutLogs,getDerivedLogIndex:()=>derivedLogIndex,getIndexRebuildCount:()=>derivedLogIndexRebuildCount,alternativeInventory:()=>[...PLANNED_BY_ALTERNATIVE.entries()],setRender(fn){renderAll=fn},setTimer(fn){startTimer=fn}};`;
   vm.runInNewContext(source+expose,context,{filename:"js/app.module.js"});
   context.__app.setRender(()=>{});
   context.__app.setTimer(()=>{});
@@ -398,4 +398,89 @@ test("persistent alternative contract and edit isolation remain intact",()=>{
 test("visible and runtime versions are consistent",()=>{
   assert.match(fs.readFileSync("js/runtime.js","utf8"),/VERSION='v5\.5\.7'/);
   assert.match(fs.readFileSync("index.html","utf8"),/app\.module\.js\?v=557/);
+});
+
+test("derived index groups logs by date, planned exercise, and composite key",()=>{
+  const {api}=loadApp();
+  const logs=[
+    {id:"bench-1",date:"2026-01-01",plannedExercise:"Barbell Bench Press",exercise:"Barbell Bench Press",weightKg:50,reps:10,createdMs:1},
+    {id:"bench-2",date:"2026-01-01",plannedExercise:"Barbell Bench Press",exercise:"Machine Chest Press",weightKg:60,reps:5,createdMs:2},
+    {id:"pull-1",date:"2026-01-02",plannedExercise:"Lat Pulldown",exercise:"Machine Pulldown",weightKg:40,reps:10,createdMs:3}
+  ];
+  api.replaceWorkoutLogs(logs);
+  const index=api.getDerivedLogIndex();
+  assert.deepEqual(Array.from(index.byDate.get("2026-01-01"),x=>x.id),["bench-1","bench-2"]);
+  assert.deepEqual(Array.from(index.byPlannedExercise.get("Barbell Bench Press"),x=>x.id),["bench-1","bench-2"]);
+  assert.deepEqual(Array.from(index.byDateAndPlannedExercise.get("2026-01-02").get("Lat Pulldown"),x=>x.id),["pull-1"]);
+  assert.equal(index.volumeByDate.get("2026-01-01"),800);
+  assert.equal(index.volumeByPlannedExercise.get("Lat Pulldown"),400);
+  const dateRows=api.logsOnDate("2026-01-01");
+  dateRows.pop();
+  assert.equal(index.byDate.get("2026-01-01").length,2);
+});
+
+test("unresolved legacy alternatives remain isolated in the derived index",()=>{
+  const {api}=loadApp();
+  const legacy={id:"legacy",date:"2026-01-01",day:"Day 1",exercise:"Machine Chest Press",weightKg:50,reps:8,createdMs:1};
+  api.replaceWorkoutLogs([legacy]);
+  const index=api.getDerivedLogIndex();
+  assert.equal(index.byPlannedExercise.get("Machine Chest Press")[0],legacy);
+  assert.equal(index.byPlannedExercise.has("Barbell Bench Press"),false);
+  assert.equal(api.completedForExercise("Barbell Bench Press","2026-01-01"),0);
+});
+
+test("latest and previous set accessors follow existing created order",()=>{
+  const {api}=loadApp();
+  const logs=[
+    {id:"first",date:"2026-01-01",plannedExercise:"Lat Pulldown",createdMs:10},
+    {id:"latest",date:"2026-01-02",plannedExercise:"Lat Pulldown",createdMs:30},
+    {id:"previous",date:"2026-01-02",plannedExercise:"Lat Pulldown",createdMs:20}
+  ];
+  api.replaceWorkoutLogs(logs);
+  assert.equal(api.latestSetForPlanned("Lat Pulldown").id,"latest");
+  assert.equal(api.previousSetForPlanned("Lat Pulldown").id,"previous");
+  assert.equal(api.latestSetForPlanned("Cable Fly"),null);
+});
+
+test("previous workout accessor returns the latest prior session, not a same-day set",()=>{
+  const {api}=loadApp();
+  api.replaceWorkoutLogs([
+    {id:"old",date:"2026-01-01",plannedExercise:"Barbell Bench Press",createdMs:1},
+    {id:"prior-a",date:"2026-01-03",plannedExercise:"Barbell Bench Press",createdMs:2},
+    {id:"prior-b",date:"2026-01-03",plannedExercise:"Barbell Bench Press",createdMs:3},
+    {id:"current",date:"2026-01-05",plannedExercise:"Barbell Bench Press",createdMs:4}
+  ]);
+  assert.equal(api.previousWorkoutForPlanned("Barbell Bench Press","2026-01-05").id,"prior-b");
+  assert.equal(api.previousWorkoutForPlanned("Barbell Bench Press","2026-01-01"),null);
+});
+
+test("indexed completion count matches filter-based behavior",()=>{
+  const {api}=loadApp();
+  const logs=[
+    {id:"1",date:"2026-01-01",plannedExercise:"Barbell Bench Press"},
+    {id:"2",date:"2026-01-01",plannedExercise:"Barbell Bench Press"},
+    {id:"3",date:"2026-01-01",plannedExercise:"Lat Pulldown"},
+    {id:"4",date:"2026-01-02",plannedExercise:"Barbell Bench Press"}
+  ];
+  api.replaceWorkoutLogs(logs);
+  const expected=logs.filter(x=>x.date==="2026-01-01" && api.samePlanned(x,"Barbell Bench Press")).length;
+  assert.equal(api.completedForExercise("Barbell Bench Press","2026-01-01"),expected);
+});
+
+test("derived index rebuilds only for log mutations",()=>{
+  const {api,elements,calls}=loadApp();
+  const initial=api.getIndexRebuildCount();
+  api.replaceWorkoutLogs([]);
+  assert.equal(api.getIndexRebuildCount(),initial+1);
+  const baseline=api.getIndexRebuildCount();
+  api.show("dash");
+  api.updateTimerState();
+  elements.exercise=element("Lat Pulldown");
+  api.bind();
+  elements.exercise.listeners.change({target:elements.exercise});
+  assert.equal(api.getIndexRebuildCount(),baseline);
+  api.state.user={uid:"user-1"};
+  api.subscribeLogs();
+  calls.snapshots[0](snapshot([{id:"remote",date:"2026-01-01",plannedExercise:"Lat Pulldown",exercise:"Lat Pulldown",weightKg:40,reps:10,createdMs:1}]));
+  assert.equal(api.getIndexRebuildCount(),baseline+1);
 });

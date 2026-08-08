@@ -253,6 +253,39 @@ function actualOf(log){ return log.exercise || log.plannedExercise || ""; }
 function samePlanned(log, ex){ return plannedOf(log) === canonicalExercise(ex); }
 function byCreated(a,b){ return (a.createdMs||0) - (b.createdMs||0); }
 function logsSorted(){ return [...state.logs].sort((a,b)=>(a.date||"").localeCompare(b.date||"") || byCreated(a,b)); }
+function buildDerivedLogIndex(logs){
+  const byDate=new Map(), byPlannedExercise=new Map(), byDateAndPlannedExercise=new Map();
+  const latestByPlannedExercise=new Map(), previousByPlannedExercise=new Map();
+  const volumeByDate=new Map(), volumeByPlannedExercise=new Map();
+  for(const log of logs){
+    const date=log.date;
+    const planned=plannedOf(log);
+    if(!byDate.has(date)) byDate.set(date,[]);
+    byDate.get(date).push(log);
+    if(!byPlannedExercise.has(planned)) byPlannedExercise.set(planned,[]);
+    byPlannedExercise.get(planned).push(log);
+    if(!byDateAndPlannedExercise.has(date)) byDateAndPlannedExercise.set(date,new Map());
+    const byPlanned=byDateAndPlannedExercise.get(date);
+    if(!byPlanned.has(planned)) byPlanned.set(planned,[]);
+    byPlanned.get(planned).push(log);
+    const volume=(Number(log.weightKg)||0)*(Number(log.reps)||0);
+    volumeByDate.set(date,(volumeByDate.get(date)||0)+volume);
+    volumeByPlannedExercise.set(planned,(volumeByPlannedExercise.get(planned)||0)+volume);
+  }
+  byDate.forEach(rows=>Object.freeze(rows));
+  byDateAndPlannedExercise.forEach(byPlanned=>byPlanned.forEach(rows=>Object.freeze(rows)));
+  byPlannedExercise.forEach((rows,planned)=>{
+    rows.sort(byCreated);
+    Object.freeze(rows);
+    latestByPlannedExercise.set(planned,rows.at(-1)||null);
+    previousByPlannedExercise.set(planned,rows.at(-2)||null);
+  });
+  return Object.freeze({byDate,byPlannedExercise,byDateAndPlannedExercise,latestByPlannedExercise,previousByPlannedExercise,volumeByDate,volumeByPlannedExercise});
+}
+let derivedLogIndex=buildDerivedLogIndex(state.logs);
+let derivedLogIndexRebuildCount=0;
+function rebuildDerivedLogIndex(){ derivedLogIndex=buildDerivedLogIndex(state.logs); derivedLogIndexRebuildCount++; }
+function replaceWorkoutLogs(logs){ state.logs=logs; rebuildDerivedLogIndex(); }
 function status(msg,type="ok",ms=1800){ const bar=$("appStatusBar"); if(!bar) return; bar.textContent=msg; bar.className=`statusbar show ${type}`; if(ms) setTimeout(()=>{ if(bar.textContent===msg) bar.className="statusbar"; }, ms); }
 function setHtml(id,html){ const el=$(id); if(el) el.innerHTML=html; }
 function setText(id,text){ const el=$(id); if(el) el.textContent=text; }
@@ -318,9 +351,18 @@ function resolveSelectedExercise(){
   if(chosen) restorePersistentAlt();
 }
 
-function logsOnDate(date=state.selectedDate){ return state.logs.filter(x=>x.date===date); }
-function completedForExercise(ex,date=state.selectedDate){ return logsOnDate(date).filter(x=>samePlanned(x,ex)).length; }
+function logsOnDate(date=state.selectedDate){ return [...(derivedLogIndex.byDate.get(date)||[])]; }
+function completedForExercise(ex,date=state.selectedDate){ return derivedLogIndex.byDateAndPlannedExercise.get(date)?.get(canonicalExercise(ex))?.length || 0; }
 function volumeForLogs(arr){ return arr.reduce((s,x)=>s+(Number(x.weightKg)||0)*(Number(x.reps)||0),0); }
+function latestSetForPlanned(exercise){ return derivedLogIndex.latestByPlannedExercise.get(canonicalExercise(exercise)) || null; }
+function previousSetForPlanned(exercise){ return derivedLogIndex.previousByPlannedExercise.get(canonicalExercise(exercise)) || null; }
+function previousWorkoutForPlanned(exercise,beforeDate=state.selectedDate){
+  const rows=derivedLogIndex.byPlannedExercise.get(canonicalExercise(exercise)) || [];
+  const dates=rows.map(x=>x.date).filter(date=>isValidDateKey(date) && date<beforeDate);
+  if(!dates.length) return null;
+  const previousDate=dates.sort().at(-1);
+  return rows.filter(x=>x.date===previousDate).at(-1) || null;
+}
 function currentExerciseProgress(ex=state.selectedExercise,date=state.selectedDate){ return {done:completedForExercise(ex,date), target:targetSets(ex)}; }
 function nextIncompleteExercise(day,date=state.selectedDate){ return PROGRAM.filter(p=>p[0]===day).find(p=>completedForExercise(p[2],date)<Number(p[3]))?.[2] || PROGRAM.find(p=>p[0]===day)?.[2] || PROGRAM[0][2]; }
 function dayForExercise(ex){ return metaByExercise(ex)[0]; }
@@ -407,7 +449,7 @@ function clearScopedWorkoutState(){
   if(state.unsub) state.unsub();
   state.unsub=null;
   state.subscriptionScope=null;
-  state.logs=[];
+  replaceWorkoutLogs([]);
   state.pendingWrites.clear();
   state.lastSnapshotAt=0;
   state.editingId=null;
@@ -427,8 +469,9 @@ function subscribeLogs(){
     if(state.subscriptionScope!==scope) return;
     const remote=snap.docs.map(d=>normalizeLog(d.data(), d.id));
     const remoteIds=new Set(remote.map(x=>x.id));
-    state.logs=remote.map(x=>state.pendingWrites.get(x.id)?.optimistic || x);
-    state.pendingWrites.forEach((pending,id)=>{ if(!remoteIds.has(id)) state.logs.push(pending.optimistic); });
+    const nextLogs=remote.map(x=>state.pendingWrites.get(x.id)?.optimistic || x);
+    state.pendingWrites.forEach((pending,id)=>{ if(!remoteIds.has(id)) nextLogs.push(pending.optimistic); });
+    replaceWorkoutLogs(nextLogs);
     state.lastSnapshotAt=Date.now();
     status("โหลดข้อมูลสำเร็จ","ok");
     scheduleRender();
@@ -652,7 +695,7 @@ function renderRecent(){
   host.querySelectorAll(".del-log").forEach(btn=>btn.addEventListener("click",()=>deleteLog(btn.dataset.id)));
 }
 
-function logsForPlanned(ex){ const planned=canonicalExercise(ex); return state.logs.filter(x=>plannedOf(x)===planned).sort(byCreated); }
+function logsForPlanned(ex){ return [...(derivedLogIndex.byPlannedExercise.get(canonicalExercise(ex))||[])]; }
 function todayLogs(){ return logsOnDate(state.selectedDate); }
 function muscleBalanceHtml(){
   const g=groupByMuscle(); const entries=Object.entries(g).sort((a,b)=>b[1]-a[1]);
@@ -813,12 +856,14 @@ async function saveSet(){
     if(wasEditing){
       const idx=state.logs.findIndex(x=>x.id===state.editingId);
       if(idx>=0) state.logs[idx]={...state.logs[idx], ...localPayload};
+      rebuildDerivedLogIndex();
       state.pendingWrites.set(writeRef.id,pending);
       scheduleRender();
       await updateDoc(writeRef,payload);
       if(state.pendingWrites.get(writeRef.id)===pending){ state.pendingWrites.delete(writeRef.id); state.editingId=null; applied=true; }
     } else {
       state.logs.push(localPayload);
+      rebuildDerivedLogIndex();
       state.pendingWrites.set(writeRef.id,pending);
       ["weight","reps","note"].forEach(id=>setVal(id,""));
       scheduleRender();
@@ -841,8 +886,8 @@ async function saveSet(){
     console.error(e);
     if(state.pendingWrites.get(writeRef.id)===pending){
       state.pendingWrites.delete(writeRef.id);
-      if(wasEditing){ const idx=state.logs.findIndex(x=>x.id===writeRef.id); if(idx>=0) state.logs[idx]=original; }
-      else state.logs=state.logs.filter(x=>x.id!==writeRef.id);
+      if(wasEditing){ const idx=state.logs.findIndex(x=>x.id===writeRef.id); if(idx>=0) state.logs[idx]=original; rebuildDerivedLogIndex(); }
+      else replaceWorkoutLogs(state.logs.filter(x=>x.id!==writeRef.id));
       status("บันทึกไม่สำเร็จ: "+e.message,"err",0);
     }
   }
