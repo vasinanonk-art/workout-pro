@@ -8,6 +8,14 @@ const VERSION = "v5.5.7";
 const $ = (id) => document.getElementById(id);
 const firebaseConfig = {"apiKey":"AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI","authDomain":"workout-program-9eea7.firebaseapp.com","projectId":"workout-program-9eea7","storageBucket":"workout-program-9eea7.firebasestorage.app","messagingSenderId":"315102427876","appId":"1:315102427876:web:d2d5d4c89eb78fae960af1","measurementId":"G-JHEKDYEY8B"};
 
+function storageText(key,fallback=""){
+  try{ const value=localStorage.getItem(key); return typeof value==="string" ? value : fallback; }catch(e){ return fallback; }
+}
+function storageJson(key,fallback,validate){
+  try{ const value=JSON.parse(storageText(key,"")); return validate(value) ? value : fallback; }catch(e){ return fallback; }
+}
+function escapeHtml(value){ return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
 const PROGRAM = [
   ["Day 1","Push","Barbell Bench Press",4,"5-8","Chest","heavy"], ["Day 1","Push","Incline Dumbbell Press",3,"8-12","Chest","standard"], ["Day 1","Push","Seated Shoulder Press",3,"8-12","Shoulder","standard"], ["Day 1","Push","Dumbbell Lateral Raise",4,"12-15","Shoulder","quick"], ["Day 1","Push","Cable Triceps Pushdown",3,"10-15","Triceps","quick"],
   ["Day 2","Pull","Lat Pulldown",4,"8-12","Back","standard"], ["Day 2","Pull","Barbell Row",4,"6-10","Back","heavy"], ["Day 2","Pull","Seated Cable Row",3,"10-12","Back","standard"], ["Day 2","Pull","Face Pull",3,"12-15","Rear Delt","quick"], ["Day 2","Pull","Dumbbell Curl",3,"10-15","Biceps","quick"],
@@ -162,7 +170,7 @@ function mediaSearchUrl(name,type="image"){
 }
 function exerciseMediaHtml(name){
   const info=exInfo(name);
-  return `<div class="media-actions"><a class="miniBtn purple" href="${mediaSearchUrl(name,'image')}" target="_blank" rel="noopener">รูป</a><a class="miniBtn cyan" href="${mediaSearchUrl(name,'video')}" target="_blank" rel="noopener">วิดีโอ</a></div><div class="small">${info.isAlternative?`ท่าทดแทนของ ${info.planned}`:`ท่าหลัก`} • Muscle: ${info.primaryMuscle} • Target: ${info.target || '-'} sets</div>`;
+  return `<div class="media-actions"><a class="miniBtn purple" href="${mediaSearchUrl(name,'image')}" target="_blank" rel="noopener">รูป</a><a class="miniBtn cyan" href="${mediaSearchUrl(name,'video')}" target="_blank" rel="noopener">วิดีโอ</a></div><div class="small">${info.isAlternative?`ท่าทดแทนของ ${escapeHtml(info.planned)}`:`ท่าหลัก`} • Muscle: ${escapeHtml(info.primaryMuscle)} • Target: ${Number(info.target) || '-'} sets</div>`;
 }
 function localNowMs(){ return Date.now(); }
 function tempId(){ return `local_${localNowMs()}_${Math.random().toString(36).slice(2,8)}`; }
@@ -173,16 +181,17 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 let state = {
   user:null,
-  teamId: localStorage.getItem("teamId") || "Beer-Team",
+  teamId: storageText("teamId","Beer-Team") || "Beer-Team",
   logs:[],
   pendingWrites:new Map(),
   lastSnapshotAt:0,
+  subscriptionScope:null,
   selectedDate: todayTH(),
   selectedExercise: PROGRAM[0][2],
   selectedAlt:null,
-  sessionExerciseByDate: JSON.parse(localStorage.getItem("sessionExerciseByDateV556") || "{}"),
+  sessionExerciseByDate: storageJson("sessionExerciseByDateV556",{},v=>v && typeof v==="object" && !Array.isArray(v) && Object.entries(v).every(([date,ex])=>isValidDateKey(date) && typeof ex==="string")),
   selectedDayForOverride:null,
-  overrideKeys: new Set(JSON.parse(localStorage.getItem("dayLockOverridesV540") || "[]")),
+  overrideKeys: new Set(storageJson("dayLockOverridesV540",[],v=>Array.isArray(v) && v.every(x=>typeof x==="string"))),
   editingId:null,
   saving:false,
   unsub:null,
@@ -193,10 +202,10 @@ let state = {
   timerDuration:0,
   notified10:false,
   notifiedDone:false,
-  notificationsEnabled: localStorage.getItem("restNotifyEnabled") !== "0",
-  notify10Enabled: localStorage.getItem("restNotify10Enabled") !== "0",
-  soundEnabled: localStorage.getItem("restSoundEnabled") !== "0",
-  vibrateEnabled: localStorage.getItem("restVibrateEnabled") !== "0",
+  notificationsEnabled: storageText("restNotifyEnabled","1") !== "0",
+  notify10Enabled: storageText("restNotify10Enabled","1") !== "0",
+  soundEnabled: storageText("restSoundEnabled","1") !== "0",
+  vibrateEnabled: storageText("restVibrateEnabled","1") !== "0",
   lastRender:0,
   calendarMonth: todayTH().slice(0,7)
 };
@@ -233,7 +242,11 @@ function status(msg,type="ok",ms=1800){ const bar=$("appStatusBar"); if(!bar) re
 function setHtml(id,html){ const el=$(id); if(el) el.innerHTML=html; }
 function setText(id,text){ const el=$(id); if(el) el.textContent=text; }
 function setVal(id,val){ const el=$(id); if(el) el.value=val; }
-function isValidDateKey(k){ return /^\d{4}-\d{2}-\d{2}$/.test(String(k||"")); }
+function isValidDateKey(k){
+  const m=String(k||"").match(/^(\d{4})-(\d{2})-(\d{2})$/); if(!m) return false;
+  const y=Number(m[1]), month=Number(m[2]), d=Number(m[3]);
+  return y>=1000 && y<=9999 && month>=1 && month<=12 && d>=1 && d<=new Date(y,month,0).getDate();
+}
 
 function hasOption(el, value){ return !!el && Array.from(el.options||[]).some(o=>o.value===String(value)); }
 function setDefaultIfEmpty(id, value){ const el=$(id); if(el && (el.value==="" || el.value==null)) el.value=String(value); }
@@ -267,6 +280,7 @@ function clearSessionExercise(date=state.selectedDate){
   localStorage.setItem("sessionExerciseByDateV556", JSON.stringify(state.sessionExerciseByDate));
 }
 function restoreSessionExercise(){
+  if(state.editingId) return;
   const ex=state.sessionExerciseByDate?.[state.selectedDate];
   if(!ex) return;
   const day=dayForExercise(ex);
@@ -274,6 +288,19 @@ function restoreSessionExercise(){
   if(allowed.length && allowed.includes(day) && completedForExercise(ex,state.selectedDate) < targetSets(ex)){
     state.selectedExercise=ex;
   }
+}
+function resolveSelectedExercise(){
+  if(state.editingId) return;
+  restoreSessionExercise();
+  const old=state.selectedExercise;
+  const allowedDays=allowedTrainingDaysForDate(state.selectedDate);
+  const rows=uniqueBy(PROGRAM,p=>p[2]);
+  const oldRow=rows.find(p=>p[2]===old);
+  const oldAvailable=oldRow && completedForExercise(old,displayDateForExerciseProgress(oldRow[0],state.selectedDate))<Number(oldRow[3]);
+  const firstOpen=rows.find(p=>allowedDays.includes(p[0]) && completedForExercise(p[2],displayDateForExerciseProgress(p[0],state.selectedDate))<Number(p[3]));
+  const chosen=oldAvailable ? old : firstOpen?.[2];
+  if(chosen && chosen!==state.selectedExercise){ state.selectedExercise=chosen; state.selectedAlt=null; }
+  if(chosen) restorePersistentAlt();
 }
 
 function logsOnDate(date=state.selectedDate){ return state.logs.filter(x=>x.date===date); }
@@ -361,12 +388,28 @@ function normalizeLog(raw,id){
   const planned = raw.plannedExercise || raw.originalExercise || inferPlannedExerciseFromActual(actual, raw.day || "") || actual;
   return {...raw, id, plannedExercise:planned, exercise:actual||planned, date:isValidDateKey(raw.date)?raw.date:todayTH(), weightKg:Number(raw.weightKg ?? raw.weight ?? 0), reps:Number(raw.reps||0), rir:Number(raw.rir ?? 2), createdMs};
 }
+function clearScopedWorkoutState(){
+  if(state.unsub) state.unsub();
+  state.unsub=null;
+  state.subscriptionScope=null;
+  state.logs=[];
+  state.pendingWrites.clear();
+  state.lastSnapshotAt=0;
+  state.editingId=null;
+  state.selectedAlt=null;
+  state.saving=false;
+}
+function workoutScope(){ return state.user?.uid && state.teamId ? `${state.user.uid}|${state.teamId}` : null; }
 function subscribeLogs(){
   if(state.unsub) state.unsub();
-  if(!state.user || !state.teamId){ renderAll(); return; }
+  state.unsub=null;
+  const scope=workoutScope();
+  state.subscriptionScope=scope;
+  if(!scope){ renderAll(); return; }
   status("กำลังโหลด Log...","warn",0);
   const q=query(collection(db, collectionPath()), orderBy("date","asc"));
   state.unsub=onSnapshot(q,(snap)=>{
+    if(state.subscriptionScope!==scope) return;
     const remote=snap.docs.map(d=>normalizeLog(d.data(), d.id));
     const pending=[...state.pendingWrites.values()].filter(x=>!x.__removeOnSync);
     const remoteKeys=new Set(remote.map(x=>`${x.date}|${plannedOf(x)}|${actualOf(x)}|${x.weightKg}|${x.reps}|${x.createdMs}`));
@@ -378,6 +421,7 @@ function subscribeLogs(){
 }
 
 function renderAll(){
+  resolveSelectedExercise();
   renderSetup(); renderDayLock(); renderExerciseSelect(); renderExerciseDatabase(); renderLogSummary(); renderRecent(); renderDashboard(); renderCoach(); renderProgram(); renderGuide(); renderCalendar(); renderBackup(); renderMediaPanel(); updateFormDerived();
 }
 
@@ -422,8 +466,8 @@ function renderSetup(){
   renderNotificationControls();
   setVal("teamId", state.teamId);
   setText("authState", state.user ? `Login: ${state.user.displayName || state.user.email}` : "ยังไม่ได้ login");
-  setHtml("debug", `Version: <b>${VERSION}</b><br>User: ${state.user?.email || "-"}<br>Team: ${state.teamId || "-"}<br>Logs: ${state.logs.length}<br>Date: ${state.selectedDate} (${dateLabelTH(state.selectedDate)})`);
-  setHtml("teamSaveStatus", `Team ID: <b>${state.teamId || "-"}</b>`);
+  setHtml("debug", `Version: <b>${VERSION}</b><br>User: ${escapeHtml(state.user?.email || "-")}<br>Team: ${escapeHtml(state.teamId || "-")}<br>Logs: ${state.logs.length}<br>Date: ${escapeHtml(state.selectedDate)} (${escapeHtml(dateLabelTH(state.selectedDate))})`);
+  setHtml("teamSaveStatus", `Team ID: <b>${escapeHtml(state.teamId || "-")}</b>`);
 }
 
 function selectedDateStatus(){
@@ -437,7 +481,6 @@ function selectedDateStatus(){
 
 function renderExerciseSelect(){
   const sel=$("exercise"); if(!sel) return;
-  restoreSessionExercise();
   const old=state.selectedExercise;
   const allowedDays = allowedTrainingDaysForDate(state.selectedDate);
   const lock = calcDayLock(state.selectedDate);
@@ -467,13 +510,10 @@ function renderExerciseSelect(){
     if(isOpen && !firstOpen) firstOpen=opt;
   });
 
-  const keepOld = oldOption && !oldOption.disabled;
+  const keepOld = oldOption && (state.editingId || !oldOption.disabled);
   const chosen = keepOld ? oldOption : firstOpen;
   if(chosen){
     sel.value=chosen.value;
-    if(state.selectedExercise!==chosen.value){ state.selectedAlt=null; }
-    state.selectedExercise=chosen.value;
-    restorePersistentAlt();
   }else{
     const placeholder=document.createElement("option");
     placeholder.value="";
@@ -523,8 +563,7 @@ function renderDayLock(){
   $("overrideDayBtn")?.addEventListener("click",()=>{
     const d=$("overrideDaySelect")?.value || current;
     grantOverride(d);
-    const ex=nextIncompleteExercise(d,state.selectedDate);
-    state.selectedExercise=ex;
+    if(!state.editingId) state.selectedExercise=nextIncompleteExercise(d,state.selectedDate);
     renderAll();
   });
   setHtml("lockStatus", lock.status==="OPEN" ? `<span class="ok-text">พร้อมเล่น: ${dayForExercise(state.selectedExercise)}</span>` : `<span class="warn-text">ล็อกอยู่: ${lock.reason}</span>`);
@@ -536,9 +575,9 @@ function updateFormDerived(){
   const ds = selectedDateStatus();
   const dateStatusEl = $("dateStatus");
   if(dateStatusEl){ dateStatusEl.className = `msg ${ds.cls}`; dateStatusEl.innerHTML = `<b>${ds.text}</b><br><span class="small">${ds.detail}</span>`; }
-  setHtml("altStatus", state.selectedAlt ? `ใช้ท่าทดแทน: <b>${state.selectedAlt.name}</b><br><span class="small">นับ progress เข้า ${state.selectedExercise}</span>` : "ยังไม่ได้เลือกท่าทดแทน");
-  setHtml("persistentSubStatus", state.selectedAlt ? `Current substitute: ${state.selectedAlt.name} → ${state.selectedExercise}` : "Persistent Alternative: ไม่มี");
-  setHtml("historyRemapBox", `History Remap: ใช้ plannedExercise เป็นตัวนับหลัก • Actual: ${actualExerciseName()}`);
+  setHtml("altStatus", state.selectedAlt ? `ใช้ท่าทดแทน: <b>${escapeHtml(state.selectedAlt.name)}</b><br><span class="small">นับ progress เข้า ${escapeHtml(state.selectedExercise)}</span>` : "ยังไม่ได้เลือกท่าทดแทน");
+  setHtml("persistentSubStatus", state.selectedAlt ? `Current substitute: ${escapeHtml(state.selectedAlt.name)} → ${escapeHtml(state.selectedExercise)}` : "Persistent Alternative: ไม่มี");
+  setHtml("historyRemapBox", `History Remap: ใช้ plannedExercise เป็นตัวนับหลัก • Actual: ${escapeHtml(actualExerciseName())}`);
   setVal("week", autoWeek());
   setVal("targetSets", targetSets());
   setText("setNo", Math.min(completedForExercise(state.selectedExercise)+1, targetSets(state.selectedExercise)));
@@ -546,8 +585,8 @@ function updateFormDerived(){
   ensureLogDefaults();
   const prog=currentExerciseProgress();
   const lock=calcDayLock();
-  const saveBtn=$("saveBtn"); if(saveBtn) saveBtn.disabled = state.saving || lock.status!=="OPEN" || prog.done>=prog.target;
-  setHtml("setStatus", prog.done>=prog.target ? `<span class="ok-text">ท่านี้ครบแล้ว ${prog.done}/${prog.target}</span>` : `พร้อมบันทึก: <b>${actualExerciseName()}</b> Set ${prog.done+1}/${prog.target}`);
+  const saveBtn=$("saveBtn"); if(saveBtn) saveBtn.disabled = state.saving || (!state.editingId && (lock.status!=="OPEN" || prog.done>=prog.target));
+  setHtml("setStatus", prog.done>=prog.target ? `<span class="ok-text">ท่านี้ครบแล้ว ${prog.done}/${prog.target}</span>` : `พร้อมบันทึก: <b>${escapeHtml(actualExerciseName())}</b> Set ${prog.done+1}/${prog.target}`);
   setHtml("calendarSyncStatus", `Calendar Sync: Today ${dateLabelTH(todayTH())} • Selected ${dateLabelTH(state.selectedDate)}`);
   setHtml("cycleDebug", `Cycle: Week ${autoWeek()} • Allowed ${calcDayLock().allowedDays?.join(", ") || "-"}`);
   renderPRAndSuggestion();
@@ -557,25 +596,25 @@ function renderPRAndSuggestion(){
   const ex=state.selectedExercise;
   const rows=state.logs.filter(x=>plannedOf(x)===ex).sort(byCreated);
   const best=rows.reduce((b,x)=>((x.weightKg||0)*(x.reps||0)>(b.weightKg||0)*(b.reps||0)?x:b),{});
-  setHtml("prStatus", rows.length ? `สถิติ ${ex}: สูงสุด ${best.weightKg||0} kg × ${best.reps||0}` : `ยังไม่มีสถิติของ ${ex}`);
+  setHtml("prStatus", rows.length ? `สถิติ ${escapeHtml(ex)}: สูงสุด ${best.weightKg||0} kg × ${best.reps||0}` : `ยังไม่มีสถิติของ ${escapeHtml(ex)}`);
   const last=rows[rows.length-1];
   setHtml("weekSuggest", last ? `ล่าสุด: ${last.weightKg} kg × ${last.reps} reps (RIR ${last.rir ?? "-"})` : `ยังไม่มีข้อมูลสัปดาห์ก่อนของท่านี้`);
   let next="-";
   if(last){ const reps=Number(last.reps||0), w=Number(last.weightKg||0); next = reps>=12 ? `${(w+2.5).toFixed(1)} kg` : `${w.toFixed(1)} kg / เพิ่ม reps`; }
   setHtml("nextWeekBox", `น้ำหนักแนะนำครั้งถัดไป: <b>${next}</b>`);
-  setHtml("doubleProgressionBox", `Double Progression: ใช้เฉพาะข้อมูลของ <b>${ex}</b>`);
-  setHtml("sfrBox", `SFR / Machine Bias: ${state.selectedAlt?"ใช้ท่าแทน "+state.selectedAlt.name:"Auto"}`);
+  setHtml("doubleProgressionBox", `Double Progression: ใช้เฉพาะข้อมูลของ <b>${escapeHtml(ex)}</b>`);
+  setHtml("sfrBox", `SFR / Machine Bias: ${state.selectedAlt?"ใช้ท่าแทน "+escapeHtml(state.selectedAlt.name):"Auto"}`);
 }
 function renderLogSummary(){
   const arr=logsOnDate(state.selectedDate), sets=arr.length, vol=volumeForLogs(arr);
   const exs=[...new Set(arr.map(plannedOf))];
-  setHtml("v5LogSummary", `วันที่ ${dateLabelTH(state.selectedDate)}<br>Sets: <b>${sets}</b> • Volume: <b>${vol.toFixed(0)} kg</b><br>Exercises: ${exs.length?exs.join(", "):"-"}`);
+  setHtml("v5LogSummary", `วันที่ ${escapeHtml(dateLabelTH(state.selectedDate))}<br>Sets: <b>${sets}</b> • Volume: <b>${vol.toFixed(0)} kg</b><br>Exercises: ${exs.length?exs.map(escapeHtml).join(", "):"-"}`);
 }
 function renderRecent(){
   const host=$("recent"); if(!host) return;
   const arr=[...state.logs].sort((a,b)=>(b.createdMs||0)-(a.createdMs||0)).slice(0,12);
   if(!arr.length){ host.innerHTML="<div class='msg info'>ยังไม่มี Log</div>"; return; }
-  host.innerHTML=arr.map(x=>`<div class="recent-card"><b>${dateLabelTH(x.date)} • ${x.exercise}</b><br><span class="small">Planned: ${plannedOf(x)} • ${x.weightKg} kg × ${x.reps} • RIR ${x.rir ?? "-"}</span><br><span class="small">${x.note||""}</span><div class="recent-actions"><button class="secondary edit-log" data-id="${x.id}" type="button">แก้ไข</button><button class="orange del-log" data-id="${x.id}" type="button">ลบ</button></div></div>`).join("");
+  host.innerHTML=arr.map(x=>`<div class="recent-card"><b>${escapeHtml(dateLabelTH(x.date))} • ${escapeHtml(x.exercise)}</b><br><span class="small">Planned: ${escapeHtml(plannedOf(x))} • ${x.weightKg} kg × ${x.reps} • RIR ${x.rir ?? "-"}</span><br><span class="small">${escapeHtml(x.note||"")}</span><div class="recent-actions"><button class="secondary edit-log" data-id="${escapeHtml(x.id)}" type="button">แก้ไข</button><button class="orange del-log" data-id="${escapeHtml(x.id)}" type="button">ลบ</button></div></div>`).join("");
   host.querySelectorAll(".edit-log").forEach(btn=>btn.addEventListener("click",()=>loadEdit(btn.dataset.id)));
   host.querySelectorAll(".del-log").forEach(btn=>btn.addEventListener("click",()=>deleteLog(btn.dataset.id)));
 }
@@ -604,16 +643,16 @@ function aiDailySummary(){
   const exs=[...new Set(arr.map(plannedOf))];
   const completed=completedDaysByDate(state.selectedDate);
   const p=plateauForExercise(state.selectedExercise);
-  return `วันที่ ${dateLabelTH(state.selectedDate)} • ${arr.length} sets • Volume ${vol} kg<br>ท่าที่เล่น: ${exs.join(", ")}<br>Completed: ${completed.join(", ")||"-"}<br>Plateau: ${p.status} — ${p.detail}`;
+  return `วันที่ ${escapeHtml(dateLabelTH(state.selectedDate))} • ${arr.length} sets • Volume ${vol} kg<br>ท่าที่เล่น: ${exs.map(escapeHtml).join(", ")}<br>Completed: ${completed.map(escapeHtml).join(", ")||"-"}<br>Plateau: ${escapeHtml(p.status)} — ${escapeHtml(p.detail)}`;
 }
 function renderExerciseDatabase(){
   const host=$("v430ExerciseDb"); if(!host) return;
   const selected=state.selectedExercise || PROGRAM[0][2];
   const info=exInfo(selected);
   const rows=getExerciseDbRows();
-  const selectedCard = `<div><b>${info.name}</b> ${info.isAlternative?`<span class="pill">Alternative</span>`:`<span class="pill">Main</span>`}<br>Day: ${info.day} • Muscle: ${info.primaryMuscle} • Target: ${info.target} sets • Reps: ${info.reps}<br>${exerciseMediaHtml(info.name)}</div>`;
-  const mainRows = rows.filter(r=>!r.isAlternative).map(r=>`<div class="exercise-progress-item"><b>${r.day}</b> - ${r.name}<span class="pill">${r.primaryMuscle}</span><span class="small">${r.target} sets • ${r.reps}</span></div>`).join("");
-  const altRows = rows.filter(r=>r.isAlternative).slice(0,60).map(r=>`<div class="exercise-progress-item"><b>${r.name}</b><span class="pill">แทน ${r.planned}</span><span class="small">${r.primaryMuscle}</span></div>`).join("");
+  const selectedCard = `<div><b>${escapeHtml(info.name)}</b> ${info.isAlternative?`<span class="pill">Alternative</span>`:`<span class="pill">Main</span>`}<br>Day: ${escapeHtml(info.day)} • Muscle: ${escapeHtml(info.primaryMuscle)} • Target: ${Number(info.target)||0} sets • Reps: ${escapeHtml(info.reps)}<br>${exerciseMediaHtml(info.name)}</div>`;
+  const mainRows = rows.filter(r=>!r.isAlternative).map(r=>`<div class="exercise-progress-item"><b>${escapeHtml(r.day)}</b> - ${escapeHtml(r.name)}<span class="pill">${escapeHtml(r.primaryMuscle)}</span><span class="small">${Number(r.target)||0} sets • ${escapeHtml(r.reps)}</span></div>`).join("");
+  const altRows = rows.filter(r=>r.isAlternative).slice(0,60).map(r=>`<div class="exercise-progress-item"><b>${escapeHtml(r.name)}</b><span class="pill">แทน ${escapeHtml(r.planned)}</span><span class="small">${escapeHtml(r.primaryMuscle)}</span></div>`).join("");
   host.innerHTML = `${selectedCard}<hr><div class="small">Exercise DB loaded: <b>${rows.length}</b> records • Main ${rows.filter(r=>!r.isAlternative).length} • Alternative ${rows.filter(r=>r.isAlternative).length}</div><h4>Program Exercises</h4>${mainRows || "ไม่มีข้อมูล"}<h4>Alternative Library</h4>${altRows || "ไม่มีข้อมูลท่าทดแทน"}`;
 }
 
@@ -622,7 +661,7 @@ function renderDashboard(){
   drawSimpleChart("weekChart", groupByWeek()); drawSimpleChart("exChart", groupByExercise()); drawSimpleChart("v5MuscleChart", groupByMuscle()); drawSimpleChart("v5RecoveryChart", groupByDateSets());
   setHtml("v5MuscleInsight", muscleBalanceHtml()); setHtml("muscleStatus", muscleBalanceHtml());
   const prs={}; state.logs.forEach(x=>{ const ex=plannedOf(x); const score=(x.weightKg||0)*(x.reps||0); if(!prs[ex] || score>prs[ex].score) prs[ex]={score,x}; });
-  setHtml("v5PRBoard", Object.values(prs).slice(0,8).map(r=>`<span class="pill">${plannedOf(r.x)}: ${r.x.weightKg}×${r.x.reps}</span>`).join(" ")||"รอข้อมูล PR");
+  setHtml("v5PRBoard", Object.values(prs).slice(0,8).map(r=>`<span class="pill">${escapeHtml(plannedOf(r.x))}: ${r.x.weightKg}×${r.x.reps}</span>`).join(" ")||"รอข้อมูล PR");
 }
 function groupByWeek(){ const g={}; state.logs.forEach(x=>{ const w=x.week||1; g["W"+w]=(g["W"+w]||0)+1; }); return g; }
 function groupByExercise(){ const g={}; state.logs.forEach(x=>{ const k=plannedOf(x); g[k]=(g[k]||0)+(x.weightKg||0)*(x.reps||0); }); return g; }
@@ -636,8 +675,8 @@ function renderCoach(){
   setText("coachRecovery", Math.round(recovery)); setText("coachFatigue", Math.round(fatigue)); setText("coachProgress", p.status==='Progress'?"UP":(latest?"OK":"-")); setText("coachDeload", fatigue>55?"WATCH":"NO");
   setText("coachRecoveryText", recovery>=65?"พร้อมฝึก":"ลด volume หรือใช้ machine stable"); setText("coachFatigueText", fatigue>55?"เสี่ยงล้า":"ปกติ"); setText("coachProgressText", p.detail); setText("coachDeloadText", fatigue>65?"พิจารณา deload":"ยังไม่จำเป็น");
   const muscleHtml = muscleBalanceHtml();
-  setHtml("coachAdvice", `Recovery ${Math.round(recovery)} / Fatigue ${Math.round(fatigue)}<br>${today.length?`วันนี้มี ${today.length} sets • Volume ${volumeForLogs(today).toFixed(0)} kg`:"ยังไม่มี log วันนี้"}<br>${p.status}: ${p.detail}<br><span class="small">Muscle Balance: ${muscleHtml}</span>`);
-  setHtml("plateauBox", `<b>${p.status}</b><br>${p.detail}<br><span class="small">Exercise: ${canonicalExercise(state.selectedExercise)}</span>`);
+  setHtml("coachAdvice", `Recovery ${Math.round(recovery)} / Fatigue ${Math.round(fatigue)}<br>${today.length?`วันนี้มี ${today.length} sets • Volume ${volumeForLogs(today).toFixed(0)} kg`:"ยังไม่มี log วันนี้"}<br>${escapeHtml(p.status)}: ${escapeHtml(p.detail)}<br><span class="small">Muscle Balance: ${muscleHtml}</span>`);
+  setHtml("plateauBox", `<b>${escapeHtml(p.status)}</b><br>${escapeHtml(p.detail)}<br><span class="small">Exercise: ${escapeHtml(canonicalExercise(state.selectedExercise))}</span>`);
   const effective=today.filter(x=>Number(x.rir)<=2).length;
   setText("effectiveRepsScore", effective); setText("sfrScore", recovery>=65?"Good":"Moderate"); setText("volumeZone", today.length<8?"Low":(today.length>22?"High":"OK"));
   setHtml("v430AiSummary", aiDailySummary());
@@ -653,7 +692,6 @@ function calendarDateClass(date){
   return "partial";
 }
 function renderCalendar(){
-  if(!state.calendarMonth) state.calendarMonth = state.selectedDate.slice(0,7);
   const [yy,mm]=state.calendarMonth.split("-").map(Number);
   const first=new Date(yy,mm-1,1);
   const last=new Date(yy,mm,0);
@@ -679,7 +717,7 @@ function renderCalendar(){
       const allowed=allowedTrainingDaysForDate(state.selectedDate);
       const d=allowed[0] || dayForExercise(state.selectedExercise);
       const next=nextIncompleteExercise(d,state.selectedDate);
-      if(next) state.selectedExercise=next;
+      if(next && !state.editingId) state.selectedExercise=next;
       status("เลือกวันที่ "+dateLabelTH(state.selectedDate),"ok");
       renderAll();
     }));
@@ -690,8 +728,8 @@ function renderCalendar(){
   setHtml("daySummary", `Sets: ${arr.length} • Completed: ${completed.join(", ")||"-"}`);
   const vol=volumeForLogs(arr);
   const exs=[...new Set(arr.map(plannedOf))];
-  setHtml("v5DayInsight", arr.length ? `Volume: <b>${vol.toFixed(0)} kg</b><br>Exercises: ${exs.join(", ")}<br>Completed: ${completed.join(", ")||"-"}` : "ยังไม่มีข้อมูลของวันนี้");
-  setHtml("calendarSelectedDayDetail", arr.length ? arr.slice(-8).reverse().map(x=>`<div class="small">${x.exercise}: ${x.weightKg} kg × ${x.reps} (${plannedOf(x)})</div>`).join("") : "");
+  setHtml("v5DayInsight", arr.length ? `Volume: <b>${vol.toFixed(0)} kg</b><br>Exercises: ${exs.map(escapeHtml).join(", ")}<br>Completed: ${completed.map(escapeHtml).join(", ")||"-"}` : "ยังไม่มีข้อมูลของวันนี้");
+  setHtml("calendarSelectedDayDetail", arr.length ? arr.slice(-8).reverse().map(x=>`<div class="small">${escapeHtml(x.exercise)}: ${x.weightKg} kg × ${x.reps} (${escapeHtml(plannedOf(x))})</div>`).join("") : "");
   const btn=$("calendarGoLogBtn");
   if(btn){ btn.disabled=false; btn.classList.remove("disabled"); btn.onclick=()=>{ show("log"); }; }
 }
@@ -699,7 +737,7 @@ function renderBackup(){ const first=logsSorted()[0]?.date||"-", last=logsSorted
 function renderMediaPanel(){
   const ex=actualExerciseName();
   setText("mediaTitle", `Media Reference: ${ex}`);
-  setHtml("mediaCue", `Cue: คุมฟอร์ม ไม่ฝืนเจ็บ • Search: ${ex} proper form<br>${exerciseMediaHtml(ex)}`);
+  setHtml("mediaCue", `Cue: คุมฟอร์ม ไม่ฝืนเจ็บ • Search: ${escapeHtml(ex)} proper form<br>${exerciseMediaHtml(ex)}`);
 }
 
 function autoWeek(){
@@ -709,19 +747,29 @@ function autoWeek(){
 }
 async function saveSet(){
   ensureLogDefaults();
-  const lock=calcDayLock(); const prog=currentExerciseProgress();
-  if(lock.status!=="OPEN"){ status("ยังถูก Day Lock: "+lock.reason,"err"); return; }
-  if(prog.done>=prog.target){ status("ท่านี้ครบแล้ว เลือกท่าอื่น","warn"); return; }
-  if(!state.user){ status("กรุณา Login ก่อน","err"); return; }
-  const w=Number($("weight")?.value||0), reps=Number($("reps")?.value||0), rir=Number($("rir")?.value||2);
-  if(!w || !reps){ status("กรอก Weight/Reps ก่อน","err"); return; }
   const wasEditing=Boolean(state.editingId);
+  const original=wasEditing ? state.logs.find(x=>x.id===state.editingId) : null;
+  if(wasEditing && !original){ status("ไม่พบ Log เดิมที่กำลังแก้ไข","err",0); return; }
+  const lock=calcDayLock(); const prog=currentExerciseProgress();
+  if(!wasEditing && lock.status!=="OPEN"){ status("ยังถูก Day Lock: "+lock.reason,"err"); return; }
+  if(!wasEditing && prog.done>=prog.target){ status("ท่านี้ครบแล้ว เลือกท่าอื่น","warn"); return; }
+  if(!state.user){ status("กรุณา Login ก่อน","err"); return; }
+  const w=Number($("weight")?.value), reps=Number($("reps")?.value), rir=Number($("rir")?.value);
+  const sleepHours=Number($("sleepHours")?.value), soreness=Number($("soreness")?.value), stress=Number($("stress")?.value);
+  const saveDate=wasEditing ? original.date : state.selectedDate;
+  if(!isValidDateKey(saveDate)){ status("วันที่ไม่ถูกต้อง","err"); return; }
+  if(!Number.isFinite(w) || w<=0){ status("Weight ต้องเป็นตัวเลขมากกว่า 0","err"); return; }
+  if(!Number.isFinite(reps) || !Number.isInteger(reps) || reps<=0){ status("Reps ต้องเป็นจำนวนเต็มมากกว่า 0","err"); return; }
+  if(!Number.isFinite(rir) || rir<0 || rir>5){ status("RIR ต้องอยู่ระหว่าง 0–5","err"); return; }
+  if(!Number.isFinite(sleepHours) || sleepHours<0 || sleepHours>12){ status("Sleep ต้องอยู่ระหว่าง 0–12 ชั่วโมง","err"); return; }
+  if(!Number.isFinite(soreness) || soreness<1 || soreness>5){ status("Soreness ต้องอยู่ระหว่าง 1–5","err"); return; }
+  if(!Number.isFinite(stress) || stress<1 || stress>5){ status("Stress ต้องอยู่ระหว่าง 1–5","err"); return; }
   const shouldAutoRest=!wasEditing;
   if(shouldAutoRest) requestNotifyPermission();
   state.saving=true; updateFormDerived(); status("กำลังบันทึกเซต...","warn",0);
   const nowMs=localNowMs();
-  const payload={date:state.selectedDate, week:autoWeek(), day:dayForExercise(state.selectedExercise), plannedExercise:state.selectedExercise, exercise:actualExerciseName(), weightKg:w, reps, rir, tempo:$("tempo")?.value||"", repQuality:$("repQuality")?.value||"", biasMode:$("biasMode")?.value||"", note:$("note")?.value||"", targetSets:targetSets(), sleepHours:Number($("sleepHours")?.value||7), soreness:Number($("soreness")?.value||2), stress:Number($("stress")?.value||2), version:VERSION, updatedAt:serverTimestamp()};
-  const localPayload=normalizeLog({...payload, createdMs:nowMs, updatedMs:nowMs}, wasEditing ? state.editingId : tempId());
+  const payload={date:wasEditing?original.date:state.selectedDate, week:wasEditing?(original.week??autoWeek()):autoWeek(), day:wasEditing?(original.day||dayForExercise(original.plannedExercise)):dayForExercise(state.selectedExercise), plannedExercise:wasEditing?original.plannedExercise:state.selectedExercise, exercise:wasEditing?original.exercise:actualExerciseName(), weightKg:w, reps, rir, tempo:$("tempo")?.value||"", repQuality:$("repQuality")?.value||"", biasMode:$("biasMode")?.value||"", note:$("note")?.value||"", targetSets:wasEditing?(original.targetSets??targetSets(original.plannedExercise)):targetSets(), sleepHours, soreness, stress, version:VERSION, updatedAt:serverTimestamp()};
+  const localPayload=normalizeLog({...payload, createdMs:wasEditing?original.createdMs:nowMs, updatedMs:nowMs}, wasEditing ? state.editingId : tempId());
   localPayload.__pending=true;
   try{
     if(wasEditing){
@@ -768,19 +816,22 @@ function bind(){
   document.querySelectorAll(".tab[data-page]").forEach(b=>b.addEventListener("click",()=>show(b.dataset.page)));
   $("loginBtn")?.addEventListener("click",()=>signInWithPopup(auth,new GoogleAuthProvider()).catch(e=>status(e.message,"err",0)));
   $("logoutBtn")?.addEventListener("click",()=>signOut(auth));
-  $("saveTeamBtn")?.addEventListener("click",()=>{ state.teamId=$("teamId")?.value.trim()||"Beer-Team"; localStorage.setItem("teamId",state.teamId); subscribeLogs(); status("บันทึก Team ID แล้ว","ok"); });
+  $("saveTeamBtn")?.addEventListener("click",()=>{ const teamId=$("teamId")?.value.trim()||"Beer-Team"; if(teamId!==state.teamId){ clearScopedWorkoutState(); state.teamId=teamId; renderAll(); } else state.teamId=teamId; try{ localStorage.setItem("teamId",state.teamId); }catch(e){} subscribeLogs(); status("บันทึก Team ID แล้ว","ok"); });
   $("date")?.addEventListener("change",e=>{
     state.selectedDate=isValidDateKey(e.target.value)?e.target.value:todayTH();
     state.calendarMonth=state.selectedDate.slice(0,7);
-    const allowed=allowedTrainingDaysForDate(state.selectedDate);
-    const d=allowed[0] || dayForExercise(state.selectedExercise);
-    state.selectedExercise=nextIncompleteExercise(d,state.selectedDate);
+    if(!state.editingId){
+      const allowed=allowedTrainingDaysForDate(state.selectedDate);
+      const d=allowed[0] || dayForExercise(state.selectedExercise);
+      state.selectedExercise=nextIncompleteExercise(d,state.selectedDate);
+    }
     renderAll();
   });
   $("prevM")?.addEventListener("click",()=>{ const [y,m]=state.calendarMonth.split("-").map(Number); const dt=new Date(y,m-2,1); state.calendarMonth=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}`; renderCalendar(); });
   $("nextM")?.addEventListener("click",()=>{ const [y,m]=state.calendarMonth.split("-").map(Number); const dt=new Date(y,m,1); state.calendarMonth=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}`; renderCalendar(); });
   $("exercise")?.addEventListener("change",e=>{
     if(!e.target.value) return;
+    if(state.editingId){ e.target.value=state.selectedExercise; return; }
     state.selectedExercise=e.target.value;
     state.selectedAlt=null;
     restorePersistentAlt();
@@ -904,7 +955,7 @@ function exportJson(){ const data=JSON.stringify({version:VERSION, exportedAt:ne
 function exportCsv(){ const cols=["date","week","day","plannedExercise","exercise","weightKg","reps","rir","note"]; const csv=[cols.join(","),...state.logs.map(x=>cols.map(c=>`"${String(x[c]??"").replaceAll('"','""')}"`).join(","))].join("\n"); download("workout-pro-log.csv",csv,"text/csv"); status("Export CSV แล้ว","ok"); }
 function download(name,text,type){ const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([text],{type})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
 
-onAuthStateChanged(auth,u=>{ state.user=u; if(u && !state.teamId) state.teamId="Beer-Team"; subscribeLogs(); renderAll(); });
+onAuthStateChanged(auth,u=>{ if((state.user?.uid||null)!==(u?.uid||null)) clearScopedWorkoutState(); state.user=u; if(u && !state.teamId) state.teamId="Beer-Team"; subscribeLogs(); renderAll(); });
 
 window.addEventListener("DOMContentLoaded",()=>{
   bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); ensureLogDefaults(); renderAll(); qaExerciseCoverage(); status("Workout PRO v5.5.7 พร้อมใช้งาน","ok",2500);
