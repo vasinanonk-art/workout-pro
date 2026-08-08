@@ -89,7 +89,99 @@
   <div class="card"><div class="calTop"><button class="secondary" id="prevM">‹</button><div class="month" id="monthTitle">Month</div><button class="secondary" id="nextM">›</button></div><div class="calGrid" id="calGrid"></div></div>
   <div class="card"><h3 id="dayTitle">Daily Summary</h3><div id="daySummary" class="small">เลือกวันที่</div><div id="v5DayInsight" class="msg info">เลือกวันที่เพื่อดู insight</div><div id="calendarSelectedDayDetail" class="calendar-day-detail"></div><button id="calendarGoLogBtn" class="secondary" type="button">ไปหน้า Log ของวันนี้</button></div>
 </section>
-<section id="log" class="page"><div class="card"><h3>Log Workout</h3><div class="row"><div><label>วันที่</label><input id="date" type="date"><div id="dateStatus" class="msg ok">วันนี้</div></div><div><label>Auto Week</label><input id="week" type="number" readonly value="1"><div class="small">ระบบคำนวณให้อัตโนมัติ</div></div></div><div class="row3"><div><label>Sleep (hrs)</label><input id="sleepHours" type="number" min="0" max="12" step="0.5" value="7"></div><div><label>Soreness 1-5</label><input id="soreness" type="number" min="1" max="5" value="2"></div><div><label>Stress 1-5</label><input id="stress" type="number" min="1" max="5" value="2"></div></div><label>ท่าที่จะเล่น</label><select id="exercise"></select><div class="row3"><button id="imageBtn" class="purple">ดูรูปท่าที่ถูก</button><button id="videoBtn" class="cyan">ดูวิดีโอท่านี้</button><button id="altBtn" class="orange">ไม่มีเครื่อง / เลือกท่าทดแทน</button></div><div class="mediaPanel" id="mediaPanel"><div class="mediaTitle" id="mediaTitle">Media Reference</div><div class="mediaCue" id="mediaCue">เลือกท่าเพื่อดู cue / รูป / วิดีโอ</div></div><div class="msg" id="altStatus">ยังไม่ได้เลือกท่าทดแทน</div><div class="msg info" id="persistentSubStatus">Persistent Alternative: ไม่มี</div><div class="msg info" id="historyRemapBox">History Remap: กำลังตรวจสอบ...</div><div class="row"><button id="savePersistentAltBtn" class="purple">ใช้ท่านี้แทนทุกสัปดาห์</button><button id="clearPersistentAltBtn" class="secondary">ยกเลิกท่าแทนถาวร</button></div><button id="clearAltBtn" class="secondary" style="margin-bottom:10px">ยกเลิกท่าทดแทน</button><div class="msg" id="lockStatus">กำลังตรวจสอบ...</div><div class="msg info" id="calendarSyncStatus">Calendar Sync: กำลังตรวจสอบ...</div><div class="msg info" id="cycleDebug">Cycle: กำลังตรวจสอบ...</div><div class="msg info" id="dayDateLockDebug">Day Lock: กำลังตรวจสอบ...</div><div class="msg" id="setStatus">กำลังตรวจสอบเซต...</div><div class="msg info" id="orderStatus">กำลังตรวจสอบลำดับท่า...</div><div class="msg info" id="prStatus">กำลังตรวจสอบสถิติ...</div><div class="msg info" id="weekSuggest">กำลังตรวจสอบสัปดาห์ก่อน...</div><div class="msg info" id="nextWeekBox">กำลังคำนวณน้ำหนักครั้งถัดไป...</div><div class="msg info" id="doubleProgressionBox">Double Progression: รอข้อมูล</div><div class="msg info" id="sfrBox">SFR / Machine Bias: รอข้อมูล</div><div class="row3"><div><label>Target Sets</label><input id="targetSets" type="number" placeholder="Auto from program"></div><div><label>Rest</label><select id="restMode"><option value="auto">Auto</option><option value="45">Quick 45s</option><option value="75">Standard 75s</option><option value="105">Heavy 105s</option><option value="custom">Custom</option></select></div><div><label>Rest Seconds</label><input id="restSec" type="number" value="75"></div></div><div class="timer" id="timer">00:00</div><div class="row3"><button class="orange" id="startRest">Start</button><button class="secondary" id="stopRest">Stop</button><button class="cyan" id="add30">+30s</button></div><h3>Set <span id="setNo">1</span> / <span id="targetShow">4</span></h3><div class="row3"><div><label>Weight</label><div style="display:flex;gap:6px"><input id="weight" type="number" step="0.5"><select id="unit"><option value="kg">kg</option></select></div></div><div><label>Reps</label><input id="reps" type="number"></div><div><label>RIR</label><input id="rir" type="number" value="2" min="0" max="5"></div></div><div class="row3"><div><label>Tempo</label><select id="tempo"><option value="2-0-1">2-0-1 ปกติ</option><option value="3-1-1">3-1-1 คุมช้า</option><option value="2-1-2">2-1-2 คุมเต็มช่วง</option><option value="explosive">Explosive</option></select></div><div><label>Rep Quality</label><select id="repQuality"><option value="good">Good</option><option value="strict">Strict</option><option value="cheat">Cheat</option><option value="partial">Partial</option></select></div><div><label>Mode</label><select id="biasMode"><option value="auto">Auto</option><option value="machine">Machine Bias</option><option value="free">Free Weight</option></select></div></div><label>Note</label><textarea id="note"></textarea><div class="msg" id="saveDebug">พร้อมบันทึก</div><div class="msg info" id="v430DraftStatus">Draft Save: พร้อมใช้งาน</div><button class="green" id="saveBtn">+ บันทึกเซตนี้</button> <button class="secondary" id="resetBtn">Reset</button></div><div class="card" id="v430ExerciseDbCard"><h3>Exercise Database</h3><div id="v430ExerciseDb" class="msg info">เลือกท่าเพื่อดูข้อมูล</div></div><div class="card"><h3>Daily Performance</h3><div id="v5LogSummary" class="msg info">รอข้อมูลวันนี้</div></div><div class="card"><h3>รายการล่าสุด</h3><div id="recent"></div></div></section>
+<section id="log" class="page log-entry-v2">
+  <div class="card log-compact-header">
+    <div class="log-context-line"><b id="logDayLabel">Day 1</b><span aria-hidden="true">•</span><b>Set <span id="setNo">1</span> / <span id="targetShow">4</span></b></div>
+    <label class="sr-only" for="exercise">ท่าที่จะเล่น</label>
+    <select id="exercise"></select>
+    <progress id="logSetProgress" value="0" max="4" aria-label="Exercise set progress"></progress>
+  </div>
+
+  <div class="card log-alternative-card">
+    <h3>Alternative Exercise</h3>
+    <div class="msg" id="altStatus">ยังไม่ได้เลือกท่าทดแทน</div>
+    <div class="log-alt-actions">
+      <button id="altBtn" class="orange" type="button">ไม่มีเครื่อง / เลือกท่าทดแทน</button>
+      <button id="clearAltBtn" class="secondary" type="button">ยกเลิกท่าทดแทน</button>
+    </div>
+  </div>
+
+  <div id="logPerformanceCard" class="card log-performance-card hidden" hidden>
+    <h3>Performance</h3>
+    <div class="log-performance-grid">
+      <div><span>Previous Workout</span><b>—</b></div>
+      <div><span>Last Set</span><b>—</b></div>
+      <div><span>Best Performance</span><b>—</b></div>
+    </div>
+  </div>
+
+  <div class="card log-input-card">
+    <h3>Log This Set</h3>
+    <label for="weight">Weight</label>
+    <div class="log-weight-row"><input id="weight" type="number" step="0.5"><select id="unit" aria-label="Weight unit"><option value="kg">kg</option></select></div>
+    <div class="log-reps-rir">
+      <div><label for="reps">Reps</label><input id="reps" type="number"></div>
+      <div><label for="rir">RIR</label><input id="rir" type="number" value="2" min="0" max="5"></div>
+    </div>
+    <button class="green log-save-button" id="saveBtn" type="button">+ บันทึกเซตนี้</button>
+  </div>
+
+  <details class="card log-disclosure">
+    <summary>Workout Settings</summary>
+    <div class="log-disclosure-body">
+      <div class="row">
+        <div><label for="date">วันที่</label><input id="date" type="date"><div id="dateStatus" class="msg ok">วันนี้</div></div>
+        <div><label for="week">Auto Week</label><input id="week" type="number" readonly value="1"><div class="small">ระบบคำนวณให้อัตโนมัติ</div></div>
+      </div>
+      <div class="row3">
+        <div><label for="targetSets">Target Sets</label><input id="targetSets" type="number" placeholder="Auto from program"></div>
+        <div><label for="restMode">Rest</label><select id="restMode"><option value="auto">Auto</option><option value="45">Quick 45s</option><option value="75">Standard 75s</option><option value="105">Heavy 105s</option><option value="custom">Custom</option></select></div>
+        <div><label for="restSec">Rest Seconds</label><input id="restSec" type="number" value="75"></div>
+      </div>
+      <div class="timer" id="timer">00:00</div>
+      <div class="row3"><button class="orange" id="startRest" type="button">Start</button><button class="secondary" id="stopRest" type="button">Stop</button><button class="cyan" id="add30" type="button">+30s</button></div>
+      <div class="row3">
+        <div><label for="sleepHours">Sleep (hrs)</label><input id="sleepHours" type="number" min="0" max="12" step="0.5" value="7"></div>
+        <div><label for="soreness">Soreness 1-5</label><input id="soreness" type="number" min="1" max="5" value="2"></div>
+        <div><label for="stress">Stress 1-5</label><input id="stress" type="number" min="1" max="5" value="2"></div>
+      </div>
+      <div class="row3">
+        <div><label for="tempo">Tempo</label><select id="tempo"><option value="2-0-1">2-0-1 ปกติ</option><option value="3-1-1">3-1-1 คุมช้า</option><option value="2-1-2">2-1-2 คุมเต็มช่วง</option><option value="explosive">Explosive</option></select></div>
+        <div><label for="repQuality">Rep Quality</label><select id="repQuality"><option value="good">Good</option><option value="strict">Strict</option><option value="cheat">Cheat</option><option value="partial">Partial</option></select></div>
+        <div><label for="biasMode">Mode</label><select id="biasMode"><option value="auto">Auto</option><option value="machine">Machine Bias</option><option value="free">Free Weight</option></select></div>
+      </div>
+      <label for="note">Note</label><textarea id="note"></textarea>
+      <div class="row3"><button id="imageBtn" class="purple" type="button">ดูรูปท่าที่ถูก</button><button id="videoBtn" class="cyan" type="button">ดูวิดีโอท่านี้</button><button class="secondary" id="resetBtn" type="button">Reset</button></div>
+      <div class="mediaPanel" id="mediaPanel"><div class="mediaTitle" id="mediaTitle">Media Reference</div><div class="mediaCue" id="mediaCue">เลือกท่าเพื่อดู cue / รูป / วิดีโอ</div></div>
+      <div id="v430ExerciseDbCard"><h3>Exercise Database</h3><div id="v430ExerciseDb" class="msg info">เลือกท่าเพื่อดูข้อมูล</div></div>
+      <div><h3>Daily Performance</h3><div id="v5LogSummary" class="msg info">รอข้อมูลวันนี้</div></div>
+    </div>
+  </details>
+
+  <details class="card log-disclosure log-developer-panel">
+    <summary>Developer</summary>
+    <div class="log-disclosure-body">
+      <div class="msg info" id="persistentSubStatus">Persistent Alternative: ไม่มี</div>
+      <div class="msg info" id="historyRemapBox">History Remap: กำลังตรวจสอบ...</div>
+      <div class="row"><button id="savePersistentAltBtn" class="purple" type="button">ใช้ท่านี้แทนทุกสัปดาห์</button><button id="clearPersistentAltBtn" class="secondary" type="button">ยกเลิกท่าแทนถาวร</button></div>
+      <div class="msg" id="lockStatus">กำลังตรวจสอบ...</div>
+      <div class="msg" id="setStatus">กำลังตรวจสอบเซต...</div>
+      <div class="msg info" id="calendarSyncStatus">Calendar Sync: กำลังตรวจสอบ...</div>
+      <div class="msg info" id="cycleDebug">Cycle: กำลังตรวจสอบ...</div>
+      <div class="msg info" id="dayDateLockDebug">Day Lock: กำลังตรวจสอบ...</div>
+      <div class="msg info" id="orderStatus">กำลังตรวจสอบลำดับท่า...</div>
+      <div class="msg info" id="prStatus">กำลังตรวจสอบสถิติ...</div>
+      <div class="msg info" id="weekSuggest">กำลังตรวจสอบสัปดาห์ก่อน...</div>
+      <div class="msg info" id="nextWeekBox">กำลังคำนวณน้ำหนักครั้งถัดไป...</div>
+      <div class="msg info" id="doubleProgressionBox">Double Progression: รอข้อมูล</div>
+      <div class="msg info" id="sfrBox">SFR / Machine Bias: รอข้อมูล</div>
+      <div class="msg" id="saveDebug">พร้อมบันทึก</div>
+      <div class="msg info" id="v430DraftStatus">Draft Save: พร้อมใช้งาน</div>
+    </div>
+  </details>
+
+  <div class="card log-recent-card"><h3>Recent Sets</h3><div id="recent"></div></div>
+</section>
 <section id="program" class="page">
   <div class="card program-hero">
     <h3>Program Overview</h3>

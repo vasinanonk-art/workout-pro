@@ -631,6 +631,7 @@ function renderDayLock(){
   const lock=calcDayLock();
   const box=$("dayDateLockDebug"); if(!box) return;
   const current = dayForExercise(state.selectedExercise);
+  setText("logDayLabel",current);
   const days = DAY_ORDER.map(d=>`<option value="${d}" ${d===current?"selected":""}>${d}</option>`).join("");
   box.className = `msg lock-panel ${lock.status==="OPEN"?"open":"locked"}`;
   box.innerHTML = `<h3>Day Lock Control</h3>
@@ -652,6 +653,7 @@ function updateFormDerived(){
   const dateStatusEl = $("dateStatus");
   if(dateStatusEl){ dateStatusEl.className = `msg ${ds.cls}`; dateStatusEl.innerHTML = `<b>${ds.text}</b><br><span class="small">${ds.detail}</span>`; }
   setHtml("altStatus", state.selectedAlt ? `ใช้ท่าทดแทน: <b>${escapeHtml(state.selectedAlt.name)}</b><br><span class="small">นับ progress เข้า ${escapeHtml(state.selectedExercise)}</span>` : "ยังไม่ได้เลือกท่าทดแทน");
+  const clearAltBtn=$("clearAltBtn"); if(clearAltBtn) clearAltBtn.hidden=!state.selectedAlt;
   setHtml("persistentSubStatus", state.selectedAlt ? `Current substitute: ${escapeHtml(state.selectedAlt.name)} → ${escapeHtml(state.selectedExercise)}` : "Persistent Alternative: ไม่มี");
   setHtml("historyRemapBox", `History Remap: ใช้ plannedExercise เป็นตัวนับหลัก • Actual: ${escapeHtml(actualExerciseName())}`);
   setVal("week", autoWeek());
@@ -660,6 +662,8 @@ function updateFormDerived(){
   setText("targetShow", targetSets());
   ensureLogDefaults();
   const prog=currentExerciseProgress();
+  const progress=$("logSetProgress");
+  if(progress){ progress.max=prog.target; progress.value=Math.min(prog.done,prog.target); }
   const lock=calcDayLock();
   const saveBtn=$("saveBtn"); if(saveBtn) saveBtn.disabled = state.saving || (!state.editingId && (lock.status!=="OPEN" || prog.done>=prog.target));
   setHtml("setStatus", prog.done>=prog.target ? `<span class="ok-text">ท่านี้ครบแล้ว ${prog.done}/${prog.target}</span>` : `พร้อมบันทึก: <b>${escapeHtml(actualExerciseName())}</b> Set ${prog.done+1}/${prog.target}`);
