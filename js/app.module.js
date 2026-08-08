@@ -111,6 +111,36 @@ function alternativesForExercise(name){
   const t=tieredAlternativesForExercise(name);
   return uniqueBy([...(t.A||[]), ...(t.B||[]), ...(t.C||[])], x=>x);
 }
+function persistentAltKey(plannedExercise){ return `persistent_alt_${plannedExercise}`; }
+function clearPersistentAlt(plannedExercise){
+  if(!plannedExercise) return;
+  try{ localStorage.removeItem(persistentAltKey(plannedExercise)); }catch(e){ console.warn("Unable to clear persistent alternative",e); }
+}
+function readPersistentAlt(plannedExercise){
+  if(!plannedExercise) return null;
+  try{
+    const raw=localStorage.getItem(persistentAltKey(plannedExercise));
+    if(!raw) return null;
+    const saved=JSON.parse(raw);
+    if(saved?.version!==1 || typeof saved.name!=="string" || !alternativesForExercise(plannedExercise).includes(saved.name)){
+      clearPersistentAlt(plannedExercise);
+      return null;
+    }
+    return saved.name;
+  }catch(e){
+    clearPersistentAlt(plannedExercise);
+    return null;
+  }
+}
+function writePersistentAlt(plannedExercise,alternative){
+  if(!plannedExercise || !alternativesForExercise(plannedExercise).includes(alternative)) return;
+  try{ localStorage.setItem(persistentAltKey(plannedExercise),JSON.stringify({version:1,name:alternative})); }catch(e){ console.warn("Unable to save persistent alternative",e); }
+}
+function restorePersistentAlt(){
+  if(state.editingId) return;
+  const name=readPersistentAlt(state.selectedExercise);
+  state.selectedAlt=name?{name,original:state.selectedExercise}:null;
+}
 function qaExerciseCoverage(){
   const programExercises=PROGRAM.map(p=>p[2]);
   const missingAlt=programExercises.filter(ex=>!alternativesForExercise(ex).length);
@@ -443,6 +473,7 @@ function renderExerciseSelect(){
     sel.value=chosen.value;
     if(state.selectedExercise!==chosen.value){ state.selectedAlt=null; }
     state.selectedExercise=chosen.value;
+    restorePersistentAlt();
   }else{
     const placeholder=document.createElement("option");
     placeholder.value="";
@@ -752,6 +783,7 @@ function bind(){
     if(!e.target.value) return;
     state.selectedExercise=e.target.value;
     state.selectedAlt=null;
+    restorePersistentAlt();
     rememberSessionExercise(state.selectedExercise,state.selectedDate);
     status("เลือกท่า: "+state.selectedExercise,"ok",900);
     // v5.5.4: do not call renderAll() here. Rebuilding the select during a mobile change event
@@ -761,7 +793,7 @@ function bind(){
   $("restMode")?.addEventListener("change",()=>{ ensureLogDefaults(); status("อัปเดตค่า Rest แล้ว","ok",900); });
   $("saveBtn")?.addEventListener("click",saveSet); $("resetBtn")?.addEventListener("click",resetForm);
   $("altBtn")?.addEventListener("click",openAltModal); $("closeAlt")?.addEventListener("click",()=>{$("altModal")?.classList.remove("show"); document.body.classList.remove("modal-open");});
-  $("clearAltBtn")?.addEventListener("click",()=>{ state.selectedAlt=null; renderAll(); });
+  $("clearAltBtn")?.addEventListener("click",()=>{ if(!state.editingId) clearPersistentAlt(state.selectedExercise); state.selectedAlt=null; renderAll(); });
   $("imageBtn")?.addEventListener("click",()=>window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(actualExerciseName()+" proper form")}`,"_blank"));
   $("videoBtn")?.addEventListener("click",()=>window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(actualExerciseName()+" proper form")}`,"_blank"));
   $("startRest")?.addEventListener("click",startTimer); $("stopRest")?.addEventListener("click",stopTimer); $("add30")?.addEventListener("click",()=>{addRestTime(30);});
@@ -791,6 +823,7 @@ function openAltModal(){
     host.innerHTML=sections || "ไม่มีท่าแทน";
     host.querySelectorAll(".alt-choice").forEach(b=>b.addEventListener("click",()=>{
       state.selectedAlt={name:b.dataset.name, original:base, tier:b.dataset.tier};
+      if(!state.editingId) writePersistentAlt(base,b.dataset.name);
       modal.classList.remove("show"); document.body.classList.remove("modal-open");
       renderAll(); status(`ใช้ท่าแทน Tier ${b.dataset.tier}: ${b.dataset.name}`,"ok");
     }));
