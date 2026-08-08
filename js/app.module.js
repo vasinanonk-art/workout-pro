@@ -394,7 +394,7 @@ function allowedTrainingDaysForDate(date=state.selectedDate){
   const plan = currentCyclePlan(date);
   return [...new Set([...(plan.allowedDays||[]), ...overrides])];
 }
-function grantOverride(day=dayForExercise(state.selectedExercise)){ const key=`${state.selectedDate}|${state.user?.uid||"guest"}|${state.teamId}|${day}`; state.overrideKeys.add(key); localStorage.setItem("dayLockOverridesV540", JSON.stringify([...state.overrideKeys])); status(`ปลดล็อก ${day} แล้ว`,"warn"); renderAll(); }
+function grantOverride(day=dayForExercise(state.selectedExercise)){ const key=`${state.selectedDate}|${state.user?.uid||"guest"}|${state.teamId}|${day}`; state.overrideKeys.add(key); localStorage.setItem("dayLockOverridesV540", JSON.stringify([...state.overrideKeys])); status(`ปลดล็อก ${day} แล้ว`,"warn"); scheduleRender(); }
 
 function normalizeLog(raw,id){
   let createdMs = Number(raw.createdMs || raw.updatedMs || 0) || Date.now();
@@ -420,7 +420,7 @@ function subscribeLogs(){
   state.unsub=null;
   const scope=workoutScope();
   state.subscriptionScope=scope;
-  if(!scope){ renderAll(); return; }
+  if(!scope){ scheduleRender(); return; }
   status("กำลังโหลด Log...","warn",0);
   const q=query(collection(db, collectionPath()), orderBy("date","asc"));
   state.unsub=onSnapshot(q,(snap)=>{
@@ -431,13 +431,29 @@ function subscribeLogs(){
     state.pendingWrites.forEach((pending,id)=>{ if(!remoteIds.has(id)) state.logs.push(pending.optimistic); });
     state.lastSnapshotAt=Date.now();
     status("โหลดข้อมูลสำเร็จ","ok");
-    renderAll();
+    scheduleRender();
   },(err)=>{ console.error(err); status("โหลด Log ไม่สำเร็จ: "+err.message,"err",0); });
 }
 
+const staticRenderValid={program:false,guide:false};
+function invalidateRender(page){ if(page in staticRenderValid) staticRenderValid[page]=false; }
+function renderStaticPage(page,renderer){ if(staticRenderValid[page]) return; renderer(); staticRenderValid[page]=true; }
+function scheduleRender(){ resolveSelectedExercise(); renderAll(); }
+function renderShared(){}
 function renderAll(){
-  resolveSelectedExercise();
-  renderSetup(); renderDayLock(); renderExerciseSelect(); renderExerciseDatabase(); renderLogSummary(); renderRecent(); renderDashboard(); renderCoach(); renderProgram(); renderGuide(); renderCalendar(); renderBackup(); renderMediaPanel(); updateFormDerived();
+  renderShared();
+  if(state.page==="setup") renderSetup();
+  else if(state.page==="log") renderLog();
+  else if(state.page==="dash") renderDashboard();
+  else if(state.page==="coach") renderCoach();
+  else if(state.page==="calendar") renderCalendar();
+  else if(state.page==="program") renderStaticPage("program",renderProgram);
+  else if(state.page==="guide") renderStaticPage("guide",renderGuide);
+  else if(state.page==="backup") renderBackup();
+}
+
+function renderLog(){
+  renderDayLock(); renderExerciseSelect(); renderExerciseDatabase(); renderLogSummary(); renderRecent(); renderMedia(); renderTimer(); updateFormDerived();
 }
 
 function notificationPermissionText(){
@@ -445,6 +461,19 @@ function notificationPermissionText(){
   if(Notification.permission==="granted") return "Notification: อนุญาตแล้ว";
   if(Notification.permission==="denied") return "Notification: ถูกบล็อก ต้องเปิดใน Browser Settings";
   return "Notification: ยังไม่ได้อนุญาต";
+}
+async function enableNotifications(){
+  const r=await requestNotifyPermission();
+  state.notificationsEnabled = r === "granted";
+  localStorage.setItem("restNotifyEnabled", state.notificationsEnabled ? "1" : "0");
+  status(r==="granted" ? "เปิด Notification แล้ว" : "ยังเปิด Notification ไม่ได้: "+r, r==="granted"?"ok":"warn", 2500);
+  renderNotificationControls();
+}
+function toggleNotifications(){
+  state.notificationsEnabled=!state.notificationsEnabled;
+  localStorage.setItem("restNotifyEnabled", state.notificationsEnabled ? "1" : "0");
+  status(state.notificationsEnabled?"เปิด Notify แล้ว":"ปิด Notify แล้ว", "ok", 1200);
+  renderNotificationControls();
 }
 function renderNotificationControls(){
   const setup=$("setup"); if(!setup) return;
@@ -461,20 +490,9 @@ function renderNotificationControls(){
     <div class="msg info" id="notifyStatus">${notificationPermissionText()}<br><span class="small">ใช้สำหรับแจ้งเตือนเหลือ 10 วิ และหมดเวลาพัก</span></div>
     <div class="row3"><button id="enableNotifyBtn" class="cyan" type="button">🔔 Enable Notifications</button><button id="testNotifyBtn" class="secondary" type="button">Test</button><button id="toggleNotifyBtn" class="secondary" type="button">${state.notificationsEnabled?"ปิด Notify":"เปิด Notify"}</button></div>
     <div class="small">Permission: ${perm} • 10s: ${state.notify10Enabled?"ON":"OFF"} • Sound: ${state.soundEnabled?"ON":"OFF"} • Vibrate: ${state.vibrateEnabled?"ON":"OFF"}</div>`;
-  $("enableNotifyBtn")?.addEventListener("click", async()=>{
-    const r=await requestNotifyPermission();
-    state.notificationsEnabled = r === "granted";
-    localStorage.setItem("restNotifyEnabled", state.notificationsEnabled ? "1" : "0");
-    status(r==="granted" ? "เปิด Notification แล้ว" : "ยังเปิด Notification ไม่ได้: "+r, r==="granted"?"ok":"warn", 2500);
-    renderNotificationControls();
-  });
+  $("enableNotifyBtn")?.addEventListener("click", enableNotifications);
   $("testNotifyBtn")?.addEventListener("click", ()=>notifyRest("🔔 Test Notification", "ถ้าเห็นอันนี้ การแจ้งเตือนพร้อมใช้งาน", "done"));
-  $("toggleNotifyBtn")?.addEventListener("click", ()=>{
-    state.notificationsEnabled=!state.notificationsEnabled;
-    localStorage.setItem("restNotifyEnabled", state.notificationsEnabled ? "1" : "0");
-    status(state.notificationsEnabled?"เปิด Notify แล้ว":"ปิด Notify แล้ว", "ok", 1200);
-    renderNotificationControls();
-  });
+  $("toggleNotifyBtn")?.addEventListener("click", toggleNotifications);
 }
 
 function renderSetup(){
@@ -545,10 +563,8 @@ function renderExerciseSelect(){
 function renderAfterExerciseChange(){
   renderExerciseProgressList();
   renderExerciseDatabase();
-  renderMediaPanel();
+  renderMedia();
   updateFormDerived();
-  renderDashboard();
-  renderCoach();
 }
 function renderExerciseProgressList(){
   const host=$("orderStatus"); if(!host) return;
@@ -560,6 +576,13 @@ function renderExerciseProgressList(){
     const cls=done>=tgt?"done":(p[2]===state.selectedExercise?"active":"");
     return `<div class="exercise-progress-item ${cls}">${done>=tgt?"✓":"▶"} ${p[2]} <span class="pill ${done>=tgt?"done":(p[2]===state.selectedExercise?"active":"")}">${done}/${tgt}</span></div>`;
   }).join("") + `</div>`;
+}
+function selectOverrideDay(e){ state.selectedDayForOverride=e.target.value; status("เลือก Day ที่จะข้าม: "+e.target.value,"warn",1200); }
+function applyDayOverride(){
+  const d=$("overrideDaySelect")?.value || dayForExercise(state.selectedExercise);
+  grantOverride(d);
+  if(!state.editingId) state.selectedExercise=nextIncompleteExercise(d,state.selectedDate);
+  scheduleRender();
 }
 function renderDayLock(){
   const lock=calcDayLock();
@@ -574,13 +597,8 @@ function renderDayLock(){
     <div class="small">${lock.reason}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><select id="overrideDaySelect">${days}</select><button id="overrideDayBtn" class="orange" type="button">ข้ามไปเล่น Day ที่เลือก</button></div>
     <div class="select-hint">ถ้าข้ามวัน ต้องกดปุ่มนี้ก่อน Save ถึงจะทำงาน</div>`;
-  $("overrideDaySelect")?.addEventListener("change", e=>{ state.selectedDayForOverride=e.target.value; status("เลือก Day ที่จะข้าม: "+e.target.value,"warn",1200); });
-  $("overrideDayBtn")?.addEventListener("click",()=>{
-    const d=$("overrideDaySelect")?.value || current;
-    grantOverride(d);
-    if(!state.editingId) state.selectedExercise=nextIncompleteExercise(d,state.selectedDate);
-    renderAll();
-  });
+  $("overrideDaySelect")?.addEventListener("change", selectOverrideDay);
+  $("overrideDayBtn")?.addEventListener("click",applyDayOverride);
   setHtml("lockStatus", lock.status==="OPEN" ? `<span class="ok-text">พร้อมเล่น: ${dayForExercise(state.selectedExercise)}</span>` : `<span class="warn-text">ล็อกอยู่: ${lock.reason}</span>`);
 }
 function updateFormDerived(){
@@ -706,6 +724,17 @@ function calendarDateClass(date){
   if(completed.length) return "completed";
   return "partial";
 }
+function selectCalendarDate(date){
+  state.selectedDate=date;
+  state.calendarMonth=state.selectedDate.slice(0,7);
+  setVal("date",state.selectedDate);
+  const allowed=allowedTrainingDaysForDate(state.selectedDate);
+  const d=allowed[0] || dayForExercise(state.selectedExercise);
+  const next=nextIncompleteExercise(d,state.selectedDate);
+  if(next && !state.editingId) state.selectedExercise=next;
+  status("เลือกวันที่ "+dateLabelTH(state.selectedDate),"ok");
+  scheduleRender();
+}
 function renderCalendar(){
   const [yy,mm]=state.calendarMonth.split("-").map(Number);
   const first=new Date(yy,mm-1,1);
@@ -725,17 +754,7 @@ function renderCalendar(){
       cells += `<div class="${cls}" data-date="${key}"><b>${d}</b><br>${tag}</div>`;
     }
     grid.innerHTML=heads+cells;
-    grid.querySelectorAll(".calDay[data-date]").forEach(el=>el.addEventListener("click",()=>{
-      state.selectedDate=el.dataset.date;
-      state.calendarMonth=state.selectedDate.slice(0,7);
-      setVal("date",state.selectedDate);
-      const allowed=allowedTrainingDaysForDate(state.selectedDate);
-      const d=allowed[0] || dayForExercise(state.selectedExercise);
-      const next=nextIncompleteExercise(d,state.selectedDate);
-      if(next && !state.editingId) state.selectedExercise=next;
-      status("เลือกวันที่ "+dateLabelTH(state.selectedDate),"ok");
-      renderAll();
-    }));
+    grid.querySelectorAll(".calDay[data-date]").forEach(el=>el.addEventListener("click",()=>selectCalendarDate(el.dataset.date)));
   }
   const arr=logsOnDate(state.selectedDate);
   const completed=completedDaysByDate(state.selectedDate);
@@ -749,7 +768,7 @@ function renderCalendar(){
   if(btn){ btn.disabled=false; btn.classList.remove("disabled"); btn.onclick=()=>{ show("log"); }; }
 }
 function renderBackup(){ const first=logsSorted()[0]?.date||"-", last=logsSorted().at(-1)?.date||"-"; setText("backupKpiSets", state.logs.length); setText("backupKpiVolume", volumeForLogs(state.logs).toFixed(0)); setText("backupKpiFirst", first); setText("backupKpiLast", last); setHtml("backupSummaryBox", `Backup ready • ${state.logs.length} logs • ${VERSION}`); }
-function renderMediaPanel(){
+function renderMedia(){
   const ex=actualExerciseName();
   setText("mediaTitle", `Media Reference: ${ex}`);
   setHtml("mediaCue", `Cue: คุมฟอร์ม ไม่ฝืนเจ็บ • Search: ${escapeHtml(ex)} proper form<br>${exerciseMediaHtml(ex)}`);
@@ -795,14 +814,14 @@ async function saveSet(){
       const idx=state.logs.findIndex(x=>x.id===state.editingId);
       if(idx>=0) state.logs[idx]={...state.logs[idx], ...localPayload};
       state.pendingWrites.set(writeRef.id,pending);
-      renderAll();
+      scheduleRender();
       await updateDoc(writeRef,payload);
       if(state.pendingWrites.get(writeRef.id)===pending){ state.pendingWrites.delete(writeRef.id); state.editingId=null; applied=true; }
     } else {
       state.logs.push(localPayload);
       state.pendingWrites.set(writeRef.id,pending);
       ["weight","reps","note"].forEach(id=>setVal(id,""));
-      renderAll();
+      scheduleRender();
       await setDoc(writeRef,{...payload,createdAt:serverTimestamp()});
       if(state.pendingWrites.get(writeRef.id)===pending){
         state.pendingWrites.delete(writeRef.id);
@@ -827,19 +846,19 @@ async function saveSet(){
       status("บันทึกไม่สำเร็จ: "+e.message,"err",0);
     }
   }
-  finally{ if(workoutScope()===writeScope){ state.saving=false; renderAll(); } }
+  finally{ if(workoutScope()===writeScope){ state.saving=false; scheduleRender(); } }
 }
-function loadEdit(id){ const x=state.logs.find(l=>l.id===id); if(!x) return; state.editingId=id; state.selectedDate=x.date; state.selectedExercise=plannedOf(x); state.selectedAlt=x.exercise!==plannedOf(x)?{name:x.exercise, original:plannedOf(x)}:null; setVal("weight",x.weightKg); setVal("reps",x.reps); setVal("rir",x.rir ?? 2); setVal("tempo",x.tempo || "2-0-1"); setVal("repQuality",x.repQuality || "good"); setVal("biasMode",x.biasMode || "auto"); setVal("sleepHours",x.sleepHours ?? 7); setVal("soreness",x.soreness ?? 2); setVal("stress",x.stress ?? 2); setVal("note",x.note||""); ensureLogDefaults(); status("โหลด Log เพื่อแก้ไขแล้ว","warn"); show("log"); renderAll(); }
+function loadEdit(id){ const x=state.logs.find(l=>l.id===id); if(!x) return; state.editingId=id; state.selectedDate=x.date; state.selectedExercise=plannedOf(x); state.selectedAlt=x.exercise!==plannedOf(x)?{name:x.exercise, original:plannedOf(x)}:null; setVal("weight",x.weightKg); setVal("reps",x.reps); setVal("rir",x.rir ?? 2); setVal("tempo",x.tempo || "2-0-1"); setVal("repQuality",x.repQuality || "good"); setVal("biasMode",x.biasMode || "auto"); setVal("sleepHours",x.sleepHours ?? 7); setVal("soreness",x.soreness ?? 2); setVal("stress",x.stress ?? 2); setVal("note",x.note||""); ensureLogDefaults(); status("โหลด Log เพื่อแก้ไขแล้ว","warn"); show("log"); scheduleRender(); }
 async function deleteLog(id){ if(!confirm("ลบ Log นี้?")) return; try{ await deleteDoc(doc(db, collectionPath(), id)); status("ลบแล้ว","ok"); }catch(e){ status("ลบไม่สำเร็จ: "+e.message,"err",0); } }
-function resetForm(){ state.editingId=null; state.selectedAlt=null; ["weight","reps","note"].forEach(id=>setVal(id,"")); setVal("rir",2); setVal("tempo","2-0-1"); setVal("repQuality","good"); setVal("biasMode","auto"); setVal("restMode","auto"); setVal("sleepHours",7); setVal("soreness",2); setVal("stress",2); ensureLogDefaults(); renderAll(); status("Reset แล้ว","ok"); }
+function resetForm(){ state.editingId=null; state.selectedAlt=null; ["weight","reps","note"].forEach(id=>setVal(id,"")); setVal("rir",2); setVal("tempo","2-0-1"); setVal("repQuality","good"); setVal("biasMode","auto"); setVal("restMode","auto"); setVal("sleepHours",7); setVal("soreness",2); setVal("stress",2); ensureLogDefaults(); scheduleRender(); status("Reset แล้ว","ok"); }
 
-function show(page){ document.querySelectorAll(".page").forEach(p=>p.classList.remove("active")); $(page)?.classList.add("active"); document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active", b.dataset.page===page)); state.page=page; status("เปิดหน้า "+page,"ok",900); renderAll(); }
+function show(page){ document.querySelectorAll(".page").forEach(p=>p.classList.remove("active")); $(page)?.classList.add("active"); document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active", b.dataset.page===page)); state.page=page; status("เปิดหน้า "+page,"ok",900); scheduleRender(); }
 window.show=show;
 function bind(){
   document.querySelectorAll(".tab[data-page]").forEach(b=>b.addEventListener("click",()=>show(b.dataset.page)));
   $("loginBtn")?.addEventListener("click",()=>signInWithPopup(auth,new GoogleAuthProvider()).catch(e=>status(e.message,"err",0)));
   $("logoutBtn")?.addEventListener("click",()=>signOut(auth));
-  $("saveTeamBtn")?.addEventListener("click",()=>{ const teamId=$("teamId")?.value.trim()||"Beer-Team"; if(teamId!==state.teamId){ clearScopedWorkoutState(); state.teamId=teamId; renderAll(); } else state.teamId=teamId; try{ localStorage.setItem("teamId",state.teamId); }catch(e){} subscribeLogs(); status("บันทึก Team ID แล้ว","ok"); });
+  $("saveTeamBtn")?.addEventListener("click",()=>{ const teamId=$("teamId")?.value.trim()||"Beer-Team"; if(teamId!==state.teamId){ clearScopedWorkoutState(); state.teamId=teamId; scheduleRender(); } else state.teamId=teamId; try{ localStorage.setItem("teamId",state.teamId); }catch(e){} subscribeLogs(); status("บันทึก Team ID แล้ว","ok"); });
   $("date")?.addEventListener("change",e=>{
     state.selectedDate=isValidDateKey(e.target.value)?e.target.value:todayTH();
     state.calendarMonth=state.selectedDate.slice(0,7);
@@ -848,7 +867,7 @@ function bind(){
       const d=allowed[0] || dayForExercise(state.selectedExercise);
       state.selectedExercise=nextIncompleteExercise(d,state.selectedDate);
     }
-    renderAll();
+    scheduleRender();
   });
   $("prevM")?.addEventListener("click",()=>{ const [y,m]=state.calendarMonth.split("-").map(Number); const dt=new Date(y,m-2,1); state.calendarMonth=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}`; renderCalendar(); });
   $("nextM")?.addEventListener("click",()=>{ const [y,m]=state.calendarMonth.split("-").map(Number); const dt=new Date(y,m,1); state.calendarMonth=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}`; renderCalendar(); });
@@ -867,12 +886,12 @@ function bind(){
   $("restMode")?.addEventListener("change",()=>{ ensureLogDefaults(); status("อัปเดตค่า Rest แล้ว","ok",900); });
   $("saveBtn")?.addEventListener("click",saveSet); $("resetBtn")?.addEventListener("click",resetForm);
   $("altBtn")?.addEventListener("click",openAltModal); $("closeAlt")?.addEventListener("click",()=>{$("altModal")?.classList.remove("show"); document.body.classList.remove("modal-open");});
-  $("clearAltBtn")?.addEventListener("click",()=>{ if(!state.editingId) clearPersistentAlt(state.selectedExercise); state.selectedAlt=null; renderAll(); });
+  $("clearAltBtn")?.addEventListener("click",()=>{ if(!state.editingId) clearPersistentAlt(state.selectedExercise); state.selectedAlt=null; scheduleRender(); });
   $("imageBtn")?.addEventListener("click",()=>window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(actualExerciseName()+" proper form")}`,"_blank"));
   $("videoBtn")?.addEventListener("click",()=>window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(actualExerciseName()+" proper form")}`,"_blank"));
   $("startRest")?.addEventListener("click",startTimer); $("stopRest")?.addEventListener("click",stopTimer); $("add30")?.addEventListener("click",()=>{addRestTime(30);});
-  document.addEventListener("visibilitychange", renderTimer);
-  window.addEventListener("focus", renderTimer);
+  document.addEventListener("visibilitychange", updateTimerState);
+  window.addEventListener("focus", updateTimerState);
   $("v430CopySummaryBtn")?.addEventListener("click",()=>{ navigator.clipboard?.writeText($("v430AiSummary")?.innerText||""); status("Copy Summary แล้ว","ok"); });
   $("exportJsonBtn")?.addEventListener("click",exportJson); $("v5ExportJsonBtn")?.addEventListener("click",exportJson); $("exportCsvBtn")?.addEventListener("click",exportCsv); $("v5ExportCsvBtn")?.addEventListener("click",exportCsv);
 }
@@ -899,7 +918,7 @@ function openAltModal(){
       state.selectedAlt={name:b.dataset.name, original:base, tier:b.dataset.tier};
       if(!state.editingId) writePersistentAlt(base,b.dataset.name);
       modal.classList.remove("show"); document.body.classList.remove("modal-open");
-      renderAll(); status(`ใช้ท่าแทน Tier ${b.dataset.tier}: ${b.dataset.name}`,"ok");
+      scheduleRender(); status(`ใช้ท่าแทน Tier ${b.dataset.tier}: ${b.dataset.name}`,"ok");
     }));
   };
   render("");
@@ -939,8 +958,8 @@ function startTimer(){
   state.timerEndAt=Date.now() + sec*1000;
   state.notified10=false; state.notifiedDone=false;
   requestNotifyPermission();
-  renderTimer();
-  state.timerId=setInterval(renderTimer,1000);
+  updateTimerState();
+  state.timerId=setInterval(updateTimerState,1000);
 }
 function stopTimer(clearEnd=true){
   if(state.timerId) clearInterval(state.timerId);
@@ -952,10 +971,10 @@ function addRestTime(sec=30){
   const now=Date.now();
   if(state.timerEndAt && state.timerEndAt>now){ state.timerEndAt += sec*1000; }
   else { state.timerEndAt = now + sec*1000; }
-  renderTimer();
-  if(!state.timerId) state.timerId=setInterval(renderTimer,1000);
+  updateTimerState();
+  if(!state.timerId) state.timerId=setInterval(updateTimerState,1000);
 }
-function renderTimer(){
+function updateTimerState(){
   if(state.timerEndAt){
     state.timerLeft=Math.max(0, Math.ceil((state.timerEndAt-Date.now())/1000));
     if(state.notify10Enabled && !state.notified10 && state.timerLeft>0 && state.timerLeft<=10){
@@ -966,11 +985,15 @@ function renderTimer(){
       if(state.timerId) clearInterval(state.timerId);
       state.timerId=null;
       state.timerEndAt=0;
-      setText("timer","00:00");
+      renderTimer();
       if(!state.notifiedDone){ state.notifiedDone=true; notifyRest("🔔 Rest Complete", "พร้อมเล่นเซตถัดไปแล้ว", "done"); }
       return;
     }
   }
+  renderTimer();
+}
+function renderTimer(){
+  if(state.page!=="log") return;
   const m=String(Math.floor((state.timerLeft||0)/60)).padStart(2,"0"), ss=String((state.timerLeft||0)%60).padStart(2,"0");
   setText("timer",`${m}:${ss}`);
 }
@@ -978,8 +1001,8 @@ function exportJson(){ const data=JSON.stringify({version:VERSION, exportedAt:ne
 function exportCsv(){ const cols=["date","week","day","plannedExercise","exercise","weightKg","reps","rir","note"]; const csv=[cols.join(","),...state.logs.map(x=>cols.map(c=>`"${String(x[c]??"").replaceAll('"','""')}"`).join(","))].join("\n"); download("workout-pro-log.csv",csv,"text/csv"); status("Export CSV แล้ว","ok"); }
 function download(name,text,type){ const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([text],{type})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
 
-onAuthStateChanged(auth,u=>{ if((state.user?.uid||null)!==(u?.uid||null)) clearScopedWorkoutState(); state.user=u; if(u && !state.teamId) state.teamId="Beer-Team"; subscribeLogs(); renderAll(); });
+onAuthStateChanged(auth,u=>{ if((state.user?.uid||null)!==(u?.uid||null)) clearScopedWorkoutState(); state.user=u; if(u && !state.teamId) state.teamId="Beer-Team"; subscribeLogs(); scheduleRender(); });
 
 window.addEventListener("DOMContentLoaded",()=>{
-  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); ensureLogDefaults(); renderAll(); qaExerciseCoverage(); status("Workout PRO v5.5.7 พร้อมใช้งาน","ok",2500);
+  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); ensureLogDefaults(); scheduleRender(); qaExerciseCoverage(); status("Workout PRO v5.5.7 พร้อมใช้งาน","ok",2500);
 });
