@@ -61,7 +61,7 @@ function loadApp(storageSeed={},storageUnavailable=false){
   context.window.document=document;
   context.window.Notification=context.Notification;
   context.globalThis=context;
-  const expose=`\n;globalThis.__app={state,bind,show,saveSet,subscribeLogs,renderExerciseSelect,resolveSelectedExercise,renderCalendar,renderRecent,renderSetup,updateFormDerived,updateTimerState,restorePersistentAlt,readPersistentAlt,writePersistentAlt,clearPersistentAlt,isValidDateKey,clearScopedWorkoutState,plannedOf,samePlanned,inferPlannedExerciseFromActual,plannedCandidatesForAlternative,logsOnDate,logsForPlanned,completedForExercise,latestSetForPlanned,previousSetForPlanned,previousWorkoutForPlanned,replaceWorkoutLogs,getDerivedLogIndex:()=>derivedLogIndex,getIndexRebuildCount:()=>derivedLogIndexRebuildCount,alternativeInventory:()=>[...PLANNED_BY_ALTERNATIVE.entries()],setRender(fn){renderAll=fn},setTimer(fn){startTimer=fn}};`;
+  const expose=`\n;globalThis.__app={state,bind,show,saveSet,subscribeLogs,renderExerciseSelect,resolveSelectedExercise,renderCalendar,renderRecent,renderSetup,renderPerformanceCard,usePreviousWorkout,lastSetForPlannedOnOrBefore,bestPerformanceForPlanned,updateFormDerived,updateTimerState,restorePersistentAlt,readPersistentAlt,writePersistentAlt,clearPersistentAlt,isValidDateKey,clearScopedWorkoutState,plannedOf,samePlanned,inferPlannedExerciseFromActual,plannedCandidatesForAlternative,logsOnDate,logsForPlanned,completedForExercise,latestSetForPlanned,previousSetForPlanned,previousWorkoutForPlanned,replaceWorkoutLogs,getDerivedLogIndex:()=>derivedLogIndex,getIndexRebuildCount:()=>derivedLogIndexRebuildCount,alternativeInventory:()=>[...PLANNED_BY_ALTERNATIVE.entries()],setRender(fn){renderAll=fn},setTimer(fn){startTimer=fn}};`;
   vm.runInNewContext(source+expose,context,{filename:"js/app.module.js"});
   context.__app.setRender(()=>{});
   context.__app.setTimer(()=>{});
@@ -74,6 +74,10 @@ function form(elements,values={}){
   for(const id of ["tempo","repQuality","biasMode","restMode","unit"]){ elements[id].options=[{value:elements[id].value}]; }
   elements.appStatusBar=element();
   elements.saveBtn=element();
+}
+
+function performanceElements(elements){
+  for(const id of ["logPerformanceCard","performancePrevious","performancePreviousValue","performancePreviousMeta","performanceLast","performanceLastValue","performanceLastMeta","performanceBest","performanceBestValue","performanceBestMeta","usePreviousWorkoutBtn"]){ elements[id]=element(); }
 }
 
 test("malformed and wrong-schema startup storage falls back without crashing",()=>{
@@ -483,4 +487,97 @@ test("derived index rebuilds only for log mutations",()=>{
   api.subscribeLogs();
   calls.snapshots[0](snapshot([{id:"remote",date:"2026-01-01",plannedExercise:"Lat Pulldown",exercise:"Lat Pulldown",weightKg:40,reps:10,createdMs:1}]));
   assert.equal(api.getIndexRebuildCount(),baseline+1);
+});
+
+test("Performance Previous Workout uses an earlier date, never a same-day set",()=>{
+  const {api,elements}=loadApp();
+  performanceElements(elements);
+  api.state.selectedExercise="Barbell Bench Press";
+  api.state.selectedDate="2026-02-10";
+  api.replaceWorkoutLogs([
+    {id:"prior",date:"2026-02-03",plannedExercise:"Barbell Bench Press",weightKg:80,reps:10,rir:2,createdMs:1},
+    {id:"same-day",date:"2026-02-10",plannedExercise:"Barbell Bench Press",weightKg:82.5,reps:8,rir:1,createdMs:2}
+  ]);
+  api.renderPerformanceCard();
+  assert.equal(elements.performancePreviousValue.textContent,"80 kg × 10");
+  assert.match(elements.performancePreviousMeta.textContent,/3\/2\/69/);
+});
+
+test("Performance Last Set excludes future-date sets",()=>{
+  const {api}=loadApp();
+  api.replaceWorkoutLogs([
+    {id:"past",date:"2026-02-03",plannedExercise:"Lat Pulldown",createdMs:1},
+    {id:"current",date:"2026-02-10",plannedExercise:"Lat Pulldown",createdMs:2},
+    {id:"future",date:"2026-02-20",plannedExercise:"Lat Pulldown",createdMs:3}
+  ]);
+  assert.equal(api.lastSetForPlannedOnOrBefore("Lat Pulldown","2026-02-10").id,"current");
+});
+
+test("missing Previous Workout hides its section and action",()=>{
+  const {api,elements}=loadApp();
+  performanceElements(elements);
+  api.state.selectedExercise="Cable Fly";
+  api.state.selectedDate="2026-02-10";
+  api.replaceWorkoutLogs([{id:"same-day",date:"2026-02-10",plannedExercise:"Cable Fly",weightKg:20,reps:12,rir:2,createdMs:1}]);
+  api.renderPerformanceCard();
+  assert.equal(elements.performancePrevious.hidden,true);
+  assert.equal(elements.usePreviousWorkoutBtn.hidden,true);
+  assert.equal(elements.logPerformanceCard.hidden,false);
+});
+
+test("missing all performance metrics hides the entire card",()=>{
+  const {api,elements}=loadApp();
+  performanceElements(elements);
+  api.state.selectedExercise="Cable Fly";
+  api.state.selectedDate="2026-02-10";
+  api.replaceWorkoutLogs([]);
+  api.renderPerformanceCard();
+  assert.equal(elements.performancePrevious.hidden,true);
+  assert.equal(elements.performanceLast.hidden,true);
+  assert.equal(elements.performanceBest.hidden,true);
+  assert.equal(elements.logPerformanceCard.hidden,true);
+});
+
+test("Use Previous Workout copies only weight, reps, and RIR",()=>{
+  const {api,elements}=loadApp();
+  form(elements,{weight:10,reps:3,rir:5,note:"keep",tempo:"3-1-1",repQuality:"strict",biasMode:"machine",sleepHours:8,soreness:3,stress:4});
+  api.state.selectedExercise="Barbell Bench Press";
+  api.state.selectedDate="2026-02-10";
+  api.replaceWorkoutLogs([{id:"prior",date:"2026-02-03",plannedExercise:"Barbell Bench Press",weightKg:80,reps:10,rir:2,createdMs:1}]);
+  api.usePreviousWorkout();
+  assert.deepEqual([elements.weight.value,elements.reps.value,elements.rir.value],[80,10,2]);
+  assert.deepEqual([elements.note.value,elements.tempo.value,elements.repQuality.value,elements.biasMode.value,elements.sleepHours.value,elements.soreness.value,elements.stress.value],["keep","3-1-1","strict","machine","8","3","4"]);
+});
+
+test("Use Previous Workout does not mutate workout identity or persist data",()=>{
+  const {api,elements,calls,storage}=loadApp();
+  form(elements);
+  const selectedAlt={name:"Machine Chest Press",original:"Barbell Bench Press"};
+  api.state.selectedExercise="Barbell Bench Press";
+  api.state.selectedAlt=selectedAlt;
+  api.state.selectedDate="2026-02-10";
+  api.replaceWorkoutLogs([{id:"prior",date:"2026-02-03",plannedExercise:"Barbell Bench Press",exercise:"Machine Chest Press",weightKg:80,reps:10,rir:2,createdMs:1}]);
+  const setCount=api.completedForExercise("Barbell Bench Press","2026-02-10");
+  api.usePreviousWorkout();
+  assert.equal(api.state.selectedDate,"2026-02-10");
+  assert.equal(api.state.selectedExercise,"Barbell Bench Press");
+  assert.equal(api.state.selectedAlt,selectedAlt);
+  assert.equal(api.completedForExercise("Barbell Bench Press","2026-02-10"),setCount);
+  assert.equal(calls.adds.length,0);
+  assert.equal(calls.updates.length,0);
+  assert.equal(storage.size,0);
+});
+
+test("historical edit cannot apply Use Previous Workout",()=>{
+  const {api,elements}=loadApp();
+  form(elements,{weight:55,reps:6,rir:3});
+  performanceElements(elements);
+  api.state.selectedExercise="Barbell Bench Press";
+  api.state.selectedDate="2026-02-10";
+  api.state.editingId="historical";
+  api.replaceWorkoutLogs([{id:"prior",date:"2026-02-03",plannedExercise:"Barbell Bench Press",weightKg:80,reps:10,rir:2,createdMs:1}]);
+  api.renderPerformanceCard();
+  assert.equal(elements.usePreviousWorkoutBtn.hidden,true);
+  api.usePreviousWorkout();
+  assert.deepEqual([elements.weight.value,elements.reps.value,elements.rir.value],["55","6","3"]);
 });

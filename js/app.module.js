@@ -496,7 +496,7 @@ function renderAll(){
 }
 
 function renderLog(){
-  renderDayLock(); renderExerciseSelect(); renderExerciseDatabase(); renderLogSummary(); renderRecent(); renderMedia(); renderTimer(); updateFormDerived();
+  renderDayLock(); renderExerciseSelect(); renderExerciseDatabase(); renderLogSummary(); renderRecent(); renderMedia(); renderTimer(); updateFormDerived(); renderPerformanceCard();
 }
 
 function notificationPermissionText(){
@@ -608,6 +608,7 @@ function renderAfterExerciseChange(){
   renderExerciseDatabase();
   renderMedia();
   updateFormDerived();
+  renderPerformanceCard();
 }
 function renderExerciseProgressList(){
   const host=$("orderStatus"); if(!host) return;
@@ -674,8 +675,8 @@ function updateFormDerived(){
 function actualExerciseName(){ return state.selectedAlt?.name || state.selectedExercise; }
 function renderPRAndSuggestion(){
   const ex=state.selectedExercise;
-  const rows=state.logs.filter(x=>plannedOf(x)===ex).sort(byCreated);
-  const best=rows.reduce((b,x)=>((x.weightKg||0)*(x.reps||0)>(b.weightKg||0)*(b.reps||0)?x:b),{});
+  const rows=logsForPlanned(ex);
+  const best=bestPerformanceForPlanned(ex) || {};
   setHtml("prStatus", rows.length ? `สถิติ ${escapeHtml(ex)}: สูงสุด ${best.weightKg||0} kg × ${best.reps||0}` : `ยังไม่มีสถิติของ ${escapeHtml(ex)}`);
   const last=rows[rows.length-1];
   setHtml("weekSuggest", last ? `ล่าสุด: ${last.weightKg} kg × ${last.reps} reps (RIR ${last.rir ?? "-"})` : `ยังไม่มีข้อมูลสัปดาห์ก่อนของท่านี้`);
@@ -684,6 +685,34 @@ function renderPRAndSuggestion(){
   setHtml("nextWeekBox", `น้ำหนักแนะนำครั้งถัดไป: <b>${next}</b>`);
   setHtml("doubleProgressionBox", `Double Progression: ใช้เฉพาะข้อมูลของ <b>${escapeHtml(ex)}</b>`);
   setHtml("sfrBox", `SFR / Machine Bias: ${state.selectedAlt?"ใช้ท่าแทน "+escapeHtml(state.selectedAlt.name):"Auto"}`);
+}
+function setPerformanceItem(id,valueId,metaId,log,includeDate=true){
+  const item=$(id); if(!item) return;
+  item.hidden=!log;
+  if(!log) return;
+  setText(valueId,`${log.weightKg} kg × ${log.reps}`);
+  setText(metaId,`${includeDate?dateLabelTH(log.date)+" • ":""}RIR ${log.rir ?? "-"}`);
+}
+function renderPerformanceCard(){
+  const previous=previousWorkoutForPlanned(state.selectedExercise,state.selectedDate);
+  const last=lastSetForPlannedOnOrBefore(state.selectedExercise,state.selectedDate);
+  const best=bestPerformanceForPlanned(state.selectedExercise);
+  setPerformanceItem("performancePrevious","performancePreviousValue","performancePreviousMeta",previous);
+  setPerformanceItem("performanceLast","performanceLastValue","performanceLastMeta",last);
+  setPerformanceItem("performanceBest","performanceBestValue","performanceBestMeta",best);
+  const usePreviousBtn=$("usePreviousWorkoutBtn");
+  if(usePreviousBtn) usePreviousBtn.hidden=!previous || Boolean(state.editingId);
+  const card=$("logPerformanceCard");
+  if(card) card.hidden=!previous && !last && !best;
+}
+function usePreviousWorkout(){
+  if(state.editingId) return;
+  const previous=previousWorkoutForPlanned(state.selectedExercise,state.selectedDate);
+  if(!previous) return;
+  setVal("weight",previous.weightKg);
+  setVal("reps",previous.reps);
+  setVal("rir",previous.rir ?? "");
+  status(`คัดลอก Previous Workout: ${previous.weightKg} kg × ${previous.reps}, RIR ${previous.rir ?? "-"}`,"ok",2200);
 }
 function renderLogSummary(){
   const arr=logsOnDate(state.selectedDate), sets=arr.length, vol=volumeForLogs(arr);
@@ -700,6 +729,12 @@ function renderRecent(){
 }
 
 function logsForPlanned(ex){ return [...(derivedLogIndex.byPlannedExercise.get(canonicalExercise(ex))||[])]; }
+function lastSetForPlannedOnOrBefore(exercise,date=state.selectedDate){ return logsForPlanned(exercise).filter(x=>isValidDateKey(x.date) && x.date<=date).at(-1) || null; }
+function bestPerformanceForPlanned(exercise){
+  const rows=logsForPlanned(exercise);
+  const best=rows.reduce((current,x)=>((x.weightKg||0)*(x.reps||0)>(current.weightKg||0)*(current.reps||0)?x:current),{});
+  return rows.length ? best : null;
+}
 function todayLogs(){ return logsOnDate(state.selectedDate); }
 function muscleBalanceHtml(){
   const g=groupByMuscle(); const entries=Object.entries(g).sort((a,b)=>b[1]-a[1]);
@@ -934,6 +969,7 @@ function bind(){
   });
   $("restMode")?.addEventListener("change",()=>{ ensureLogDefaults(); status("อัปเดตค่า Rest แล้ว","ok",900); });
   $("saveBtn")?.addEventListener("click",saveSet); $("resetBtn")?.addEventListener("click",resetForm);
+  $("usePreviousWorkoutBtn")?.addEventListener("click",usePreviousWorkout);
   $("altBtn")?.addEventListener("click",openAltModal); $("closeAlt")?.addEventListener("click",()=>{$("altModal")?.classList.remove("show"); document.body.classList.remove("modal-open");});
   $("clearAltBtn")?.addEventListener("click",()=>{ if(!state.editingId) clearPersistentAlt(state.selectedExercise); state.selectedAlt=null; scheduleRender(); });
   $("imageBtn")?.addEventListener("click",()=>window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(actualExerciseName()+" proper form")}`,"_blank"));
