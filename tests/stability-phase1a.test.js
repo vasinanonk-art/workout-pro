@@ -8,11 +8,18 @@ const source = fs.readFileSync("js/app.module.js","utf8").replace(/^import .*;\n
 function element(value=""){
   return {value:String(value),textContent:"",className:"",innerHTML:"",disabled:false,options:[],querySelectorAll(){ return []; },addEventListener(type,fn){ this.listeners??={}; this.listeners[type]=fn; }};
 }
+function deferred(){
+  let resolve,reject;
+  const promise=new Promise((res,rej)=>{ resolve=res; reject=rej; });
+  return {promise,resolve,reject};
+}
+function snapshot(logs){ return {docs:logs.map(({id,...data})=>({id,data:()=>data}))}; }
 
 function loadApp(storageSeed={},storageUnavailable=false){
   const storage=new Map(Object.entries(storageSeed));
   const elements={};
-  const calls={adds:[],updates:[],snapshots:[],authCallback:null};
+  const calls={adds:[],updates:[],snapshots:[],errors:[],authCallback:null,addDeferred:null,updateDeferred:null};
+  let nextId=1;
   const document={
     getElementById:id=>elements[id]||null,
     querySelectorAll:()=>[],
@@ -21,7 +28,7 @@ function loadApp(storageSeed={},storageUnavailable=false){
     addEventListener(){}
   };
   const context={
-    console,
+    console:{...console,error:(...args)=>calls.errors.push(args)},
     Date,
     Intl,
     Math,
@@ -46,15 +53,15 @@ function loadApp(storageSeed={},storageUnavailable=false){
     signInWithPopup:()=>Promise.resolve(), signOut:()=>Promise.resolve(),
     onAuthStateChanged:(auth,fn)=>{ calls.authCallback=fn; },
     collection:(...args)=>args, query:(...args)=>args, orderBy:(...args)=>args,
-    doc:(...args)=>args, serverTimestamp:()=>({server:true}),
-    addDoc:async(ref,payload)=>{ calls.adds.push(payload); return {id:"remote-1"}; },
-    updateDoc:async(ref,payload)=>{ calls.updates.push(payload); }, deleteDoc:async()=>{},
+    doc:(...args)=>args.length===1?{id:`auto-${nextId++}`}:{id:String(args.at(-1))}, serverTimestamp:()=>({server:true}),
+    setDoc:async(ref,payload)=>{ calls.adds.push({ref,payload}); if(calls.addDeferred) return calls.addDeferred.promise; },
+    updateDoc:async(ref,payload)=>{ calls.updates.push({ref,payload}); if(calls.updateDeferred) return calls.updateDeferred.promise; }, deleteDoc:async()=>{},
     onSnapshot:(q,next)=>{ calls.snapshots.push(next); return ()=>{}; }
   };
   context.window.document=document;
   context.window.Notification=context.Notification;
   context.globalThis=context;
-  const expose=`\n;globalThis.__app={state,bind,saveSet,renderExerciseSelect,resolveSelectedExercise,renderCalendar,renderRecent,renderSetup,updateFormDerived,restorePersistentAlt,readPersistentAlt,writePersistentAlt,clearPersistentAlt,isValidDateKey,clearScopedWorkoutState,setRender(fn){renderAll=fn},setTimer(fn){startTimer=fn}};`;
+  const expose=`\n;globalThis.__app={state,bind,saveSet,subscribeLogs,renderExerciseSelect,resolveSelectedExercise,renderCalendar,renderRecent,renderSetup,updateFormDerived,restorePersistentAlt,readPersistentAlt,writePersistentAlt,clearPersistentAlt,isValidDateKey,clearScopedWorkoutState,setRender(fn){renderAll=fn},setTimer(fn){startTimer=fn}};`;
   vm.runInNewContext(source+expose,context,{filename:"js/app.module.js"});
   context.__app.setRender(()=>{});
   context.__app.setTimer(()=>{});
@@ -114,7 +121,7 @@ test("completed historical edit keeps exercise and bypasses new-set guards",asyn
   await api.saveSet();
   assert.equal(calls.updates.length,1);
   assert.deepEqual(
-    [calls.updates[0].date,calls.updates[0].week,calls.updates[0].day,calls.updates[0].plannedExercise,calls.updates[0].exercise],
+    [calls.updates[0].payload.date,calls.updates[0].payload.week,calls.updates[0].payload.day,calls.updates[0].payload.plannedExercise,calls.updates[0].payload.exercise],
     [original.date,original.week,original.day,original.plannedExercise,original.exercise]
   );
   assert.equal(storage.get("persistent_alt_Lat Pulldown"),JSON.stringify({version:1,name:"Machine Pulldown"}));
@@ -174,14 +181,121 @@ test("team switch clears old logs before subscribing to the new scope",()=>{
   api.state.user={uid:"user-1"};
   api.state.teamId="old-team";
   api.state.logs=[{id:"old"}];
+  api.state.pendingWrites.set("pending",{type:"add",optimistic:{id:"pending"}});
   elements.teamId=element("new-team");
   elements.saveTeamBtn=element();
   api.bind();
   elements.saveTeamBtn.listeners.click();
   assert.equal(api.state.logs.length,0);
+  assert.equal(api.state.pendingWrites.size,0);
   assert.equal(api.state.teamId,"new-team");
   assert.equal(api.state.subscriptionScope,"user-1|new-team");
   assert.equal(calls.snapshots.length,1);
+});
+
+test("snapshot before add promise resolution does not duplicate optimistic add",async()=>{
+  const {api,elements,calls}=loadApp();
+  form(elements,{weight:60,reps:10});
+  api.state.user={uid:"user-1"};
+  api.state.selectedDate="2026-08-08";
+  api.subscribeLogs();
+  calls.addDeferred=deferred();
+  const saving=api.saveSet();
+  const id=api.state.logs[0].id;
+  calls.snapshots[0](snapshot([{id,date:"2026-08-08",week:1,day:"Day 1",plannedExercise:"Barbell Bench Press",exercise:"Barbell Bench Press",weightKg:60,reps:10,rir:2}]));
+  assert.equal(api.state.logs.length,1);
+  assert.equal(api.state.logs[0].id,id);
+  assert.equal(api.state.pendingWrites.size,1);
+  calls.addDeferred.resolve();
+  await saving;
+  assert.equal(api.state.logs.length,1);
+  assert.equal(api.state.pendingWrites.size,0);
+});
+
+test("add promise before snapshot reconciles to one server record by id",async()=>{
+  const {api,elements,calls}=loadApp();
+  form(elements,{weight:62.5,reps:8});
+  api.state.user={uid:"user-1"};
+  api.state.selectedDate="2026-08-08";
+  api.subscribeLogs();
+  await api.saveSet();
+  const id=api.state.logs[0].id;
+  assert.equal(api.state.pendingWrites.size,0);
+  calls.snapshots[0](snapshot([{id,date:"2026-08-08",week:1,day:"Day 1",plannedExercise:"Barbell Bench Press",exercise:"Barbell Bench Press",weightKg:62.5,reps:8,rir:2}]));
+  assert.equal(api.state.logs.length,1);
+  assert.equal(api.state.logs[0].id,id);
+});
+
+test("stale update snapshot cannot revert optimistic update while pending",async()=>{
+  const {api,elements,calls}=loadApp();
+  form(elements,{weight:90,reps:6});
+  const original={id:"log-1",date:"2026-01-01",week:2,day:"Day 1",plannedExercise:"Barbell Bench Press",exercise:"Barbell Bench Press",weightKg:80,reps:5,rir:2,targetSets:4,createdMs:1};
+  api.state.user={uid:"user-1"};
+  api.state.logs=[original];
+  api.state.editingId=original.id;
+  api.state.selectedDate=original.date;
+  api.state.selectedExercise=original.plannedExercise;
+  api.subscribeLogs();
+  calls.updateDeferred=deferred();
+  const saving=api.saveSet();
+  calls.snapshots[0](snapshot([original]));
+  assert.equal(api.state.logs.length,1);
+  assert.equal(api.state.logs[0].weightKg,90);
+  assert.equal(api.state.pendingWrites.size,1);
+  calls.updateDeferred.resolve();
+  await saving;
+  assert.equal(api.state.logs[0].weightKg,90);
+  assert.equal(api.state.pendingWrites.size,0);
+});
+
+test("successful update clears pending state and keeps optimistic result",async()=>{
+  const {api,elements,calls}=loadApp();
+  form(elements,{weight:85,reps:7});
+  const original={id:"log-1",date:"2026-01-01",week:2,day:"Day 1",plannedExercise:"Barbell Bench Press",exercise:"Barbell Bench Press",weightKg:80,reps:5,rir:2,targetSets:4,createdMs:1};
+  api.state.user={uid:"user-1"};
+  api.state.logs=[original];
+  api.state.editingId=original.id;
+  api.state.selectedDate=original.date;
+  api.state.selectedExercise=original.plannedExercise;
+  await api.saveSet();
+  assert.equal(calls.updates.length,1);
+  assert.equal(api.state.pendingWrites.size,0);
+  assert.equal(api.state.logs[0].weightKg,85);
+  assert.equal(api.state.editingId,null);
+});
+
+test("failed add removes optimistic record",async()=>{
+  const {api,elements,calls}=loadApp();
+  form(elements);
+  api.state.user={uid:"user-1"};
+  api.state.selectedDate="2026-08-08";
+  calls.addDeferred=deferred();
+  const saving=api.saveSet();
+  assert.equal(api.state.logs.length,1);
+  calls.addDeferred.reject(new Error("add failed"));
+  await saving;
+  assert.equal(api.state.logs.length,0);
+  assert.equal(api.state.pendingWrites.size,0);
+});
+
+test("failed update restores previous record",async()=>{
+  const {api,elements,calls}=loadApp();
+  form(elements,{weight:95,reps:6});
+  const original={id:"log-1",date:"2026-01-01",week:2,day:"Day 1",plannedExercise:"Barbell Bench Press",exercise:"Barbell Bench Press",weightKg:80,reps:5,rir:2,targetSets:4,createdMs:1,note:"before"};
+  api.state.user={uid:"user-1"};
+  api.state.logs=[original];
+  api.state.editingId=original.id;
+  api.state.selectedDate=original.date;
+  api.state.selectedExercise=original.plannedExercise;
+  calls.updateDeferred=deferred();
+  const saving=api.saveSet();
+  assert.equal(api.state.logs[0].weightKg,95);
+  calls.updateDeferred.reject(new Error("update failed"));
+  await saving;
+  assert.equal(api.state.logs[0],original);
+  assert.equal(api.state.logs[0].weightKg,80);
+  assert.equal(api.state.logs[0].note,"before");
+  assert.equal(api.state.pendingWrites.size,0);
 });
 
 test("invalid inputs are rejected before writes",async()=>{
@@ -219,7 +333,7 @@ test("kg remains canonical and lb is unavailable",async()=>{
   api.state.user={uid:"user-1"};
   api.state.selectedDate="2026-08-08";
   await api.saveSet();
-  assert.equal(calls.adds[0].weightKg,42.5);
+  assert.equal(calls.adds[0].payload.weightKg,42.5);
   const html=fs.readFileSync("index.html","utf8");
   assert.doesNotMatch(html,/<option value="lb">/);
 });

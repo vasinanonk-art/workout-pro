@@ -2,7 +2,7 @@
 // Single state engine. No legacy render patches. No duplicate Day Lock / Dropdown renderers.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, setDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const VERSION = "v5.5.7";
 const $ = (id) => document.getElementById(id);
@@ -411,9 +411,9 @@ function subscribeLogs(){
   state.unsub=onSnapshot(q,(snap)=>{
     if(state.subscriptionScope!==scope) return;
     const remote=snap.docs.map(d=>normalizeLog(d.data(), d.id));
-    const pending=[...state.pendingWrites.values()].filter(x=>!x.__removeOnSync);
-    const remoteKeys=new Set(remote.map(x=>`${x.date}|${plannedOf(x)}|${actualOf(x)}|${x.weightKg}|${x.reps}|${x.createdMs}`));
-    state.logs=[...remote, ...pending.filter(x=>!remoteKeys.has(`${x.date}|${plannedOf(x)}|${actualOf(x)}|${x.weightKg}|${x.reps}|${x.createdMs}`))];
+    const remoteIds=new Set(remote.map(x=>x.id));
+    state.logs=remote.map(x=>state.pendingWrites.get(x.id)?.optimistic || x);
+    state.pendingWrites.forEach((pending,id)=>{ if(!remoteIds.has(id)) state.logs.push(pending.optimistic); });
     state.lastSnapshotAt=Date.now();
     status("โหลดข้อมูลสำเร็จ","ok");
     renderAll();
@@ -769,42 +769,50 @@ async function saveSet(){
   state.saving=true; updateFormDerived(); status("กำลังบันทึกเซต...","warn",0);
   const nowMs=localNowMs();
   const payload={date:wasEditing?original.date:state.selectedDate, week:wasEditing?(original.week??autoWeek()):autoWeek(), day:wasEditing?(original.day||dayForExercise(original.plannedExercise)):dayForExercise(state.selectedExercise), plannedExercise:wasEditing?original.plannedExercise:state.selectedExercise, exercise:wasEditing?original.exercise:actualExerciseName(), weightKg:w, reps, rir, tempo:$("tempo")?.value||"", repQuality:$("repQuality")?.value||"", biasMode:$("biasMode")?.value||"", note:$("note")?.value||"", targetSets:wasEditing?(original.targetSets??targetSets(original.plannedExercise)):targetSets(), sleepHours, soreness, stress, version:VERSION, updatedAt:serverTimestamp()};
-  const localPayload=normalizeLog({...payload, createdMs:wasEditing?original.createdMs:nowMs, updatedMs:nowMs}, wasEditing ? state.editingId : tempId());
+  const writeRef=wasEditing ? doc(db,collectionPath(),state.editingId) : doc(collection(db,collectionPath()));
+  const writeScope=workoutScope();
+  const localPayload=normalizeLog({...payload, createdMs:wasEditing?original.createdMs:nowMs, updatedMs:nowMs}, writeRef.id);
   localPayload.__pending=true;
+  const pending={type:wasEditing?"update":"add",optimistic:localPayload,previous:wasEditing?original:null};
+  let applied=false;
   try{
     if(wasEditing){
       const idx=state.logs.findIndex(x=>x.id===state.editingId);
       if(idx>=0) state.logs[idx]={...state.logs[idx], ...localPayload};
-      state.pendingWrites.set(state.editingId, {...localPayload, __removeOnSync:true});
+      state.pendingWrites.set(writeRef.id,pending);
       renderAll();
-      await updateDoc(doc(db, collectionPath(), state.editingId), payload);
-      state.pendingWrites.delete(state.editingId);
-      state.editingId=null;
+      await updateDoc(writeRef,payload);
+      if(state.pendingWrites.get(writeRef.id)===pending){ state.pendingWrites.delete(writeRef.id); state.editingId=null; applied=true; }
     } else {
       state.logs.push(localPayload);
-      state.pendingWrites.set(localPayload.id, localPayload);
-      if(completedForExercise(state.selectedExercise,state.selectedDate) < targetSets(state.selectedExercise)) rememberSessionExercise(state.selectedExercise,state.selectedDate);
-      else clearSessionExercise(state.selectedDate);
+      state.pendingWrites.set(writeRef.id,pending);
       ["weight","reps","note"].forEach(id=>setVal(id,""));
       renderAll();
-      const ref=await addDoc(collection(db, collectionPath()), {...payload, createdAt:serverTimestamp()});
-      state.pendingWrites.delete(localPayload.id);
-      // Keep optimistic UI until Firestore snapshot arrives; if slow, replace temp id to avoid duplicates in edit/delete.
-      const temp=state.logs.find(x=>x.id===localPayload.id);
-      if(temp) temp.id=ref.id;
+      await setDoc(writeRef,{...payload,createdAt:serverTimestamp()});
+      if(state.pendingWrites.get(writeRef.id)===pending){
+        state.pendingWrites.delete(writeRef.id);
+        if(completedForExercise(state.selectedExercise,state.selectedDate) < targetSets(state.selectedExercise)) rememberSessionExercise(state.selectedExercise,state.selectedDate);
+        else clearSessionExercise(state.selectedDate);
+        applied=true;
+      }
     }
-    if(shouldAutoRest && typeof startTimer === "function"){
+    if(applied){ const saved=state.logs.find(x=>x.id===writeRef.id); if(saved) delete saved.__pending; }
+    if(applied && shouldAutoRest && typeof startTimer === "function"){
       startTimer();
       status("บันทึกสำเร็จ • เริ่มจับเวลาพักแล้ว","ok");
-    }else{
+    }else if(applied){
       status("บันทึกสำเร็จ","ok");
     }
   }catch(e){
     console.error(e);
-    if(!wasEditing){ state.logs=state.logs.filter(x=>x.id!==localPayload.id); state.pendingWrites.delete(localPayload.id); }
-    status("บันทึกไม่สำเร็จ: "+e.message,"err",0);
+    if(state.pendingWrites.get(writeRef.id)===pending){
+      state.pendingWrites.delete(writeRef.id);
+      if(wasEditing){ const idx=state.logs.findIndex(x=>x.id===writeRef.id); if(idx>=0) state.logs[idx]=original; }
+      else state.logs=state.logs.filter(x=>x.id!==writeRef.id);
+      status("บันทึกไม่สำเร็จ: "+e.message,"err",0);
+    }
   }
-  finally{ state.saving=false; renderAll(); }
+  finally{ if(workoutScope()===writeScope){ state.saving=false; renderAll(); } }
 }
 function loadEdit(id){ const x=state.logs.find(l=>l.id===id); if(!x) return; state.editingId=id; state.selectedDate=x.date; state.selectedExercise=plannedOf(x); state.selectedAlt=x.exercise!==plannedOf(x)?{name:x.exercise, original:plannedOf(x)}:null; setVal("weight",x.weightKg); setVal("reps",x.reps); setVal("rir",x.rir ?? 2); setVal("tempo",x.tempo || "2-0-1"); setVal("repQuality",x.repQuality || "good"); setVal("biasMode",x.biasMode || "auto"); setVal("sleepHours",x.sleepHours ?? 7); setVal("soreness",x.soreness ?? 2); setVal("stress",x.stress ?? 2); setVal("note",x.note||""); ensureLogDefaults(); status("โหลด Log เพื่อแก้ไขแล้ว","warn"); show("log"); renderAll(); }
 async function deleteLog(id){ if(!confirm("ลบ Log นี้?")) return; try{ await deleteDoc(doc(db, collectionPath(), id)); status("ลบแล้ว","ok"); }catch(e){ status("ลบไม่สำเร็จ: "+e.message,"err",0); } }
