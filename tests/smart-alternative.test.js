@@ -12,7 +12,7 @@ test("smart alternative returns the best metadata match",async()=>{
   const {findAlternatives}=await load();
   const result=findAlternatives({plannedExercise:"Lat Pulldown",availableEquipment:["cable"]});
   assert.equal(result[0].exercise,"Machine Pulldown");
-  assert.deepEqual(JSON.parse(JSON.stringify(result[0].score)),{mappingPriority:1,sameMovementPattern:true,sameExerciseType:true,samePrimaryMuscle:true});
+  assert.deepEqual(JSON.parse(JSON.stringify(result[0].score)),{mappingPriority:1,sameMovementPattern:true,sameExerciseType:false,samePrimaryMuscle:true});
   assert.deepEqual(Array.from(result[0].reasons),["Same movement pattern","Same primary muscle","Available equipment","Preferred mapped alternative"]);
 });
 
@@ -41,10 +41,24 @@ test("fly-style exercise metadata uses the isolation movement pattern",async()=>
   }
 });
 
+test("Leg Press patterns are classified before generic press matching",async()=>{
+  const library=await import(libraryUrl);
+  const byName=new Map(library.EXERCISE_LIBRARY.map(exercise=>[exercise.displayName,exercise]));
+  assert.equal(byName.get("Leg Press").movementPattern,"knee_dominant");
+  assert.equal(byName.get("Leg Press Calf Raise").movementPattern,"plantar_flexion");
+});
+
+test("workout-day categories are not exercise-type similarity",async()=>{
+  const {findAlternatives}=await load();
+  const results=findAlternatives({plannedExercise:"Lat Pulldown",availableEquipment:["cable","machine","bodyweight"]});
+  assert.equal(results.length>0,true);
+  assert.equal(results.every(item=>item.score.sameExerciseType===false),true);
+});
+
 test("smart alternative preserves mapping order for a full ranking tie",async()=>{
   const {findAlternatives}=await load();
   const result=findAlternatives({plannedExercise:"Walking Lunge",availableEquipment:["machine"]});
-  const tied=result.filter(item=>item.score.mappingPriority===2 && item.score.sameMovementPattern && item.score.sameExerciseType && item.score.samePrimaryMuscle);
+  const tied=result.filter(item=>item.score.mappingPriority===2 && item.score.sameMovementPattern && item.score.samePrimaryMuscle);
   assert.deepEqual(tied.map(item=>item.exercise),["Hack Squat","Pendulum Squat"]);
 });
 

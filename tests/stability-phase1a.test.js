@@ -37,7 +37,7 @@ function snapshot(logs){ return {docs:logs.map(({id,...data})=>({id,data:()=>dat
 function loadApp(storageSeed={},storageUnavailable=false){
   const storage=new Map(Object.entries(storageSeed));
   const elements={};
-  const calls={adds:[],updates:[],snapshots:[],errors:[],authCallback:null,addDeferred:null,updateDeferred:null};
+  const calls={adds:[],updates:[],snapshots:[],errors:[],warnings:[],authCallback:null,addDeferred:null,updateDeferred:null};
   let nextId=1;
   const document={
     getElementById:id=>elements[id]||null,
@@ -47,7 +47,7 @@ function loadApp(storageSeed={},storageUnavailable=false){
     addEventListener(){}
   };
   const context={
-    console:{...console,error:(...args)=>calls.errors.push(args)},
+    console:{...console,error:(...args)=>calls.errors.push(args),warn:(...args)=>calls.warnings.push(args)},
     Date,
     Intl,
     Math,
@@ -80,7 +80,7 @@ function loadApp(storageSeed={},storageUnavailable=false){
   context.window.document=document;
   context.window.Notification=context.Notification;
   context.globalThis=context;
-  const expose=`\n;globalThis.__app={state,bind,show,saveSet,subscribeLogs,renderExerciseSelect,resolveSelectedExercise,renderLogScheduleState,renderCalendar,renderRecent,renderSetup,renderPerformanceCard,usePreviousWorkout,progressionSuggestion,applyProgressionSuggestion,smartAlternativesForCurrentExercise,selectAlternative,lastSetForPlannedOnOrBefore,bestPerformanceForPlanned,updateFormDerived,updateTimerState,restorePersistentAlt,readPersistentAlt,writePersistentAlt,clearPersistentAlt,isValidDateKey,clearScopedWorkoutState,plannedOf,samePlanned,inferPlannedExerciseFromActual,plannedCandidatesForAlternative,logsOnDate,logsForPlanned,completedForExercise,latestSetForPlanned,previousSetForPlanned,previousWorkoutForPlanned,replaceWorkoutLogs,getDerivedLogIndex:()=>derivedLogIndex,getIndexRebuildCount:()=>derivedLogIndexRebuildCount,alternativeInventory:()=>[...PLANNED_BY_ALTERNATIVE.entries()],exerciseLibrary:()=>EXERCISE_LIBRARY,program:()=>PROGRAM,alternatives:()=>ALT,canonicalExercise,alternativeReasons:()=>ALTERNATIVE_REASONS,setRender(fn){renderAll=fn},setTimer(fn){startTimer=fn}};`;
+  const expose=`\n;globalThis.__app={state,bind,show,saveSet,subscribeLogs,renderExerciseSelect,resolveSelectedExercise,renderLogScheduleState,renderCalendar,renderRecent,renderSetup,renderPerformanceCard,renderPRAndSuggestion,usePreviousWorkout,progressionSuggestion,applyProgressionSuggestion,smartAlternativesForCurrentExercise,selectAlternative,lastSetForPlannedOnOrBefore,bestPerformanceForPlanned,updateFormDerived,updateTimerState,restorePersistentAlt,readPersistentAlt,writePersistentAlt,clearPersistentAlt,rememberSessionExercise,clearSessionExercise,grantOverride,normalizeLog,isValidDateKey,clearScopedWorkoutState,plannedOf,samePlanned,inferPlannedExerciseFromActual,plannedCandidatesForAlternative,logsOnDate,logsForPlanned,completedForExercise,latestSetForPlanned,previousSetForPlanned,previousWorkoutForPlanned,replaceWorkoutLogs,getDerivedLogIndex:()=>derivedLogIndex,getIndexRebuildCount:()=>derivedLogIndexRebuildCount,alternativeInventory:()=>[...PLANNED_BY_ALTERNATIVE.entries()],exerciseLibrary:()=>EXERCISE_LIBRARY,program:()=>PROGRAM,alternatives:()=>ALT,canonicalExercise,alternativeReasons:()=>ALTERNATIVE_REASONS,setRender(fn){renderAll=fn},setTimer(fn){startTimer=fn}};`;
   vm.runInNewContext(source+expose,context,{filename:"js/app.module.js"});
   context.__app.setRender(()=>{});
   context.__app.setTimer(()=>{});
@@ -306,9 +306,11 @@ test("logout clears account-scoped logs and pending writes",()=>{
   const {api,calls}=loadApp();
   api.state.user={uid:"user-1"};
   api.state.logs=[{id:"old"}];
+  api.state.quarantinedLogs=[{id:"invalid-old"}];
   api.state.pendingWrites.set("pending",{id:"pending"});
   calls.authCallback(null);
   assert.equal(api.state.logs.length,0);
+  assert.equal(api.state.quarantinedLogs.length,0);
   assert.equal(api.state.pendingWrites.size,0);
   assert.equal(api.state.subscriptionScope,null);
 });
@@ -318,12 +320,14 @@ test("team switch clears old logs before subscribing to the new scope",()=>{
   api.state.user={uid:"user-1"};
   api.state.teamId="old-team";
   api.state.logs=[{id:"old"}];
+  api.state.quarantinedLogs=[{id:"invalid-old"}];
   api.state.pendingWrites.set("pending",{type:"add",optimistic:{id:"pending"}});
   elements.teamId=element("new-team");
   elements.saveTeamBtn=element();
   api.bind();
   elements.saveTeamBtn.listeners.click();
   assert.equal(api.state.logs.length,0);
+  assert.equal(api.state.quarantinedLogs.length,0);
   assert.equal(api.state.pendingWrites.size,0);
   assert.equal(api.state.teamId,"new-team");
   assert.equal(api.state.subscriptionScope,"user-1|new-team");
@@ -824,4 +828,89 @@ test("historical edit on a Rest Day preserves its historical exercise",()=>{
   api.renderExerciseSelect();
   assert.equal(elements.exercise.value,"Lat Pulldown");
   assert.equal(elements.exercise.disabled,false);
+});
+
+test("successful add is finalized when session localStorage is unavailable",async()=>{
+  const {api,elements,calls}=loadApp({},true);
+  form(elements,{date:"2026-01-31",weight:80,reps:6,rir:2});
+  api.state.user={uid:"user-1"};
+  api.state.selectedDate="2026-01-31";
+  api.state.selectedExercise="Barbell Bench Press";
+  await api.saveSet();
+  assert.equal(calls.adds.length,1);
+  assert.equal(api.state.pendingWrites.size,0);
+  assert.equal(api.state.saving,false);
+  assert.equal(api.state.logs.length,1);
+  assert.equal(api.state.logs[0].__pending,undefined);
+});
+
+test("session and override storage writes never escape storage failures",()=>{
+  const {api}=loadApp({},true);
+  api.state.selectedDate="2026-01-31";
+  api.state.selectedExercise="Barbell Bench Press";
+  assert.doesNotThrow(()=>api.rememberSessionExercise());
+  assert.doesNotThrow(()=>api.clearSessionExercise());
+  assert.doesNotThrow(()=>api.grantOverride("Day 1"));
+  assert.equal(api.state.overrideKeys.has("2026-01-31|guest|Beer-Team|Day 1"),true);
+});
+
+test("Developer recommendation is sourced from Progression Engine",()=>{
+  const {api,elements}=loadApp();
+  form(elements);
+  for(const id of ["prStatus","weekSuggest","nextWeekBox","doubleProgressionBox","sfrBox"]){ elements[id]=element(); }
+  api.state.selectedDate="2026-02-10";
+  api.state.selectedExercise="Barbell Bench Press";
+  api.replaceWorkoutLogs([{id:"prior",date:"2026-02-03",plannedExercise:"Barbell Bench Press",weightKg:80,reps:8,rir:2,createdMs:1}]);
+  api.renderPRAndSuggestion();
+  assert.match(elements.nextWeekBox.innerHTML,/Progression Engine/);
+  assert.match(elements.nextWeekBox.innerHTML,/80\.5 kg × 5/);
+  assert.equal(/reps\s*>=\s*12|w\s*\+\s*2\.5/.test(fs.readFileSync("js/app.module.js","utf8")),false);
+});
+
+test("unknown equipment availability is not claimed in integrated alternatives",()=>{
+  const {api}=loadApp();
+  api.state.selectedExercise="Barbell Bench Press";
+  const alternatives=api.smartAlternativesForCurrentExercise();
+  assert.equal(alternatives.length,3);
+  assert.equal(alternatives.every(item=>!Array.from(item.reasons).includes("Available equipment")),true);
+});
+
+test("malformed remote dates are quarantined outside live workout logs",()=>{
+  const {api,calls}=loadApp();
+  calls.authCallback({uid:"user-1"});
+  calls.snapshots[0](snapshot([
+    {id:"valid",date:"2026-01-31",plannedExercise:"Barbell Bench Press",exercise:"Barbell Bench Press",weightKg:80,reps:6,createdMs:1},
+    {id:"invalid",date:"2026-02-31",plannedExercise:"Barbell Bench Press",exercise:"Barbell Bench Press",weightKg:200,reps:20}
+  ]));
+  assert.deepEqual(Array.from(api.state.logs,log=>log.id),["valid"]);
+  assert.deepEqual(Array.from(api.state.quarantinedLogs,log=>log.id),["invalid"]);
+  assert.equal(api.state.quarantinedLogs[0].date,"");
+  assert.equal(api.completedForExercise("Barbell Bench Press","2026-02-28"),0);
+});
+
+test("legacy missing timestamps normalize and order deterministically",()=>{
+  const {api}=loadApp();
+  const raw={date:"2026-01-31",plannedExercise:"Lat Pulldown",exercise:"Lat Pulldown",weightKg:50,reps:8};
+  const first=api.normalizeLog(raw,"legacy-a"), second=api.normalizeLog(raw,"legacy-b");
+  assert.equal(api.normalizeLog(raw,"legacy-a").createdMs,first.createdMs);
+  api.replaceWorkoutLogs([first,second]);
+  const latestForward=api.latestSetForPlanned("Lat Pulldown").id;
+  api.replaceWorkoutLogs([second,first]);
+  assert.equal(api.latestSetForPlanned("Lat Pulldown").id,latestForward);
+});
+
+test("unavailable controls stay in the DOM but are hidden and Developer remains reachable",()=>{
+  const html=fs.readFileSync("index.html","utf8");
+  for(const id of ["migrationCard","v5BackupLocalBtn","v5RestoreLocalBtn","aiCoachBtn","copyAiPromptBtn","v430ApplyDeloadBtn","savePersistentAltBtn","clearPersistentAltBtn","copyBackupSummaryBtn"]){
+    assert.match(html,new RegExp(`id="${id}"`),id);
+  }
+  assert.match(html,/id="migrationCard"[^>]*class="[^"]*hidden|class="[^"]*hidden[^"]*"[^>]*id="migrationCard"/);
+  assert.match(html,/id="v5BackupLocalBtn" class="[^"]*hidden/);
+  assert.match(html,/id="v5RestoreLocalBtn" class="[^"]*hidden/);
+  assert.match(html,/<div class="card hidden"><h3>Status \/ Debug<\/h3>/);
+  for(const id of ["aiCoachBtn","copyAiPromptBtn","v430ApplyDeloadBtn","savePersistentAltBtn","clearPersistentAltBtn","copyBackupSummaryBtn"]){
+    assert.match(html,new RegExp(`id="${id}" class="[^"]*hidden`),id);
+  }
+  assert.match(html,/<details class="card log-disclosure log-developer-panel">/);
+  for(const id of ["dayDateLockDebug","orderStatus","nextWeekBox","v430ExerciseDb"]){ assert.match(html,new RegExp(`id="${id}"`),id); }
 });

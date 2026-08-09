@@ -90,6 +90,8 @@ function equipmentForExercise(name){
 }
 function movementPatternForExercise(name,muscle){
   const value=String(name||"").toLowerCase();
+  if(/leg press calf raise/.test(value)) return "plantar_flexion";
+  if(/leg press/.test(value)) return "knee_dominant";
   if(/fly|pec deck/.test(value)) return "isolation";
   if(/press|push-up|dip/.test(value)) return muscle==="Shoulder" ? "vertical_push" : "horizontal_push";
   if(/pulldown|pull-up|chin-up|straight-arm/.test(value)) return "vertical_pull";

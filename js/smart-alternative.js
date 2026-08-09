@@ -2,6 +2,7 @@ import { EXERCISE_LIBRARY } from "./exercise-library.js";
 
 const BY_NAME=new Map(EXERCISE_LIBRARY.map(exercise=>[exercise.displayName,exercise]));
 const BY_ID=new Map(EXERCISE_LIBRARY.map(exercise=>[exercise.id,exercise]));
+const PROGRAM_CATEGORIES=new Set(["Push","Pull","Upper","Leg"]);
 
 // Product ranking convention v1: compare existing mapping priority first, then exact metadata matches.
 // The score is a descriptive ranking tuple, not a weighted total. Existing mapping order breaks full ties.
@@ -18,7 +19,7 @@ export function findAlternatives(input){
       const score=Object.freeze({
         mappingPriority:candidate.mapping.priority,
         sameMovementPattern:candidate.exercise.movementPattern===planned.movementPattern,
-        sameExerciseType:Boolean(candidate.exercise.exerciseType && planned.exerciseType && candidate.exercise.exerciseType===planned.exerciseType),
+        sameExerciseType:Boolean(candidate.exercise.exerciseType && planned.exerciseType && !PROGRAM_CATEGORIES.has(candidate.exercise.exerciseType) && !PROGRAM_CATEGORIES.has(planned.exerciseType) && candidate.exercise.exerciseType===planned.exerciseType),
         samePrimaryMuscle:candidate.exercise.primaryMuscle===planned.primaryMuscle
       });
       const reasons=[];

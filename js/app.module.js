@@ -19,6 +19,9 @@ function storageText(key,fallback=""){
 function storageJson(key,fallback,validate){
   try{ const value=JSON.parse(storageText(key,"")); return validate(value) ? value : fallback; }catch(e){ return fallback; }
 }
+function storageSet(key,value){
+  try{ localStorage.setItem(key,value); return true; }catch(e){ console.warn(`Unable to save local setting: ${key}`,e); return false; }
+}
 function escapeHtml(value){ return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
 function persistentAltKey(plannedExercise){ return `persistent_alt_${plannedExercise}`; }
@@ -81,6 +84,7 @@ let state = {
   user:null,
   teamId: storageText("teamId","Beer-Team") || "Beer-Team",
   logs:[],
+  quarantinedLogs:[],
   pendingWrites:new Map(),
   lastSnapshotAt:0,
   subscriptionScope:null,
@@ -138,7 +142,7 @@ function plannedOf(log){
 }
 function actualOf(log){ return log.exercise || log.plannedExercise || ""; }
 function samePlanned(log, ex){ return plannedOf(log) === canonicalExercise(ex); }
-function byCreated(a,b){ return (a.createdMs||0) - (b.createdMs||0); }
+function byCreated(a,b){ return (a.createdMs||0) - (b.createdMs||0) || String(a.id||"").localeCompare(String(b.id||"")); }
 function logsSorted(){ return [...state.logs].sort((a,b)=>(a.date||"").localeCompare(b.date||"") || byCreated(a,b)); }
 function buildDerivedLogIndex(logs){
   const byDate=new Map(), byPlannedExercise=new Map(), byDateAndPlannedExercise=new Map();
@@ -207,12 +211,12 @@ function ensureLogDefaults(){
 function rememberSessionExercise(ex=state.selectedExercise,date=state.selectedDate){
   if(!ex || !isValidDateKey(date)) return;
   state.sessionExerciseByDate[date]=ex;
-  localStorage.setItem("sessionExerciseByDateV556", JSON.stringify(state.sessionExerciseByDate));
+  storageSet("sessionExerciseByDateV556",JSON.stringify(state.sessionExerciseByDate));
 }
 function clearSessionExercise(date=state.selectedDate){
   if(!isValidDateKey(date)) return;
   delete state.sessionExerciseByDate[date];
-  localStorage.setItem("sessionExerciseByDateV556", JSON.stringify(state.sessionExerciseByDate));
+  storageSet("sessionExerciseByDateV556",JSON.stringify(state.sessionExerciseByDate));
 }
 function restoreSessionExercise(){
   if(state.editingId) return;
@@ -324,20 +328,30 @@ function allowedTrainingDaysForDate(date=state.selectedDate){
   const plan = currentCyclePlan(date);
   return [...new Set([...(plan.allowedDays||[]), ...overrides])];
 }
-function grantOverride(day=dayForExercise(state.selectedExercise)){ const key=`${state.selectedDate}|${state.user?.uid||"guest"}|${state.teamId}|${day}`; state.overrideKeys.add(key); localStorage.setItem("dayLockOverridesV540", JSON.stringify([...state.overrideKeys])); status(`ปลดล็อก ${day} แล้ว`,"warn"); scheduleRender(); }
+function grantOverride(day=dayForExercise(state.selectedExercise)){ const key=`${state.selectedDate}|${state.user?.uid||"guest"}|${state.teamId}|${day}`; state.overrideKeys.add(key); storageSet("dayLockOverridesV540",JSON.stringify([...state.overrideKeys])); status(`ปลดล็อก ${day} แล้ว`,"warn"); scheduleRender(); }
 
 function normalizeLog(raw,id){
-  let createdMs = Number(raw.createdMs || raw.updatedMs || 0) || Date.now();
+  let createdMs = Number(raw.createdMs || raw.updatedMs || 0);
   try{ if(raw.createdAt?.seconds) createdMs=raw.createdAt.seconds*1000; }catch(e){}
+  if(!Number.isFinite(createdMs) || createdMs<=0){
+    const dateMs=isValidDateKey(raw.date) ? Date.parse(`${raw.date}T00:00:00Z`) : 0;
+    let hash=2166136261;
+    for(const char of String(id||"")){ hash^=char.charCodeAt(0); hash=Math.imul(hash,16777619); }
+    createdMs=dateMs+(hash>>>0)%86400000;
+  }
   const actual = raw.exercise || raw.plannedExercise || raw.originalExercise || "";
   const planned = plannedOf({...raw,exercise:actual}) || actual;
-  return {...raw, id, plannedExercise:planned, exercise:actual||planned, date:isValidDateKey(raw.date)?raw.date:todayTH(), weightKg:Number(raw.weightKg ?? raw.weight ?? 0), reps:Number(raw.reps||0), rir:Number(raw.rir ?? 2), createdMs};
+  const validDate=isValidDateKey(raw.date);
+  const normalized={...raw, id, plannedExercise:planned, exercise:actual||planned, date:validDate?raw.date:"", weightKg:Number(raw.weightKg ?? raw.weight ?? 0), reps:Number(raw.reps||0), rir:Number(raw.rir ?? 2), createdMs};
+  if(!validDate) normalized.__invalidDate=true;
+  return normalized;
 }
 function clearScopedWorkoutState(){
   if(state.unsub) state.unsub();
   state.unsub=null;
   state.subscriptionScope=null;
   replaceWorkoutLogs([]);
+  state.quarantinedLogs=[];
   state.pendingWrites.clear();
   state.lastSnapshotAt=0;
   state.editingId=null;
@@ -355,7 +369,9 @@ function subscribeLogs(){
   const q=query(collection(db, collectionPath()), orderBy("date","asc"));
   state.unsub=onSnapshot(q,(snap)=>{
     if(state.subscriptionScope!==scope) return;
-    const remote=snap.docs.map(d=>normalizeLog(d.data(), d.id));
+    const normalized=snap.docs.map(d=>normalizeLog(d.data(), d.id));
+    state.quarantinedLogs=normalized.filter(x=>x.__invalidDate);
+    const remote=normalized.filter(x=>!x.__invalidDate);
     const remoteIds=new Set(remote.map(x=>x.id));
     const nextLogs=remote.map(x=>state.pendingWrites.get(x.id)?.optimistic || x);
     state.pendingWrites.forEach((pending,id)=>{ if(!remoteIds.has(id)) nextLogs.push(pending.optimistic); });
@@ -396,13 +412,13 @@ function notificationPermissionText(){
 async function enableNotifications(){
   const r=await requestNotifyPermission();
   state.notificationsEnabled = r === "granted";
-  localStorage.setItem("restNotifyEnabled", state.notificationsEnabled ? "1" : "0");
+  storageSet("restNotifyEnabled",state.notificationsEnabled ? "1" : "0");
   status(r==="granted" ? "เปิด Notification แล้ว" : "ยังเปิด Notification ไม่ได้: "+r, r==="granted"?"ok":"warn", 2500);
   renderNotificationControls();
 }
 function toggleNotifications(){
   state.notificationsEnabled=!state.notificationsEnabled;
-  localStorage.setItem("restNotifyEnabled", state.notificationsEnabled ? "1" : "0");
+  storageSet("restNotifyEnabled",state.notificationsEnabled ? "1" : "0");
   status(state.notificationsEnabled?"เปิด Notify แล้ว":"ปิด Notify แล้ว", "ok", 1200);
   renderNotificationControls();
 }
@@ -585,10 +601,10 @@ function renderPRAndSuggestion(){
   setHtml("prStatus", rows.length ? `สถิติ ${escapeHtml(ex)}: สูงสุด ${best.weightKg||0} kg × ${best.reps||0}` : `ยังไม่มีสถิติของ ${escapeHtml(ex)}`);
   const last=rows[rows.length-1];
   setHtml("weekSuggest", last ? `ล่าสุด: ${last.weightKg} kg × ${last.reps} reps (RIR ${last.rir ?? "-"})` : `ยังไม่มีข้อมูลสัปดาห์ก่อนของท่านี้`);
-  let next="-";
-  if(last){ const reps=Number(last.reps||0), w=Number(last.weightKg||0); next = reps>=12 ? `${(w+2.5).toFixed(1)} kg` : `${w.toFixed(1)} kg / เพิ่ม reps`; }
-  setHtml("nextWeekBox", `น้ำหนักแนะนำครั้งถัดไป: <b>${next}</b>`);
-  setHtml("doubleProgressionBox", `Double Progression: ใช้เฉพาะข้อมูลของ <b>${escapeHtml(ex)}</b>`);
+  const suggestion=progressionSuggestion();
+  const next=suggestion ? `${suggestion.suggestedWeight} kg × ${suggestion.suggestedReps}` : "-";
+  setHtml("nextWeekBox", `Progression Engine: <b>${next}</b>`);
+  setHtml("doubleProgressionBox", `Progression Engine: ใช้เฉพาะข้อมูลของ <b>${escapeHtml(ex)}</b>`);
   setHtml("sfrBox", `SFR / Machine Bias: ${state.selectedAlt?"ใช้ท่าแทน "+escapeHtml(state.selectedAlt.name):"Auto"}`);
 }
 function setPerformanceItem(id,valueId,metaId,log,includeDate=true){
@@ -656,7 +672,7 @@ function applyProgressionSuggestion(){
 const AVAILABLE_LIBRARY_EQUIPMENT=Object.freeze(uniqueBy(EXERCISE_LIBRARY.map(exercise=>exercise.equipment).filter(Boolean),value=>value));
 function smartAlternativesForCurrentExercise(){
   if(state.editingId || !state.selectedExercise) return [];
-  try{ return findAlternatives({plannedExercise:state.selectedExercise,availableEquipment:AVAILABLE_LIBRARY_EQUIPMENT}).slice(0,3); }
+  try{ return findAlternatives({plannedExercise:state.selectedExercise,availableEquipment:AVAILABLE_LIBRARY_EQUIPMENT}).slice(0,3).map(alternative=>({...alternative,reasons:alternative.reasons.filter(reason=>reason!=="Available equipment")})); }
   catch(e){ return []; }
 }
 function alternativeTier(plannedExercise,alternative){
