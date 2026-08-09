@@ -90,7 +90,8 @@ function equipmentForExercise(name){
 }
 function movementPatternForExercise(name,muscle){
   const value=String(name||"").toLowerCase();
-  if(/press|push-up|dip|fly|pec deck/.test(value)) return muscle==="Shoulder" ? "vertical_push" : "horizontal_push";
+  if(/fly|pec deck/.test(value)) return "isolation";
+  if(/press|push-up|dip/.test(value)) return muscle==="Shoulder" ? "vertical_push" : "horizontal_push";
   if(/pulldown|pull-up|chin-up|straight-arm/.test(value)) return "vertical_pull";
   if(/row|face pull|rear delt/.test(value)) return "horizontal_pull";
   if(/squat|leg press|lunge|split squat|step-up|leg extension/.test(value)) return "knee_dominant";
