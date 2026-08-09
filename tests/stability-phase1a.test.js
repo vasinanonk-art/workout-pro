@@ -61,7 +61,7 @@ function loadApp(storageSeed={},storageUnavailable=false){
   context.window.document=document;
   context.window.Notification=context.Notification;
   context.globalThis=context;
-  const expose=`\n;globalThis.__app={state,bind,show,saveSet,subscribeLogs,renderExerciseSelect,resolveSelectedExercise,renderCalendar,renderRecent,renderSetup,renderPerformanceCard,usePreviousWorkout,lastSetForPlannedOnOrBefore,bestPerformanceForPlanned,updateFormDerived,updateTimerState,restorePersistentAlt,readPersistentAlt,writePersistentAlt,clearPersistentAlt,isValidDateKey,clearScopedWorkoutState,plannedOf,samePlanned,inferPlannedExerciseFromActual,plannedCandidatesForAlternative,logsOnDate,logsForPlanned,completedForExercise,latestSetForPlanned,previousSetForPlanned,previousWorkoutForPlanned,replaceWorkoutLogs,getDerivedLogIndex:()=>derivedLogIndex,getIndexRebuildCount:()=>derivedLogIndexRebuildCount,alternativeInventory:()=>[...PLANNED_BY_ALTERNATIVE.entries()],setRender(fn){renderAll=fn},setTimer(fn){startTimer=fn}};`;
+  const expose=`\n;globalThis.__app={state,bind,show,saveSet,subscribeLogs,renderExerciseSelect,resolveSelectedExercise,renderCalendar,renderRecent,renderSetup,renderPerformanceCard,usePreviousWorkout,lastSetForPlannedOnOrBefore,bestPerformanceForPlanned,updateFormDerived,updateTimerState,restorePersistentAlt,readPersistentAlt,writePersistentAlt,clearPersistentAlt,isValidDateKey,clearScopedWorkoutState,plannedOf,samePlanned,inferPlannedExerciseFromActual,plannedCandidatesForAlternative,logsOnDate,logsForPlanned,completedForExercise,latestSetForPlanned,previousSetForPlanned,previousWorkoutForPlanned,replaceWorkoutLogs,getDerivedLogIndex:()=>derivedLogIndex,getIndexRebuildCount:()=>derivedLogIndexRebuildCount,alternativeInventory:()=>[...PLANNED_BY_ALTERNATIVE.entries()],exerciseLibrary:()=>EXERCISE_LIBRARY,program:()=>PROGRAM,alternatives:()=>ALT,canonicalExercise,alternativeReasons:()=>ALTERNATIVE_REASONS,setRender(fn){renderAll=fn},setTimer(fn){startTimer=fn}};`;
   vm.runInNewContext(source+expose,context,{filename:"js/app.module.js"});
   context.__app.setRender(()=>{});
   context.__app.setTimer(()=>{});
@@ -131,6 +131,60 @@ test("day-specific unique owner resolves a shared alternative",()=>{
 test("globally unique alternative resolves without day context",()=>{
   const {api}=loadApp();
   assert.deepEqual(Array.from(api.plannedCandidatesForAlternative("Machine Pulldown")),["Lat Pulldown"]);
+  assert.equal(api.inferPlannedExerciseFromActual("Machine Pulldown",""),"Lat Pulldown");
+});
+
+test("every planned exercise exists in the exercise library",()=>{
+  const {api}=loadApp();
+  const names=new Set(Array.from(api.exerciseLibrary(),x=>x.displayName));
+  for(const row of api.program()) assert.equal(names.has(row[2]),true,row[2]);
+});
+
+test("every alternative points to a valid exercise with supported metadata",()=>{
+  const {api}=loadApp();
+  const library=Array.from(api.exerciseLibrary());
+  const ids=new Set(library.map(x=>x.id));
+  const reasons=api.alternativeReasons();
+  for(const exercise of library){
+    for(const alternative of exercise.alternatives){
+      assert.equal(ids.has(alternative.exerciseId),true,`${exercise.displayName} -> ${alternative.exerciseId}`);
+      assert.equal(reasons.has(alternative.reason),true,alternative.reason);
+      assert.equal(Number.isInteger(alternative.priority) && alternative.priority>0,true);
+    }
+  }
+});
+
+test("exercise library has no duplicate IDs",()=>{
+  const {api}=loadApp();
+  const ids=Array.from(api.exerciseLibrary(),x=>x.id);
+  assert.equal(new Set(ids).size,ids.length);
+});
+
+test("exercise library has no orphan alternatives",()=>{
+  const {api}=loadApp();
+  const library=Array.from(api.exerciseLibrary());
+  const ids=new Set(library.map(x=>x.id));
+  const orphans=library.flatMap(x=>x.alternatives.filter(a=>!ids.has(a.exerciseId)));
+  assert.deepEqual(orphans,[]);
+});
+
+test("canonical mapping remains the first program owner for every known alternative",()=>{
+  const {api}=loadApp();
+  const expected=new Map();
+  for(const row of api.program()){
+    const planned=row[2];
+    expected.set(planned,planned);
+    for(const alternative of api.alternatives()[planned]||[]){
+      if(!expected.has(alternative)) expected.set(alternative,planned);
+    }
+  }
+  for(const [name,planned] of expected) assert.equal(api.canonicalExercise(name),planned,name);
+});
+
+test("legacy planned inference remains unchanged with the exercise library",()=>{
+  const {api}=loadApp();
+  assert.equal(api.inferPlannedExerciseFromActual("Machine Chest Press","Day 1"),"Machine Chest Press");
+  assert.equal(api.inferPlannedExerciseFromActual("Cable Lateral Raise","Day 4"),"Machine Shoulder Press");
   assert.equal(api.inferPlannedExerciseFromActual("Machine Pulldown",""),"Lat Pulldown");
 });
 

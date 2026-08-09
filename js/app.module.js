@@ -94,17 +94,83 @@ const PLANNED_BY_ALTERNATIVE=(()=>{
   return candidates;
 })();
 
-// v5.5.4: single exercise database / mapping source used by Alternative, Muscle Balance, Plateau, Coach and Recommendation.
-const EX_DB = (()=>{
-  const db = {};
-  PROGRAM.forEach(([day,type,exercise,target,reps,muscle,restMode])=>{
-    db[exercise] = {name:exercise, planned:exercise, day, type, target:Number(target)||0, reps, primaryMuscle:muscle, restMode, isAlternative:false, alternatives:[...(ALT[exercise]||[])]};
-    (ALT[exercise]||[]).forEach(alt=>{
-      if(!db[alt]) db[alt] = {name:alt, planned:exercise, day, type, target:Number(target)||0, reps, primaryMuscle:muscle, restMode, isAlternative:true, alternatives:[]};
+const ALTERNATIVE_REASONS = new Set(["equipment_unavailable","machine_unavailable","joint_friendly","dumbbell_only","barbell_only","bodyweight","limited_space"]);
+function exerciseId(name){ return String(name||"").trim().toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""); }
+function equipmentForExercise(name){
+  const value=String(name||"").toLowerCase();
+  if(/push-up|pull-up|chin-up|dip|nordic/.test(value)) return "bodyweight";
+  if(/dumbbell/.test(value)) return "dumbbell";
+  if(/barbell|ez bar|good morning|stiff-leg/.test(value)) return "barbell";
+  if(/smith/.test(value)) return "smith_machine";
+  if(/cable|rope|pulldown|face pull/.test(value)) return "cable";
+  if(/machine|pec deck|leg press|hack squat|v-squat|pendulum/.test(value)) return "machine";
+  if(/band/.test(value)) return "resistance_band";
+  if(/swiss ball/.test(value)) return "stability_ball";
+  return "free_weight_or_machine";
+}
+function movementPatternForExercise(name,muscle){
+  const value=String(name||"").toLowerCase();
+  if(/press|push-up|dip|fly|pec deck/.test(value)) return muscle==="Shoulder" ? "vertical_push" : "horizontal_push";
+  if(/pulldown|pull-up|chin-up|straight-arm/.test(value)) return "vertical_pull";
+  if(/row|face pull|rear delt/.test(value)) return "horizontal_pull";
+  if(/squat|leg press|lunge|split squat|step-up|leg extension/.test(value)) return "knee_dominant";
+  if(/deadlift|back extension|good morning|hinge/.test(value)) return "hip_hinge";
+  if(/leg curl|nordic/.test(value)) return "knee_flexion";
+  if(/calf/.test(value)) return "plantar_flexion";
+  if(/curl/.test(value)) return "elbow_flexion";
+  if(/triceps|skull crusher/.test(value)) return "elbow_extension";
+  if(/lateral raise|upright row/.test(value)) return "shoulder_abduction";
+  return "other";
+}
+function secondaryMusclesFor(primaryMuscle){
+  return ({Chest:["Triceps","Shoulder"],Shoulder:["Triceps"],Back:["Biceps","Rear Delt"],"Rear Delt":["Back"],Triceps:["Shoulder"],Biceps:["Forearms"],Legs:["Quads","Glutes"],Quads:["Glutes"],Hamstrings:["Glutes"],Calves:[]})[primaryMuscle] || [];
+}
+function alternativeReason(name){
+  const equipment=equipmentForExercise(name);
+  if(equipment==="bodyweight") return "bodyweight";
+  if(equipment==="dumbbell") return "dumbbell_only";
+  if(equipment==="barbell") return "barbell_only";
+  if(equipment==="machine" || equipment==="smith_machine") return "machine_unavailable";
+  return "equipment_unavailable";
+}
+function alternativePriority(planned,name){
+  const tiers=ALT_TIER[planned] || {};
+  if((tiers.A||[]).includes(name)) return 1;
+  if((tiers.B||[]).includes(name)) return 2;
+  if((tiers.C||[]).includes(name)) return 3;
+  return 4;
+}
+
+// Central internal exercise metadata. Compatibility maps remain inputs so workout behavior and ordering stay unchanged.
+const EXERCISE_LIBRARY = (()=>{
+  const records=new Map();
+  PROGRAM.forEach(([day,type,planned,target,reps,muscle,restMode])=>{
+    const names=[planned,...(ALT[planned]||[])];
+    names.forEach((name,index)=>{
+      if(index!==0 && records.has(name)) return;
+      records.set(name,{
+        id:exerciseId(name), displayName:name, plannedDay:day,
+        primaryMuscle:muscle, secondaryMuscles:secondaryMusclesFor(muscle),
+        movementPattern:movementPatternForExercise(name,muscle), equipment:equipmentForExercise(name),
+        exerciseType:type, difficulty:restMode==="heavy" ? "advanced" : restMode==="standard" ? "intermediate" : "beginner",
+        alternatives:index===0 ? (ALT[planned]||[]).map(alternative=>({exerciseId:exerciseId(alternative),priority:alternativePriority(planned,alternative),reason:alternativeReason(alternative)})) : [],
+        canonicalPlannedName:planned, target:Number(target)||0, reps, restMode, isAlternative:index!==0
+      });
     });
   });
-  return db;
+  return [...records.values()];
 })();
+const EXERCISE_LIBRARY_BY_ID = new Map(EXERCISE_LIBRARY.map(exercise=>[exercise.id,exercise]));
+const EXERCISE_LIBRARY_BY_NAME = new Map(EXERCISE_LIBRARY.map(exercise=>[exercise.displayName,exercise]));
+
+// Compatibility view used by existing workout logic.
+const EX_DB = Object.fromEntries(EXERCISE_LIBRARY.map(exercise=>[exercise.displayName,{
+  name:exercise.displayName, planned:exercise.canonicalPlannedName, day:exercise.plannedDay,
+  type:exercise.exerciseType, target:exercise.target, reps:exercise.reps,
+  primaryMuscle:exercise.primaryMuscle, restMode:exercise.restMode,
+  isAlternative:exercise.isAlternative,
+  alternatives:exercise.alternatives.map(alternative=>EXERCISE_LIBRARY_BY_ID.get(alternative.exerciseId)?.displayName).filter(Boolean)
+}]));
 
 function tieredAlternativesForExercise(name){
   const base=canonicalExercise(name) || name;
