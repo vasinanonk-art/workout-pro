@@ -1,3 +1,7 @@
+v5.6.0 Planned Exercise Completion Fix
+- Fixed day completion when an alternative exercise is logged for a planned exercise.
+- Kept workout logic, Firestore, schema, engines, and cycle rules unchanged.
+
 v5.5.7 Session Notification Stability Fix
 - Added Tier A/B/C alternative exercise ranking.
 - Expanded movement-pattern alternatives for all program exercises.

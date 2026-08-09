@@ -498,9 +498,9 @@ test("persistent alternative contract and edit isolation remain intact",()=>{
 
 test("visible and runtime versions are consistent",()=>{
   const runtime=fs.readFileSync("js/runtime.js","utf8"), app=fs.readFileSync("js/app.module.js","utf8"), html=fs.readFileSync("index.html","utf8");
-  assert.match(runtime,/VERSION='v5\.6\.0-rc1'/);
-  assert.match(app,/const VERSION = "v5\.6\.0-rc1"/);
-  for(const asset of ["runtime.js","styles.css","app.module.js"]) assert.match(html,new RegExp(`${asset.replace(".","\\.")}\\?v=560rc1`));
+  assert.match(runtime,/VERSION='v5\.6\.0'/);
+  assert.match(app,/const VERSION = "v5\.6\.0"/);
+  for(const asset of ["runtime.js","styles.css","app.module.js"]) assert.match(html,new RegExp(`${asset.replace(".","\\.")}\\?v=560`));
   assert.doesNotMatch(`${runtime}\n${app}\n${html}`,/\?v=557|v5\.5\.7/);
 });
 

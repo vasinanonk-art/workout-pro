@@ -1,9 +1,11 @@
-Workout PRO v5.5.7 QA Report
+Workout PRO v5.6.0 QA Report
 - Syntax check: PASS
 - Alternative mapping: all PROGRAM exercises have alternatives.
 - Tier A/B/C: enabled in alternative modal.
 - Database/schema reset: NOT USED
 - Firestore payload: unchanged
+
+v5.6.0 QA: Release metadata finalized from v5.6.0-rc1. No workout logic, Firestore, schema, engine, or cycle rule change.
 
 
 v5.5.7 QA: Log defaults ensured for rest, RIR, tempo, rep quality, bias mode, unit, recovery fields. No schema change.

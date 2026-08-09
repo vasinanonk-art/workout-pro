@@ -1,4 +1,4 @@
-// Workout PRO v5.6.0-rc1 PLANNED EXERCISE COMPLETION FIX
+// Workout PRO v5.6.0 PLANNED EXERCISE COMPLETION FIX
 // Single state engine. No legacy render patches. No duplicate Day Lock / Dropdown renderers.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -7,7 +7,7 @@ import { PROGRAM, ALT, PLANNED_BY_ALTERNATIVE, ALTERNATIVE_REASONS, EXERCISE_LIB
 import { evaluateProgression } from "./progression-engine.js";
 import { findAlternatives } from "./smart-alternative.js";
 
-const VERSION = "v5.6.0-rc1";
+const VERSION = "v5.6.0";
 const $ = (id) => document.getElementById(id);
 const firebaseConfig = {"apiKey":"AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI","authDomain":"workout-program-9eea7.firebaseapp.com","projectId":"workout-program-9eea7","storageBucket":"workout-program-9eea7.firebasestorage.app","messagingSenderId":"315102427876","appId":"1:315102427876:web:d2d5d4c89eb78fae960af1","measurementId":"G-JHEKDYEY8B"};
 const DAY_ORDER = ["Day 1","Day 2","Day 4","Day 5"];
@@ -1109,5 +1109,5 @@ function download(name,text,type){ const a=document.createElement("a"); a.href=U
 onAuthStateChanged(auth,u=>{ if((state.user?.uid||null)!==(u?.uid||null)) clearScopedWorkoutState(); state.user=u; if(u && !state.teamId) state.teamId="Beer-Team"; subscribeLogs(); scheduleRender(); });
 
 window.addEventListener("DOMContentLoaded",()=>{
-  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); ensureLogDefaults(); scheduleRender(); qaExerciseCoverage(); status("Workout PRO v5.6.0-rc1 พร้อมใช้งาน","ok",2500);
+  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); ensureLogDefaults(); scheduleRender(); qaExerciseCoverage(); status("Workout PRO v5.6.0 พร้อมใช้งาน","ok",2500);
 });

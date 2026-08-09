@@ -1,1 +1,1 @@
-Workout PRO v5.5.7 Alternative Tier QA package.
+Workout PRO v5.6.0 Alternative Tier QA package.
