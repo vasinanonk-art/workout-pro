@@ -3,7 +3,24 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const vm = require("node:vm");
 
-const source = fs.readFileSync("js/app.module.js","utf8").replace(/^import .*;\n/gm,"");
+const exerciseLibrarySource = fs.readFileSync("js/exercise-library.js","utf8");
+const source = `${exerciseLibrarySource.replace(/^export /gm,"")}\n${fs.readFileSync("js/app.module.js","utf8").replace(/^import .*;\n/gm,"")}`;
+
+test("exercise library module imports its public API",async()=>{
+  const url=`data:text/javascript;base64,${Buffer.from(exerciseLibrarySource).toString("base64")}`;
+  const library=await import(url);
+  for(const name of ["PROGRAM","ALT","PLANNED_BY_ALTERNATIVE","ALTERNATIVE_REASONS","EXERCISE_LIBRARY","EX_DB","tieredAlternativesForExercise","alternativesForExercise","exInfo","canonicalExercise","getExerciseDbRows","uniqueBy"]){
+    assert.notEqual(library[name],undefined,name);
+  }
+});
+
+test("exercise library module preserves canonical lookup behavior",async()=>{
+  const url=`data:text/javascript;base64,${Buffer.from(exerciseLibrarySource).toString("base64")}`;
+  const {canonicalExercise}=await import(url);
+  assert.equal(canonicalExercise("Machine Chest Press"),"Barbell Bench Press");
+  assert.equal(canonicalExercise("Cable Fly"),"Cable Fly");
+  assert.equal(canonicalExercise("Unknown Exercise"),"Unknown Exercise");
+});
 
 function element(value=""){
   return {value:String(value),textContent:"",className:"",innerHTML:"",disabled:false,options:[],querySelectorAll(){ return []; },addEventListener(type,fn){ this.listeners??={}; this.listeners[type]=fn; }};
