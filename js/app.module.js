@@ -710,7 +710,8 @@ function renderLogSummary(){
 function renderRecent(){
   const host=$("recent"); if(!host) return;
   const arr=[...state.logs].sort((a,b)=>(b.createdMs||0)-(a.createdMs||0)).slice(0,12);
-  if(!arr.length){ host.innerHTML="<div class='msg info'>ยังไม่มี Log</div>"; return; }
+  const card=$("logRecentCard"); if(card) card.hidden=!arr.length;
+  if(!arr.length){ host.innerHTML=""; return; }
   host.innerHTML=arr.map(x=>`<div class="recent-card"><b>${escapeHtml(dateLabelTH(x.date))} • ${escapeHtml(x.exercise)}</b><br><span class="small">Planned: ${escapeHtml(plannedOf(x))} • ${x.weightKg} kg × ${x.reps} • RIR ${x.rir ?? "-"}</span><br><span class="small">${escapeHtml(x.note||"")}</span><div class="recent-actions"><button class="secondary edit-log" data-id="${escapeHtml(x.id)}" type="button">แก้ไข</button><button class="orange del-log" data-id="${escapeHtml(x.id)}" type="button">ลบ</button></div></div>`).join("");
   host.querySelectorAll(".edit-log").forEach(btn=>btn.addEventListener("click",()=>loadEdit(btn.dataset.id)));
   host.querySelectorAll(".del-log").forEach(btn=>btn.addEventListener("click",()=>deleteLog(btn.dataset.id)));
@@ -760,6 +761,8 @@ function renderExerciseDatabase(){
 }
 
 function renderDashboard(){
+  const hasLogs=state.logs.length>0;
+  for(const id of ["dashboardWeeklyCard","dashboardExerciseCard","dashboardMuscleCard","dashboardPrCard","dashboardRecoveryCard"]){ const card=$(id); if(card) card.hidden=!hasLogs; }
   setText("kVol", volumeForLogs(state.logs).toFixed(0)); setText("kSets", state.logs.length); setText("kUsers", state.user?1:0); setText("kWeek", autoWeek());
   drawSimpleChart("weekChart", groupByWeek()); drawSimpleChart("exChart", groupByExercise()); drawSimpleChart("v5MuscleChart", groupByMuscle()); drawSimpleChart("v5RecoveryChart", groupByDateSets());
   setHtml("v5MuscleInsight", muscleBalanceHtml()); setHtml("muscleStatus", muscleBalanceHtml());
@@ -775,6 +778,9 @@ function renderCoach(){
   const latest=state.logs[state.logs.length-1]; const sleep=Number($("sleepHours")?.value||7), soreness=Number($("soreness")?.value||2), stress=Number($("stress")?.value||2);
   const recovery=Math.max(0,Math.min(100,70+(sleep-7)*8-(soreness-2)*8-(stress-2)*8)); const fatigue=100-recovery;
   const today=todayLogs(); const p=plateauForExercise(state.selectedExercise);
+  const muscleCard=$("coachMuscleCard"); if(muscleCard) muscleCard.hidden=!state.logs.length;
+  const plateauCard=$("coachPlateauCard"); if(plateauCard) plateauCard.hidden=logsForPlanned(state.selectedExercise).length<3;
+  const dailySummaryCard=$("coachDailySummaryCard"); if(dailySummaryCard) dailySummaryCard.hidden=!today.length;
   setText("coachRecovery", Math.round(recovery)); setText("coachFatigue", Math.round(fatigue)); setText("coachProgress", p.status==='Progress'?"UP":(latest?"OK":"-")); setText("coachDeload", fatigue>55?"WATCH":"NO");
   setText("coachRecoveryText", recovery>=65?"พร้อมฝึก":"ลด volume หรือใช้ machine stable"); setText("coachFatigueText", fatigue>55?"เสี่ยงล้า":"ปกติ"); setText("coachProgressText", p.detail); setText("coachDeloadText", fatigue>65?"พิจารณา deload":"ยังไม่จำเป็น");
   const muscleHtml = muscleBalanceHtml();
@@ -837,7 +843,7 @@ function renderCalendar(){
   const btn=$("calendarGoLogBtn");
   if(btn){ btn.disabled=false; btn.classList.remove("disabled"); btn.onclick=()=>{ show("log"); }; }
 }
-function renderBackup(){ const first=logsSorted()[0]?.date||"-", last=logsSorted().at(-1)?.date||"-"; setText("backupKpiSets", state.logs.length); setText("backupKpiVolume", volumeForLogs(state.logs).toFixed(0)); setText("backupKpiFirst", first); setText("backupKpiLast", last); setHtml("backupSummaryBox", `Backup ready • ${state.logs.length} logs • ${VERSION}`); }
+function renderBackup(){ const first=logsSorted()[0]?.date||"-", last=logsSorted().at(-1)?.date||"-"; const summaryCard=$("backupSummaryCard"); if(summaryCard) summaryCard.hidden=!state.logs.length; setText("backupKpiSets", state.logs.length); setText("backupKpiVolume", volumeForLogs(state.logs).toFixed(0)); setText("backupKpiFirst", first); setText("backupKpiLast", last); setHtml("backupSummaryBox", `Backup ready • ${state.logs.length} logs • ${VERSION}`); }
 function renderMedia(){
   const ex=actualExerciseName();
   setText("mediaTitle", `Media Reference: ${ex}`);

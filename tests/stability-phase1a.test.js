@@ -914,3 +914,17 @@ test("unavailable controls stay in the DOM but are hidden and Developer remains 
   assert.match(html,/<details class="card log-disclosure log-developer-panel">/);
   for(const id of ["dayDateLockDebug","orderStatus","nextWeekBox","v430ExerciseDb"]){ assert.match(html,new RegExp(`id="${id}"`),id); }
 });
+
+test("release UI hides placeholders while keeping Developer utilities reachable",()=>{
+  const html=fs.readFileSync("index.html","utf8");
+  for(const id of ["migrationCard","aiCoachBtn","copyAiPromptBtn","v430ApplyDeloadBtn","v5BackupLocalBtn","v5RestoreLocalBtn","backupQaCard","chartStatus","v5RecoveryInsight"]){
+    assert.match(html,new RegExp(`(?:id="${id}"[^>]*class="[^"]*hidden|class="[^"]*hidden[^"]*"[^>]*id="${id}")`),id);
+  }
+  for(const id of ["dashboardWeeklyCard","dashboardExerciseCard","dashboardMuscleCard","dashboardPrCard","dashboardRecoveryCard","coachMuscleCard","coachPlateauCard","coachDailySummaryCard","logRecentCard","backupSummaryCard"]){
+    assert.match(html,new RegExp(`id="${id}"[^>]*\\shidden(?:\\s|>)`),id);
+  }
+  assert.match(html,/<details class="card log-disclosure log-developer-panel">\s*<summary>Developer<\/summary>/);
+  for(const id of ["persistentSubStatus","historyRemapBox","calendarSyncStatus","cycleDebug","dayDateLockDebug","v430ExerciseDbCard"]){
+    assert.match(html,new RegExp(`id="${id}"`),id);
+  }
+});

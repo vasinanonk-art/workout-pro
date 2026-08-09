@@ -28,11 +28,11 @@
       <div class="v5-kpi"><span>Auto Week</span><b id="kWeek">1</b></div>
     </div>
   </div>
-  <div class="card"><h3>Weekly Progress</h3><canvas id="weekChart" width="760" height="260"></canvas><div class="small" id="chartStatus">Dashboard ready</div></div>
-  <div class="card"><h3>Top Exercise Volume</h3><canvas id="exChart" width="760" height="260"></canvas></div>
-  <div class="card"><h3>Muscle Balance</h3><canvas id="v5MuscleChart" width="760" height="260"></canvas><div id="v5MuscleInsight" class="msg info">รอข้อมูล Muscle Balance</div></div>
-  <div class="card"><h3>PR Board</h3><div id="v5PRBoard" class="v5-board">รอข้อมูล PR</div></div>
-  <div class="card"><h3>Recovery / Fatigue Trend</h3><canvas id="v5RecoveryChart" width="760" height="260"></canvas><div id="v5RecoveryInsight" class="msg info">รอข้อมูล Recovery</div></div>
+  <div class="card" id="dashboardWeeklyCard" hidden><h3>Weekly Progress</h3><canvas id="weekChart" width="760" height="260"></canvas><div class="small hidden" id="chartStatus">Dashboard ready</div></div>
+  <div class="card" id="dashboardExerciseCard" hidden><h3>Top Exercise Volume</h3><canvas id="exChart" width="760" height="260"></canvas></div>
+  <div class="card" id="dashboardMuscleCard" hidden><h3>Muscle Balance</h3><canvas id="v5MuscleChart" width="760" height="260"></canvas><div id="v5MuscleInsight" class="msg info">รอข้อมูล Muscle Balance</div></div>
+  <div class="card" id="dashboardPrCard" hidden><h3>PR Board</h3><div id="v5PRBoard" class="v5-board">รอข้อมูล PR</div></div>
+  <div class="card" id="dashboardRecoveryCard" hidden><h3>Recovery / Fatigue Trend</h3><canvas id="v5RecoveryChart" width="760" height="260"></canvas><div id="v5RecoveryInsight" class="msg info hidden">รอข้อมูล Recovery</div></div>
   <div class="card"><h3>Export & Backup</h3><div class="v5-action-grid"><button id="v5ExportJsonBtn" class="cyan">Export JSON</button><button id="v5ExportCsvBtn" class="purple">Export CSV</button><button id="v5BackupLocalBtn" class="secondary hidden">Backup Local</button><button id="v5RestoreLocalBtn" class="orange hidden">Restore Local</button></div><textarea id="v5BackupText" class="hidden" placeholder="Backup / Restore payload"></textarea></div>
 </section>
 
@@ -62,18 +62,18 @@
     <h3>Coach Recommendations</h3>
     <div id="coachAdvice" class="msg info">ยังไม่มีข้อมูล</div>
   </div>
-  <div class="card">
+  <div class="card" id="coachMuscleCard" hidden>
     <h3>Muscle Volume Balance</h3>
     <canvas id="muscleChart" width="760" height="260"></canvas>
     <div class="small" id="muscleStatus">รอข้อมูล</div>
   </div>
-  <div class="card">
+  <div class="card" id="coachPlateauCard" hidden>
     <h3>Plateau Detection v2</h3>
     <div id="plateauBox" class="msg">รอข้อมูล</div>
   </div>
 
 <div class="card hidden"><h3>Deload Detection</h3><div id="v430DeloadBox" class="msg info">กำลังตรวจสอบ deload...</div><button id="v430ApplyDeloadBtn" class="orange hidden">Apply Deload Suggestion</button></div>
-<div class="card"><h3>AI Daily Coach Summary</h3><div id="v430AiSummary" class="msg info">รอข้อมูลหลังจบวัน</div><button id="v430CopySummaryBtn" class="cyan">Copy Summary</button></div>
+<div class="card" id="coachDailySummaryCard" hidden><h3>Daily Workout Summary</h3><div id="v430AiSummary" class="msg info">รอข้อมูลหลังจบวัน</div><button id="v430CopySummaryBtn" class="cyan">Copy Summary</button></div>
 </section>
 
 <section id="calendar" class="page">
@@ -187,7 +187,7 @@
     </div>
   </details>
 
-  <div class="card log-recent-card"><h3>Recent Sets</h3><div id="recent"></div></div>
+  <div class="card log-recent-card" id="logRecentCard" hidden><h3>Recent Sets</h3><div id="recent"></div></div>
 </section>
 <section id="program" class="page">
   <div class="card program-hero">
@@ -259,7 +259,7 @@
       <div id="backupStatus" class="msg info">พร้อม Export หลัง Login และโหลดข้อมูล</div>
     </div>
 
-    <div class="card">
+    <div class="card" id="backupSummaryCard" hidden>
       <h3>Backup Summary</h3>
       <div id="backupSummaryBox" class="msg info">ยังไม่ได้สร้าง Summary</div>
       <div class="backup-kpi-grid">
@@ -271,7 +271,7 @@
     </div>
   </div>
 
-  <div class="card">
+  <div class="card hidden" id="backupQaCard">
     <h3>QA Status</h3>
     <div id="backupQaBox" class="msg info">กดสร้าง Export เพื่อดูสถานะ QA</div>
   </div>
