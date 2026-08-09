@@ -80,7 +80,7 @@ function loadApp(storageSeed={},storageUnavailable=false){
   context.window.document=document;
   context.window.Notification=context.Notification;
   context.globalThis=context;
-  const expose=`\n;globalThis.__app={state,bind,show,saveSet,subscribeLogs,renderExerciseSelect,resolveSelectedExercise,renderLogScheduleState,renderCalendar,renderRecent,renderSetup,renderPerformanceCard,renderPRAndSuggestion,usePreviousWorkout,progressionSuggestion,applyProgressionSuggestion,smartAlternativesForCurrentExercise,selectAlternative,lastSetForPlannedOnOrBefore,bestPerformanceForPlanned,updateFormDerived,updateTimerState,restorePersistentAlt,readPersistentAlt,writePersistentAlt,clearPersistentAlt,rememberSessionExercise,clearSessionExercise,grantOverride,normalizeLog,isValidDateKey,clearScopedWorkoutState,plannedOf,samePlanned,inferPlannedExerciseFromActual,plannedCandidatesForAlternative,logsOnDate,logsForPlanned,completedForExercise,latestSetForPlanned,previousSetForPlanned,previousWorkoutForPlanned,replaceWorkoutLogs,getDerivedLogIndex:()=>derivedLogIndex,getIndexRebuildCount:()=>derivedLogIndexRebuildCount,alternativeInventory:()=>[...PLANNED_BY_ALTERNATIVE.entries()],exerciseLibrary:()=>EXERCISE_LIBRARY,program:()=>PROGRAM,alternatives:()=>ALT,canonicalExercise,alternativeReasons:()=>ALTERNATIVE_REASONS,setRender(fn){renderAll=fn},setTimer(fn){startTimer=fn}};`;
+  const expose=`\n;globalThis.__app={state,bind,show,saveSet,subscribeLogs,renderExerciseSelect,resolveSelectedExercise,renderLogScheduleState,renderCalendar,renderRecent,renderSetup,renderPerformanceCard,renderPRAndSuggestion,usePreviousWorkout,progressionSuggestion,applyProgressionSuggestion,smartAlternativesForCurrentExercise,selectAlternative,lastSetForPlannedOnOrBefore,bestPerformanceForPlanned,currentCyclePlan,allowedTrainingDaysForDate,calcDayLock,updateFormDerived,updateTimerState,restorePersistentAlt,readPersistentAlt,writePersistentAlt,clearPersistentAlt,rememberSessionExercise,clearSessionExercise,grantOverride,normalizeLog,isValidDateKey,clearScopedWorkoutState,plannedOf,samePlanned,inferPlannedExerciseFromActual,plannedCandidatesForAlternative,logsOnDate,logsForPlanned,completedForExercise,latestSetForPlanned,previousSetForPlanned,previousWorkoutForPlanned,replaceWorkoutLogs,getDerivedLogIndex:()=>derivedLogIndex,getIndexRebuildCount:()=>derivedLogIndexRebuildCount,alternativeInventory:()=>[...PLANNED_BY_ALTERNATIVE.entries()],exerciseLibrary:()=>EXERCISE_LIBRARY,program:()=>PROGRAM,alternatives:()=>ALT,canonicalExercise,alternativeReasons:()=>ALTERNATIVE_REASONS,setRender(fn){renderAll=fn},setTimer(fn){startTimer=fn}};`;
   vm.runInNewContext(source+expose,context,{filename:"js/app.module.js"});
   context.__app.setRender(()=>{});
   context.__app.setTimer(()=>{});
@@ -897,6 +897,49 @@ test("manual override resolves its allowed workout on an otherwise Rest Day",()=
   api.resolveSelectedExercise();
   assert.equal(api.state.selectedExercise,"Barbell Bench Press");
   assert.equal(api.state.logHydration.status,"ready");
+});
+
+test("Friday Day 5 requires Saturday and Sunday Rest before Monday Day 1",()=>{
+  const {api}=loadApp();
+  api.replaceWorkoutLogs(completedProgramDay(api,"Day 5","2026-08-07"));
+  for(const date of ["2026-08-08","2026-08-09"]){
+    const plan=api.currentCyclePlan(date);
+    assert.deepEqual(Array.from(plan.allowedDays),[],date);
+    assert.equal(plan.code,"REST_LOCK",date);
+    assert.equal(plan.earliest,"2026-08-10",date);
+  }
+  const reopened=api.currentCyclePlan("2026-08-10");
+  assert.deepEqual(Array.from(reopened.allowedDays),["Day 1"]);
+  assert.equal(reopened.code,"OPEN");
+  assert.equal(reopened.earliest,"2026-08-10");
+});
+
+test("Saturday Day 5 requires Sunday and Monday Rest before Tuesday Day 1",()=>{
+  const {api}=loadApp();
+  api.replaceWorkoutLogs(completedProgramDay(api,"Day 5","2026-08-08"));
+  for(const date of ["2026-08-09","2026-08-10"]){
+    const plan=api.currentCyclePlan(date);
+    assert.deepEqual(Array.from(plan.allowedDays),[],date);
+    assert.equal(plan.code,"REST_LOCK",date);
+    assert.equal(plan.earliest,"2026-08-11",date);
+  }
+  const reopened=api.currentCyclePlan("2026-08-11");
+  assert.deepEqual(Array.from(reopened.allowedDays),["Day 1"]);
+  assert.equal(reopened.code,"OPEN");
+  assert.equal(reopened.earliest,"2026-08-11");
+});
+
+test("manual override can intentionally open Day 1 on the second post-Day-5 Rest Day",()=>{
+  const {api}=loadApp();
+  api.state.selectedDate="2026-08-09";
+  api.state.selectedExercise="Barbell Bench Press";
+  api.replaceWorkoutLogs(completedProgramDay(api,"Day 5","2026-08-07"));
+  assert.deepEqual(Array.from(api.allowedTrainingDaysForDate("2026-08-09")),[]);
+  api.state.overrideKeys.add("2026-08-09|guest|Beer-Team|Day 1");
+  assert.deepEqual(Array.from(api.allowedTrainingDaysForDate("2026-08-09")),["Day 1"]);
+  api.resolveSelectedExercise();
+  assert.equal(api.state.selectedExercise,"Barbell Bench Press");
+  assert.equal(api.calcDayLock("2026-08-09").override,true);
 });
 
 test("historical edit on a Rest Day preserves its historical exercise",()=>{

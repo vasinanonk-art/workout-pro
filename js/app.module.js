@@ -293,10 +293,10 @@ function currentCyclePlan(date=state.selectedDate){
   // Uses the latest completed Day 5 before the selected date as the previous cycle boundary.
   const previousD5 = completedDateBetween("Day 5", null, date);
   let boundary = null;
-  if(previousD5 && dayDiff(date, previousD5) < 2){
-    return {allowedDays:[], code:"REST_LOCK", earliest:addDaysKey(previousD5,2), reason:`พักหลัง Day 5 ยังไม่ครบ เริ่มรอบใหม่ได้เร็วสุด ${addDaysKey(previousD5,2)}`};
+  if(previousD5 && dayDiff(date, previousD5) < 3){
+    return {allowedDays:[], code:"REST_LOCK", earliest:addDaysKey(previousD5,3), reason:`พักหลัง Day 5 ยังไม่ครบ เริ่มรอบใหม่ได้เร็วสุด ${addDaysKey(previousD5,3)}`};
   }
-  if(previousD5 && dayDiff(date, previousD5) >= 2) boundary = previousD5;
+  if(previousD5 && dayDiff(date, previousD5) >= 3) boundary = previousD5;
 
   const d1 = completedDateBetween("Day 1", boundary, date);
   if(!d1) return {allowedDays:["Day 1"], code:"OPEN", earliest:date, reason:"เริ่ม Day 1 ได้"};
@@ -312,8 +312,8 @@ function currentCyclePlan(date=state.selectedDate){
 
   const d5 = completedDateBetween("Day 5", d4, date);
   if(!d5) return {allowedDays:["Day 5"], code:"OPEN", earliest:addDaysKey(d4,1), reason:"Day 4 จบแล้ว เริ่ม Day 5 ได้"};
-  if(dayDiff(date,d5) < 2) return {allowedDays:[], code:"REST_LOCK", earliest:addDaysKey(d5,2), reason:`พักหลัง Day 5 ยังไม่ครบ เริ่มรอบใหม่ได้เร็วสุด ${addDaysKey(d5,2)}`};
-  return {allowedDays:["Day 1"], code:"OPEN", earliest:addDaysKey(d5,2), reason:"พักครบแล้ว เริ่ม Day 1 รอบใหม่ได้"};
+  if(dayDiff(date,d5) < 3) return {allowedDays:[], code:"REST_LOCK", earliest:addDaysKey(d5,3), reason:`พักหลัง Day 5 ยังไม่ครบ เริ่มรอบใหม่ได้เร็วสุด ${addDaysKey(d5,3)}`};
+  return {allowedDays:["Day 1"], code:"OPEN", earliest:addDaysKey(d5,3), reason:"พักครบแล้ว เริ่ม Day 1 รอบใหม่ได้"};
 }
 function calcDayLock(date=state.selectedDate){
   const today = todayTH();
