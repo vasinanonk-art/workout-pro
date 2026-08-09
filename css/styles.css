@@ -203,3 +203,63 @@ button.ux-busy,select.ux-busy,input.ux-busy{opacity:.72;cursor:progress!importan
 .miniBtn.cyan{background:rgba(8,145,178,.85)}
 .alt-choice .media-actions{margin-top:8px}
 select option:disabled{color:#888;background:#111827}
+
+/* Log Entry v2 — Phase 3A layout only */
+.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+#log.log-entry-v2{max-width:760px;margin:0 auto}
+#log.log-entry-v2 .card{padding:12px;margin-bottom:9px;border-radius:16px}
+#log.log-entry-v2 h3{margin:0 0 9px;font-size:16px}
+.log-context-line{display:flex;align-items:center;gap:7px;margin-bottom:8px;font-size:15px}
+.log-rest-day-state{display:grid;gap:4px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#020617}
+.log-rest-day-state[hidden]{display:none}
+.log-rest-day-state b{font-size:18px}
+.log-rest-day-state span{color:var(--muted);font-size:13px}
+.log-compact-header select{font-size:17px;font-weight:800;padding:11px 12px}
+.log-compact-header progress{display:block;width:100%;height:10px;margin-top:9px;border:0;border-radius:999px;overflow:hidden;background:#020617;accent-color:#38bdf8}
+.log-compact-header progress::-webkit-progress-bar{background:#020617;border-radius:999px}
+.log-compact-header progress::-webkit-progress-value{background:#38bdf8;border-radius:999px}
+.log-compact-header progress::-moz-progress-bar{background:#38bdf8;border-radius:999px}
+.log-action-state{padding:8px 10px;margin-top:8px;border:1px solid currentColor;border-radius:10px;font-size:13px;line-height:1.35}
+.log-alternative-card .msg{margin:0 0 8px;padding:9px 10px}
+.log-alt-actions{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:8px}
+#log .log-alt-actions button,#log .log-alt-actions #clearAltBtn{width:100%!important;min-height:46px!important;margin:0!important;padding:10px 12px!important;border-radius:13px!important;font-size:14px!important}
+.smart-alternative-section{margin-top:9px;padding-top:9px;border-top:1px solid var(--line)}
+.smart-alternative-list{display:grid;gap:7px}
+.smart-alt-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;border:1px solid var(--line);border-radius:12px;background:#020617}
+.smart-alt-item .small{display:block;margin-top:3px}
+.smart-alt-item button{flex:0 0 auto;margin:0;min-height:42px}
+.log-performance-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.log-performance-grid>div{padding:10px;border:1px solid var(--line);border-radius:12px;background:#020617}
+.log-performance-grid>.log-performance-primary{border-color:#38bdf8;background:rgba(14,116,144,.14)}
+.log-performance-grid span{display:block;color:var(--muted);font-size:12px;margin-bottom:5px}
+.log-performance-grid b{font-size:16px}
+.log-performance-grid small{display:block;color:var(--muted);margin-top:4px}
+#usePreviousWorkoutBtn,#applyProgressionBtn{width:100%;margin-top:9px;min-height:44px;font-size:13px}
+.log-input-card label{margin-bottom:5px}
+.log-weight-row{display:grid;grid-template-columns:minmax(0,1fr) 72px;gap:7px}
+.log-reps-rir{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}
+.log-input-card input,.log-input-card select{min-height:48px;font-size:18px}
+.log-save-button{display:block;width:100%;min-height:56px;margin-top:10px;font-size:18px;background:#16a34a}
+.log-disclosure{padding:0!important;overflow:hidden}
+.log-disclosure summary{cursor:pointer;list-style:none;padding:14px;font-size:16px;font-weight:900;min-height:48px;display:flex;align-items:center;justify-content:space-between}
+.log-disclosure summary::-webkit-details-marker{display:none}
+.log-disclosure summary::after{content:"+";font-size:22px;color:var(--muted)}
+.log-disclosure[open] summary::after{content:"−"}
+.log-disclosure[open] summary{border-bottom:1px solid var(--line)}
+.log-disclosure-body{display:grid;gap:10px;padding:12px}
+.log-disclosure-body>.row,.log-disclosure-body>.row3{margin:0}
+.log-developer-panel summary{color:#cbd5e1}
+.log-recent-card .recent-card{margin:6px 0;padding:10px}
+@media(min-width:760px){
+  #log.log-entry-v2{max-width:980px}
+  .log-input-card{max-width:620px;margin-left:auto;margin-right:auto}
+}
+@media(max-width:640px){
+  main{padding-left:10px;padding-right:10px}
+  #log.log-entry-v2 .card{padding:10px;margin-bottom:8px}
+  .log-disclosure{padding:0!important}
+  .log-disclosure-body{padding:10px}
+  .log-alt-actions{grid-template-columns:1fr 1fr}
+  .log-alt-actions button{white-space:normal}
+  .log-performance-grid{grid-template-columns:1fr}
+}
