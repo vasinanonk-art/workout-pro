@@ -1,4 +1,4 @@
-// Workout PRO v5.5.7 PLANNED EXERCISE COMPLETION FIX
+// Workout PRO v5.6.0-rc1 PLANNED EXERCISE COMPLETION FIX
 // Single state engine. No legacy render patches. No duplicate Day Lock / Dropdown renderers.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -7,7 +7,7 @@ import { PROGRAM, ALT, PLANNED_BY_ALTERNATIVE, ALTERNATIVE_REASONS, EXERCISE_LIB
 import { evaluateProgression } from "./progression-engine.js";
 import { findAlternatives } from "./smart-alternative.js";
 
-const VERSION = "v5.5.7";
+const VERSION = "v5.6.0-rc1";
 const $ = (id) => document.getElementById(id);
 const firebaseConfig = {"apiKey":"AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI","authDomain":"workout-program-9eea7.firebaseapp.com","projectId":"workout-program-9eea7","storageBucket":"workout-program-9eea7.firebasestorage.app","messagingSenderId":"315102427876","appId":"1:315102427876:web:d2d5d4c89eb78fae960af1","measurementId":"G-JHEKDYEY8B"};
 const DAY_ORDER = ["Day 1","Day 2","Day 4","Day 5"];
@@ -88,6 +88,8 @@ let state = {
   pendingWrites:new Map(),
   lastSnapshotAt:0,
   subscriptionScope:null,
+  subscriptionGeneration:0,
+  logHydration:{scope:null,status:"ready",error:""},
   selectedDate: todayTH(),
   selectedExercise: PROGRAM[0][2],
   selectedAlt:null,
@@ -230,6 +232,11 @@ function restoreSessionExercise(){
 }
 function resolveSelectedExercise(){
   if(state.editingId) return;
+  if(state.user && state.logHydration.status!=="ready"){
+    state.selectedExercise="";
+    state.selectedAlt=null;
+    return;
+  }
   restoreSessionExercise();
   const old=state.selectedExercise;
   const allowedDays=allowedTrainingDaysForDate(state.selectedDate);
@@ -349,7 +356,9 @@ function normalizeLog(raw,id){
 function clearScopedWorkoutState(){
   if(state.unsub) state.unsub();
   state.unsub=null;
+  state.subscriptionGeneration+=1;
   state.subscriptionScope=null;
+  state.logHydration={scope:null,status:"loading",error:""};
   replaceWorkoutLogs([]);
   state.quarantinedLogs=[];
   state.pendingWrites.clear();
@@ -362,13 +371,15 @@ function workoutScope(){ return state.user?.uid && state.teamId ? `${state.user.
 function subscribeLogs(){
   if(state.unsub) state.unsub();
   state.unsub=null;
+  const generation=++state.subscriptionGeneration;
   const scope=workoutScope();
   state.subscriptionScope=scope;
-  if(!scope){ scheduleRender(); return; }
+  if(!scope){ state.logHydration={scope:null,status:"ready",error:""}; scheduleRender(); return; }
+  state.logHydration={scope,status:"loading",error:""};
   status("กำลังโหลด Log...","warn",0);
   const q=query(collection(db, collectionPath()), orderBy("date","asc"));
   state.unsub=onSnapshot(q,(snap)=>{
-    if(state.subscriptionScope!==scope) return;
+    if(state.subscriptionGeneration!==generation || state.subscriptionScope!==scope || state.logHydration.scope!==scope) return;
     const normalized=snap.docs.map(d=>normalizeLog(d.data(), d.id));
     state.quarantinedLogs=normalized.filter(x=>x.__invalidDate);
     const remote=normalized.filter(x=>!x.__invalidDate);
@@ -376,10 +387,18 @@ function subscribeLogs(){
     const nextLogs=remote.map(x=>state.pendingWrites.get(x.id)?.optimistic || x);
     state.pendingWrites.forEach((pending,id)=>{ if(!remoteIds.has(id)) nextLogs.push(pending.optimistic); });
     replaceWorkoutLogs(nextLogs);
+    state.logHydration={scope,status:"ready",error:""};
     state.lastSnapshotAt=Date.now();
     status("โหลดข้อมูลสำเร็จ","ok");
     scheduleRender();
-  },(err)=>{ console.error(err); status("โหลด Log ไม่สำเร็จ: "+err.message,"err",0); });
+  },(err)=>{
+    if(state.subscriptionGeneration!==generation || state.subscriptionScope!==scope || state.logHydration.scope!==scope) return;
+    console.error(err);
+    state.logHydration={scope,status:"error",error:err?.message||"Unknown error"};
+    if(!state.editingId){ state.selectedExercise=""; state.selectedAlt=null; }
+    status("โหลด Log ไม่สำเร็จ: "+state.logHydration.error,"err",0);
+    scheduleRender();
+  });
 }
 
 const staticRenderValid={program:false,guide:false};
@@ -508,13 +527,20 @@ function renderExerciseSelect(){
 }
 
 function renderLogScheduleState(){
+  const hydrationBlocked=Boolean(state.user) && state.logHydration.status!=="ready" && !state.editingId;
   const restDay=!state.editingId && allowedTrainingDaysForDate(state.selectedDate).length===0;
+  const hydrationState=$("logHydrationState");
+  if(hydrationState){
+    hydrationState.hidden=!hydrationBlocked;
+    if(hydrationBlocked) hydrationState.textContent=state.logHydration.status==="error" ? `Unable to load workout data: ${state.logHydration.error}` : "Loading workout data...";
+  }
   const restState=$("logRestDayState"); if(restState) restState.hidden=!restDay;
-  for(const id of ["logWorkoutContext","exercise","logSetProgress"]){ const element=$(id); if(element) element.hidden=restDay; }
-  for(const id of ["logAlternativeCard","logPerformanceCard","logInputCard"]){ const element=$(id); if(element) element.hidden=restDay || (id==="logPerformanceCard" && element.hidden); }
-  if(restDay){
+  if(restState && hydrationBlocked) restState.hidden=true;
+  for(const id of ["logWorkoutContext","exercise","logSetProgress"]){ const element=$(id); if(element) element.hidden=restDay || hydrationBlocked; }
+  for(const id of ["logAlternativeCard","logPerformanceCard","logInputCard"]){ const element=$(id); if(element) element.hidden=restDay || hydrationBlocked || (id==="logPerformanceCard" && element.hidden); }
+  if(restDay || hydrationBlocked){
     for(const id of ["smartAlternativeSection","performanceSuggested","applyProgressionBtn"]){ const element=$(id); if(element) element.hidden=true; }
-    setText("logDayLabel","Rest Day");
+    if(restDay && !hydrationBlocked) setText("logDayLabel","Rest Day");
     const warning=$("logDayLockWarning"); if(warning) warning.hidden=true;
   }
 }
@@ -587,7 +613,7 @@ function updateFormDerived(){
   const progress=$("logSetProgress");
   if(progress){ progress.max=prog.target; progress.value=Math.min(prog.done,prog.target); }
   const lock=calcDayLock();
-  const saveBtn=$("saveBtn"); if(saveBtn) saveBtn.disabled = state.saving || (!state.editingId && (lock.status!=="OPEN" || prog.done>=prog.target));
+  const saveBtn=$("saveBtn"); if(saveBtn) saveBtn.disabled = state.saving || (!state.editingId && (state.logHydration.status!=="ready" || lock.status!=="OPEN" || prog.done>=prog.target));
   setHtml("setStatus", prog.done>=prog.target ? `<span class="ok-text">ท่านี้ครบแล้ว ${prog.done}/${prog.target}</span>` : `พร้อมบันทึก: <b>${escapeHtml(actualExerciseName())}</b> Set ${prog.done+1}/${prog.target}`);
   setHtml("calendarSyncStatus", `Calendar Sync: Today ${dateLabelTH(todayTH())} • Selected ${dateLabelTH(state.selectedDate)}`);
   setHtml("cycleDebug", `Cycle: Week ${autoWeek()} • Allowed ${calcDayLock().allowedDays?.join(", ") || "-"}`);
@@ -858,6 +884,10 @@ function autoWeek(){
 async function saveSet(){
   ensureLogDefaults();
   const wasEditing=Boolean(state.editingId);
+  if(!wasEditing && state.user && state.logHydration.status!=="ready"){
+    status(state.logHydration.status==="error" ? "โหลดข้อมูล Workout ไม่สำเร็จ" : "กำลังโหลดข้อมูล Workout","err",0);
+    return;
+  }
   const original=wasEditing ? state.logs.find(x=>x.id===state.editingId) : null;
   if(wasEditing && !original){ status("ไม่พบ Log เดิมที่กำลังแก้ไข","err",0); return; }
   const lock=calcDayLock(); const prog=currentExerciseProgress();
@@ -1079,5 +1109,5 @@ function download(name,text,type){ const a=document.createElement("a"); a.href=U
 onAuthStateChanged(auth,u=>{ if((state.user?.uid||null)!==(u?.uid||null)) clearScopedWorkoutState(); state.user=u; if(u && !state.teamId) state.teamId="Beer-Team"; subscribeLogs(); scheduleRender(); });
 
 window.addEventListener("DOMContentLoaded",()=>{
-  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); ensureLogDefaults(); scheduleRender(); qaExerciseCoverage(); status("Workout PRO v5.5.7 พร้อมใช้งาน","ok",2500);
+  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); ensureLogDefaults(); scheduleRender(); qaExerciseCoverage(); status("Workout PRO v5.6.0-rc1 พร้อมใช้งาน","ok",2500);
 });

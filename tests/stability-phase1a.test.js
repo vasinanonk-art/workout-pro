@@ -37,7 +37,7 @@ function snapshot(logs){ return {docs:logs.map(({id,...data})=>({id,data:()=>dat
 function loadApp(storageSeed={},storageUnavailable=false){
   const storage=new Map(Object.entries(storageSeed));
   const elements={};
-  const calls={adds:[],updates:[],snapshots:[],errors:[],warnings:[],authCallback:null,addDeferred:null,updateDeferred:null};
+  const calls={adds:[],updates:[],snapshots:[],snapshotErrors:[],errors:[],warnings:[],authCallback:null,addDeferred:null,updateDeferred:null};
   let nextId=1;
   const document={
     getElementById:id=>elements[id]||null,
@@ -75,7 +75,7 @@ function loadApp(storageSeed={},storageUnavailable=false){
     doc:(...args)=>args.length===1?{id:`auto-${nextId++}`}:{id:String(args.at(-1))}, serverTimestamp:()=>({server:true}),
     setDoc:async(ref,payload)=>{ calls.adds.push({ref,payload}); if(calls.addDeferred) return calls.addDeferred.promise; },
     updateDoc:async(ref,payload)=>{ calls.updates.push({ref,payload}); if(calls.updateDeferred) return calls.updateDeferred.promise; }, deleteDoc:async()=>{},
-    onSnapshot:(q,next)=>{ calls.snapshots.push(next); return ()=>{}; }
+    onSnapshot:(q,next,error)=>{ calls.snapshots.push(next); calls.snapshotErrors.push(error); return ()=>{}; }
   };
   context.window.document=document;
   context.window.Notification=context.Notification;
@@ -340,6 +340,7 @@ test("snapshot before add promise resolution does not duplicate optimistic add",
   api.state.user={uid:"user-1"};
   api.state.selectedDate="2026-08-08";
   api.subscribeLogs();
+  calls.snapshots[0](snapshot([]));
   calls.addDeferred=deferred();
   const saving=api.saveSet();
   const id=api.state.logs[0].id;
@@ -359,6 +360,7 @@ test("add promise before snapshot reconciles to one server record by id",async()
   api.state.user={uid:"user-1"};
   api.state.selectedDate="2026-08-08";
   api.subscribeLogs();
+  calls.snapshots[0](snapshot([]));
   await api.saveSet();
   const id=api.state.logs[0].id;
   assert.equal(api.state.pendingWrites.size,0);
@@ -495,8 +497,11 @@ test("persistent alternative contract and edit isolation remain intact",()=>{
 });
 
 test("visible and runtime versions are consistent",()=>{
-  assert.match(fs.readFileSync("js/runtime.js","utf8"),/VERSION='v5\.5\.7'/);
-  assert.match(fs.readFileSync("index.html","utf8"),/app\.module\.js\?v=557/);
+  const runtime=fs.readFileSync("js/runtime.js","utf8"), app=fs.readFileSync("js/app.module.js","utf8"), html=fs.readFileSync("index.html","utf8");
+  assert.match(runtime,/VERSION='v5\.6\.0-rc1'/);
+  assert.match(app,/const VERSION = "v5\.6\.0-rc1"/);
+  for(const asset of ["runtime.js","styles.css","app.module.js"]) assert.match(html,new RegExp(`${asset.replace(".","\\.")}\\?v=560rc1`));
+  assert.doesNotMatch(`${runtime}\n${app}\n${html}`,/\?v=557|v5\.5\.7/);
 });
 
 test("derived index groups logs by date, planned exercise, and composite key",()=>{
@@ -770,6 +775,82 @@ test("Rest Day clears a stale selected exercise and renders no scheduled option"
   assert.equal(elements.exercise.options[0].textContent,"No scheduled workout");
 });
 
+test("authenticated startup hides workout entry while the first snapshot is pending",()=>{
+  const {api,elements,calls}=loadApp();
+  form(elements);
+  for(const id of ["logHydrationState","logRestDayState","logWorkoutContext","exercise","logSetProgress","logAlternativeCard","logPerformanceCard","logInputCard","smartAlternativeSection","performanceSuggested","applyProgressionBtn","logDayLockWarning"]){
+    elements[id]=element(); elements[id].hidden=false;
+  }
+  calls.authCallback({uid:"user-1"});
+  api.renderLogScheduleState();
+  api.updateFormDerived();
+  assert.equal(api.state.logHydration.status,"loading");
+  assert.equal(api.state.selectedExercise,"");
+  assert.equal(elements.logHydrationState.hidden,false);
+  assert.equal(elements.logHydrationState.textContent,"Loading workout data...");
+  for(const id of ["logWorkoutContext","exercise","logSetProgress","logAlternativeCard","logPerformanceCard","logInputCard"]){ assert.equal(elements[id].hidden,true,id); }
+  assert.equal(elements.saveBtn.disabled,true);
+});
+
+test("first successful empty snapshot readies a genuine new account for Day 1",()=>{
+  const {api,calls}=loadApp();
+  calls.authCallback({uid:"user-1"});
+  assert.equal(api.state.logHydration.status,"loading");
+  calls.snapshots[0](snapshot([]));
+  assert.equal(api.state.logHydration.status,"ready");
+  assert.equal(api.state.selectedExercise,"Barbell Bench Press");
+  assert.deepEqual(Array.from(api.state.logs),[]);
+});
+
+test("successful history snapshot resolves Rest Day after hydration",()=>{
+  const {api,elements,calls}=loadApp();
+  api.state.selectedDate="2026-02-02";
+  calls.authCallback({uid:"user-1"});
+  calls.snapshots[0](snapshot(restDayLogs(api)));
+  for(const id of ["logHydrationState","logRestDayState","logWorkoutContext","exercise","logSetProgress","logAlternativeCard","logPerformanceCard","logInputCard","smartAlternativeSection","performanceSuggested","applyProgressionBtn","logDayLockWarning","logDayLabel"]){
+    elements[id]=element(); elements[id].hidden=false;
+  }
+  api.renderLogScheduleState();
+  assert.equal(api.state.logHydration.status,"ready");
+  assert.equal(api.state.selectedExercise,"");
+  assert.equal(elements.logRestDayState.hidden,false);
+  assert.equal(elements.logInputCard.hidden,true);
+});
+
+test("snapshot failure shows a persistent error without Day 1 fallback",()=>{
+  const {api,elements,calls}=loadApp();
+  form(elements);
+  for(const id of ["logHydrationState","logRestDayState","logWorkoutContext","exercise","logSetProgress","logAlternativeCard","logPerformanceCard","logInputCard","smartAlternativeSection","performanceSuggested","applyProgressionBtn","logDayLockWarning"]){
+    elements[id]=element(); elements[id].hidden=false;
+  }
+  calls.authCallback({uid:"user-1"});
+  calls.snapshotErrors[0](new Error("permission denied"));
+  api.renderLogScheduleState();
+  api.updateFormDerived();
+  assert.equal(api.state.logHydration.status,"error");
+  assert.equal(api.state.selectedExercise,"");
+  assert.equal(elements.logHydrationState.hidden,false);
+  assert.match(elements.logHydrationState.textContent,/permission denied/);
+  assert.equal(elements.logInputCard.hidden,true);
+  assert.equal(elements.saveBtn.disabled,true);
+});
+
+test("scope switch returns to loading and ignores the stale old snapshot",()=>{
+  const {api,calls}=loadApp();
+  calls.authCallback({uid:"user-a"});
+  const oldSnapshot=calls.snapshots[0];
+  api.clearScopedWorkoutState();
+  api.state.user={uid:"user-b"};
+  api.state.teamId="team-b";
+  api.subscribeLogs();
+  assert.equal(api.state.logHydration.status,"loading");
+  assert.equal(api.state.logHydration.scope,"user-b|team-b");
+  oldSnapshot(snapshot([]));
+  assert.equal(api.state.logHydration.status,"loading");
+  calls.snapshots[1](snapshot([]));
+  assert.equal(api.state.logHydration.status,"ready");
+});
+
 test("Rest Day hides workout assistance and entry sections",()=>{
   const {api,elements}=loadApp();
   api.state.selectedDate="2026-02-02";
@@ -808,12 +889,14 @@ test("a valid training day resolves the first allowed incomplete exercise",()=>{
 
 test("manual override resolves its allowed workout on an otherwise Rest Day",()=>{
   const {api}=loadApp();
+  api.state.logHydration.status="ready";
   api.state.selectedDate="2026-02-02";
   api.state.selectedExercise="Barbell Bench Press";
   api.replaceWorkoutLogs(restDayLogs(api));
   api.state.overrideKeys.add("2026-02-02|guest|Beer-Team|Day 1");
   api.resolveSelectedExercise();
   assert.equal(api.state.selectedExercise,"Barbell Bench Press");
+  assert.equal(api.state.logHydration.status,"ready");
 });
 
 test("historical edit on a Rest Day preserves its historical exercise",()=>{
