@@ -4,7 +4,9 @@ const fs = require("node:fs");
 const vm = require("node:vm");
 
 const exerciseLibrarySource = fs.readFileSync("js/exercise-library.js","utf8");
-const source = `${exerciseLibrarySource.replace(/^export /gm,"")}\n${fs.readFileSync("js/app.module.js","utf8").replace(/^import .*;\n/gm,"")}`;
+const progressionEngineSource = fs.readFileSync("js/progression-engine.js","utf8");
+const smartAlternativeSource = fs.readFileSync("js/smart-alternative.js","utf8");
+const source = `${exerciseLibrarySource.replace(/^export /gm,"")}\n${progressionEngineSource.replace(/^export /gm,"")}\n${smartAlternativeSource.replace(/^import .*;\n/gm,"").replace(/^export /gm,"")}\n${fs.readFileSync("js/app.module.js","utf8").replace(/^import .*;\n/gm,"")}`;
 
 test("exercise library module imports its public API",async()=>{
   const url=`data:text/javascript;base64,${Buffer.from(exerciseLibrarySource).toString("base64")}`;
@@ -78,7 +80,7 @@ function loadApp(storageSeed={},storageUnavailable=false){
   context.window.document=document;
   context.window.Notification=context.Notification;
   context.globalThis=context;
-  const expose=`\n;globalThis.__app={state,bind,show,saveSet,subscribeLogs,renderExerciseSelect,resolveSelectedExercise,renderCalendar,renderRecent,renderSetup,renderPerformanceCard,usePreviousWorkout,lastSetForPlannedOnOrBefore,bestPerformanceForPlanned,updateFormDerived,updateTimerState,restorePersistentAlt,readPersistentAlt,writePersistentAlt,clearPersistentAlt,isValidDateKey,clearScopedWorkoutState,plannedOf,samePlanned,inferPlannedExerciseFromActual,plannedCandidatesForAlternative,logsOnDate,logsForPlanned,completedForExercise,latestSetForPlanned,previousSetForPlanned,previousWorkoutForPlanned,replaceWorkoutLogs,getDerivedLogIndex:()=>derivedLogIndex,getIndexRebuildCount:()=>derivedLogIndexRebuildCount,alternativeInventory:()=>[...PLANNED_BY_ALTERNATIVE.entries()],exerciseLibrary:()=>EXERCISE_LIBRARY,program:()=>PROGRAM,alternatives:()=>ALT,canonicalExercise,alternativeReasons:()=>ALTERNATIVE_REASONS,setRender(fn){renderAll=fn},setTimer(fn){startTimer=fn}};`;
+  const expose=`\n;globalThis.__app={state,bind,show,saveSet,subscribeLogs,renderExerciseSelect,resolveSelectedExercise,renderCalendar,renderRecent,renderSetup,renderPerformanceCard,usePreviousWorkout,progressionSuggestion,applyProgressionSuggestion,smartAlternativesForCurrentExercise,selectAlternative,lastSetForPlannedOnOrBefore,bestPerformanceForPlanned,updateFormDerived,updateTimerState,restorePersistentAlt,readPersistentAlt,writePersistentAlt,clearPersistentAlt,isValidDateKey,clearScopedWorkoutState,plannedOf,samePlanned,inferPlannedExerciseFromActual,plannedCandidatesForAlternative,logsOnDate,logsForPlanned,completedForExercise,latestSetForPlanned,previousSetForPlanned,previousWorkoutForPlanned,replaceWorkoutLogs,getDerivedLogIndex:()=>derivedLogIndex,getIndexRebuildCount:()=>derivedLogIndexRebuildCount,alternativeInventory:()=>[...PLANNED_BY_ALTERNATIVE.entries()],exerciseLibrary:()=>EXERCISE_LIBRARY,program:()=>PROGRAM,alternatives:()=>ALT,canonicalExercise,alternativeReasons:()=>ALTERNATIVE_REASONS,setRender(fn){renderAll=fn},setTimer(fn){startTimer=fn}};`;
   vm.runInNewContext(source+expose,context,{filename:"js/app.module.js"});
   context.__app.setRender(()=>{});
   context.__app.setTimer(()=>{});
@@ -88,13 +90,14 @@ function loadApp(storageSeed={},storageUnavailable=false){
 function form(elements,values={}){
   const defaults={weight:50,reps:8,rir:2,sleepHours:7,soreness:2,stress:2,tempo:"2-0-1",repQuality:"good",biasMode:"auto",restMode:"auto",restSec:75,unit:"kg",note:"",date:"2026-08-08"};
   for(const [id,value] of Object.entries({...defaults,...values})) elements[id]=element(value);
+  elements.weight.step="0.5";
   for(const id of ["tempo","repQuality","biasMode","restMode","unit"]){ elements[id].options=[{value:elements[id].value}]; }
   elements.appStatusBar=element();
   elements.saveBtn=element();
 }
 
 function performanceElements(elements){
-  for(const id of ["logPerformanceCard","performancePrevious","performancePreviousValue","performancePreviousMeta","performanceLast","performanceLastValue","performanceLastMeta","performanceBest","performanceBestValue","performanceBestMeta","usePreviousWorkoutBtn"]){ elements[id]=element(); }
+  for(const id of ["logPerformanceCard","performancePrevious","performancePreviousValue","performancePreviousMeta","performanceSuggested","performanceSuggestedValue","performanceSuggestedMeta","applyProgressionBtn","performanceLast","performanceLastValue","performanceLastMeta","performanceBest","performanceBestValue","performanceBestMeta","usePreviousWorkoutBtn"]){ elements[id]=element(); }
 }
 
 test("malformed and wrong-schema startup storage falls back without crashing",()=>{
@@ -651,4 +654,83 @@ test("historical edit cannot apply Use Previous Workout",()=>{
   assert.equal(elements.usePreviousWorkoutBtn.hidden,true);
   api.usePreviousWorkout();
   assert.deepEqual([elements.weight.value,elements.reps.value,elements.rir.value],["55","6","3"]);
+});
+
+test("Apply Suggestion fills weight and reps only",()=>{
+  const {api,elements,calls,storage}=loadApp();
+  form(elements,{weight:20,reps:3,rir:4,note:"keep",tempo:"3-1-1",repQuality:"strict",biasMode:"machine"});
+  api.state.selectedExercise="Barbell Bench Press";
+  api.state.selectedDate="2026-02-10";
+  api.replaceWorkoutLogs([{id:"prior",date:"2026-02-03",plannedExercise:"Barbell Bench Press",weightKg:80,reps:8,rir:2,createdMs:1}]);
+  const identity=[api.state.selectedDate,api.state.selectedExercise,api.state.selectedAlt,api.state.editingId];
+  api.applyProgressionSuggestion();
+  assert.deepEqual([elements.weight.value,elements.reps.value],[80.5,5]);
+  assert.deepEqual([elements.rir.value,elements.note.value,elements.tempo.value,elements.repQuality.value,elements.biasMode.value],["4","keep","3-1-1","strict","machine"]);
+  assert.deepEqual([api.state.selectedDate,api.state.selectedExercise,api.state.selectedAlt,api.state.editingId],identity);
+  assert.equal(calls.adds.length,0);
+  assert.equal(calls.updates.length,0);
+  assert.equal(storage.size,0);
+});
+
+test("Apply Suggestion does not save or start the rest timer",()=>{
+  const {api,elements,calls}=loadApp();
+  form(elements);
+  api.state.selectedExercise="Barbell Bench Press";
+  api.state.selectedDate="2026-02-10";
+  api.replaceWorkoutLogs([{id:"prior",date:"2026-02-03",plannedExercise:"Barbell Bench Press",weightKg:80,reps:8,rir:2,createdMs:1}]);
+  const timer=[api.state.timerId,api.state.timerEndAt,api.state.timerLeft];
+  api.applyProgressionSuggestion();
+  assert.equal(calls.adds.length,0);
+  assert.equal(calls.updates.length,0);
+  assert.deepEqual([api.state.timerId,api.state.timerEndAt,api.state.timerLeft],timer);
+});
+
+test("Smart Replace reuses persistent alternative selection",()=>{
+  const {api,storage}=loadApp();
+  api.state.selectedExercise="Barbell Bench Press";
+  assert.equal(api.selectAlternative("Machine Chest Press"),true);
+  assert.equal(api.state.selectedAlt.name,"Machine Chest Press");
+  assert.equal(api.state.selectedAlt.original,"Barbell Bench Press");
+  assert.equal(storage.get("persistent_alt_Barbell Bench Press"),JSON.stringify({version:1,name:"Machine Chest Press"}));
+});
+
+test("Smart Alternative integration preserves engine top-three order",()=>{
+  const {api}=loadApp();
+  api.state.selectedExercise="Barbell Bench Press";
+  assert.deepEqual(Array.from(api.smartAlternativesForCurrentExercise(),item=>item.exercise),[
+    "Machine Chest Press","Smith Machine Bench Press","Dumbbell Bench Press"
+  ]);
+});
+
+test("Suggested section is hidden when progression is unavailable",()=>{
+  const {api,elements}=loadApp();
+  form(elements);
+  performanceElements(elements);
+  api.state.selectedExercise="Barbell Bench Press";
+  api.state.selectedDate="2026-02-10";
+  api.replaceWorkoutLogs([]);
+  api.renderPerformanceCard();
+  assert.equal(elements.performanceSuggested.hidden,true);
+  assert.equal(elements.applyProgressionBtn.hidden,true);
+  assert.equal(elements.logPerformanceCard.hidden,true);
+});
+
+test("Smart Alternative is unavailable for an unknown planned exercise",()=>{
+  const {api}=loadApp();
+  api.state.selectedExercise="Unknown Exercise";
+  assert.equal(api.smartAlternativesForCurrentExercise().length,0);
+});
+
+test("historical edit cannot apply Suggestion or Smart Replace",()=>{
+  const {api,elements,storage}=loadApp();
+  form(elements,{weight:55,reps:6});
+  api.state.selectedExercise="Barbell Bench Press";
+  api.state.selectedDate="2026-02-10";
+  api.state.editingId="historical";
+  api.replaceWorkoutLogs([{id:"prior",date:"2026-02-03",plannedExercise:"Barbell Bench Press",weightKg:80,reps:8,rir:2,createdMs:1}]);
+  api.applyProgressionSuggestion();
+  assert.deepEqual([elements.weight.value,elements.reps.value],["55","6"]);
+  assert.equal(api.selectAlternative("Machine Chest Press"),false);
+  assert.equal(api.state.selectedAlt,null);
+  assert.equal(storage.size,0);
 });

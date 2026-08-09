@@ -219,13 +219,18 @@ select option:disabled{color:#888;background:#111827}
 .log-alternative-card .msg{margin:0 0 8px;padding:9px 10px}
 .log-alt-actions{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:8px}
 #log .log-alt-actions button,#log .log-alt-actions #clearAltBtn{width:100%!important;min-height:46px!important;margin:0!important;padding:10px 12px!important;border-radius:13px!important;font-size:14px!important}
-.log-performance-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.smart-alternative-section{margin-top:9px;padding-top:9px;border-top:1px solid var(--line)}
+.smart-alternative-list{display:grid;gap:7px}
+.smart-alt-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;border:1px solid var(--line);border-radius:12px;background:#020617}
+.smart-alt-item .small{display:block;margin-top:3px}
+.smart-alt-item button{flex:0 0 auto;margin:0;min-height:42px}
+.log-performance-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .log-performance-grid>div{padding:10px;border:1px solid var(--line);border-radius:12px;background:#020617}
 .log-performance-grid>.log-performance-primary{border-color:#38bdf8;background:rgba(14,116,144,.14)}
 .log-performance-grid span{display:block;color:var(--muted);font-size:12px;margin-bottom:5px}
 .log-performance-grid b{font-size:16px}
 .log-performance-grid small{display:block;color:var(--muted);margin-top:4px}
-#usePreviousWorkoutBtn{width:100%;margin-top:9px;min-height:44px;font-size:13px}
+#usePreviousWorkoutBtn,#applyProgressionBtn{width:100%;margin-top:9px;min-height:44px;font-size:13px}
 .log-input-card label{margin-bottom:5px}
 .log-weight-row{display:grid;grid-template-columns:minmax(0,1fr) 72px;gap:7px}
 .log-reps-rir{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}

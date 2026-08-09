@@ -4,6 +4,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, setDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { PROGRAM, ALT, PLANNED_BY_ALTERNATIVE, ALTERNATIVE_REASONS, EXERCISE_LIBRARY, EX_DB, tieredAlternativesForExercise, alternativesForExercise, exInfo, canonicalExercise, getExerciseDbRows, uniqueBy } from "./exercise-library.js";
+import { evaluateProgression } from "./progression-engine.js";
+import { findAlternatives } from "./smart-alternative.js";
 
 const VERSION = "v5.5.7";
 const $ = (id) => document.getElementById(id);
@@ -381,7 +383,7 @@ function renderAll(){
 }
 
 function renderLog(){
-  renderDayLock(); renderExerciseSelect(); renderExerciseDatabase(); renderLogSummary(); renderRecent(); renderMedia(); renderTimer(); updateFormDerived(); renderPerformanceCard();
+  renderDayLock(); renderExerciseSelect(); renderExerciseDatabase(); renderLogSummary(); renderRecent(); renderMedia(); renderTimer(); updateFormDerived(); renderSmartAlternatives(); renderPerformanceCard();
 }
 
 function notificationPermissionText(){
@@ -493,6 +495,7 @@ function renderAfterExerciseChange(){
   renderExerciseDatabase();
   renderMedia();
   updateFormDerived();
+  renderSmartAlternatives();
   renderPerformanceCard();
 }
 function renderExerciseProgressList(){
@@ -582,17 +585,43 @@ function setPerformanceItem(id,valueId,metaId,log,includeDate=true){
   setText(valueId,`${log.weightKg} kg × ${log.reps}`);
   setText(metaId,`${includeDate?dateLabelTH(log.date)+" • ":""}RIR ${log.rir ?? "-"}`);
 }
+function targetRepRange(exercise=state.selectedExercise){
+  const values=String(metaByExercise(exercise)[4]||"").match(/\d+/g)?.map(Number) || [];
+  if(!values.length) return null;
+  const min=values[0], max=values[1] ?? values[0];
+  return Number.isInteger(min) && Number.isInteger(max) && min>0 && max>=min ? {min,max} : null;
+}
+function progressionSuggestion(){
+  if(state.editingId) return null;
+  const previousWorkout=previousWorkoutForPlanned(state.selectedExercise,state.selectedDate);
+  const lastSet=lastSetForPlannedOnOrBefore(state.selectedExercise,state.selectedDate);
+  const range=targetRepRange();
+  const weightIncrement=Number($("weight")?.step);
+  const exerciseType=EXERCISE_LIBRARY.find(exercise=>exercise.displayName===state.selectedExercise)?.exerciseType;
+  if((!previousWorkout && !lastSet) || !range || !Number.isFinite(weightIncrement) || weightIncrement<=0 || !exerciseType) return null;
+  try{ return evaluateProgression({previousWorkout,lastSet,targetRepRange:range,weightIncrement,exerciseType}); }
+  catch(e){ return null; }
+}
 function renderPerformanceCard(){
   const previous=previousWorkoutForPlanned(state.selectedExercise,state.selectedDate);
+  const suggestion=progressionSuggestion();
   const last=lastSetForPlannedOnOrBefore(state.selectedExercise,state.selectedDate);
   const best=bestPerformanceForPlanned(state.selectedExercise);
   setPerformanceItem("performancePrevious","performancePreviousValue","performancePreviousMeta",previous);
+  const suggested=$("performanceSuggested");
+  if(suggested) suggested.hidden=!suggestion;
+  if(suggestion){
+    setText("performanceSuggestedValue",`${suggestion.suggestedWeight} kg × ${suggestion.suggestedReps}`);
+    setText("performanceSuggestedMeta",suggestion.message);
+  }
   setPerformanceItem("performanceLast","performanceLastValue","performanceLastMeta",last);
   setPerformanceItem("performanceBest","performanceBestValue","performanceBestMeta",best);
   const usePreviousBtn=$("usePreviousWorkoutBtn");
   if(usePreviousBtn) usePreviousBtn.hidden=!previous || Boolean(state.editingId);
+  const applyBtn=$("applyProgressionBtn");
+  if(applyBtn) applyBtn.hidden=!suggestion || Boolean(state.editingId);
   const card=$("logPerformanceCard");
-  if(card) card.hidden=!previous && !last && !best;
+  if(card) card.hidden=!previous && !suggestion && !last && !best;
 }
 function usePreviousWorkout(){
   if(state.editingId) return;
@@ -602,6 +631,47 @@ function usePreviousWorkout(){
   setVal("reps",previous.reps);
   setVal("rir",previous.rir ?? "");
   status(`คัดลอก Previous Workout: ${previous.weightKg} kg × ${previous.reps}, RIR ${previous.rir ?? "-"}`,"ok",2200);
+}
+function applyProgressionSuggestion(){
+  const suggestion=progressionSuggestion();
+  if(!suggestion || state.editingId) return;
+  setVal("weight",suggestion.suggestedWeight);
+  setVal("reps",suggestion.suggestedReps);
+  status(`ใช้ Suggested: ${suggestion.suggestedWeight} kg × ${suggestion.suggestedReps}`,"ok",2200);
+}
+
+const AVAILABLE_LIBRARY_EQUIPMENT=Object.freeze(uniqueBy(EXERCISE_LIBRARY.map(exercise=>exercise.equipment).filter(Boolean),value=>value));
+function smartAlternativesForCurrentExercise(){
+  if(state.editingId || !state.selectedExercise) return [];
+  try{ return findAlternatives({plannedExercise:state.selectedExercise,availableEquipment:AVAILABLE_LIBRARY_EQUIPMENT}).slice(0,3); }
+  catch(e){ return []; }
+}
+function alternativeTier(plannedExercise,alternative){
+  const tiers=tieredAlternativesForExercise(plannedExercise);
+  return ["A","B","C"].find(tier=>(tiers[tier]||[]).includes(alternative)) || "";
+}
+function selectAlternative(alternative,tier=alternativeTier(state.selectedExercise,alternative)){
+  if(state.editingId || !alternativesForExercise(state.selectedExercise).includes(alternative)) return false;
+  const base=state.selectedExercise;
+  state.selectedAlt={name:alternative,original:base,tier};
+  writePersistentAlt(base,alternative);
+  $("altModal")?.classList.remove("show");
+  document.body.classList.remove("modal-open");
+  scheduleRender();
+  status(`ใช้ท่าแทน${tier?` Tier ${tier}`:""}: ${alternative}`,"ok");
+  return true;
+}
+function renderSmartAlternatives(){
+  const section=$("smartAlternativeSection"), host=$("smartAlternativeList");
+  if(!section || !host) return;
+  const alternatives=smartAlternativesForCurrentExercise();
+  section.hidden=!alternatives.length;
+  if(!alternatives.length){ host.innerHTML=""; return; }
+  host.innerHTML=alternatives.map((alternative,index)=>`<div class="smart-alt-item"><div><b>${escapeHtml(alternative.exercise)}</b><span class="small">${alternative.reasons.map(escapeHtml).join(" • ")}</span></div><button class="secondary smart-alt-replace" data-index="${index}" type="button" aria-label="Replace with ${escapeHtml(alternative.exercise)}">Replace</button></div>`).join("");
+  host.querySelectorAll(".smart-alt-replace").forEach(button=>button.addEventListener("click",()=>{
+    const alternative=alternatives[Number(button.dataset.index)];
+    if(alternative) selectAlternative(alternative.exercise);
+  }));
 }
 function renderLogSummary(){
   const arr=logsOnDate(state.selectedDate), sets=arr.length, vol=volumeForLogs(arr);
@@ -859,6 +929,7 @@ function bind(){
   $("restMode")?.addEventListener("change",()=>{ ensureLogDefaults(); status("อัปเดตค่า Rest แล้ว","ok",900); });
   $("saveBtn")?.addEventListener("click",saveSet); $("resetBtn")?.addEventListener("click",resetForm);
   $("usePreviousWorkoutBtn")?.addEventListener("click",usePreviousWorkout);
+  $("applyProgressionBtn")?.addEventListener("click",applyProgressionSuggestion);
   $("altBtn")?.addEventListener("click",openAltModal); $("closeAlt")?.addEventListener("click",()=>{$("altModal")?.classList.remove("show"); document.body.classList.remove("modal-open");});
   $("clearAltBtn")?.addEventListener("click",()=>{ if(!state.editingId) clearPersistentAlt(state.selectedExercise); state.selectedAlt=null; scheduleRender(); });
   $("imageBtn")?.addEventListener("click",()=>window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(actualExerciseName()+" proper form")}`,"_blank"));
@@ -888,12 +959,7 @@ function openAltModal(){
       }).join("") + `</div>`;
     }).join("");
     host.innerHTML=sections || "ไม่มีท่าแทน";
-    host.querySelectorAll(".alt-choice").forEach(b=>b.addEventListener("click",()=>{
-      state.selectedAlt={name:b.dataset.name, original:base, tier:b.dataset.tier};
-      if(!state.editingId) writePersistentAlt(base,b.dataset.name);
-      modal.classList.remove("show"); document.body.classList.remove("modal-open");
-      scheduleRender(); status(`ใช้ท่าแทน Tier ${b.dataset.tier}: ${b.dataset.name}`,"ok");
-    }));
+    host.querySelectorAll(".alt-choice").forEach(b=>b.addEventListener("click",()=>selectAlternative(b.dataset.name,b.dataset.tier)));
   };
   render("");
   const search=$("altSearch"); if(search){ search.value=""; search.oninput=()=>render(search.value); }

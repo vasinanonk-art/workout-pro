@@ -106,12 +106,16 @@
       <button id="altBtn" class="orange" type="button">ไม่มีเครื่อง / เลือกท่าทดแทน</button>
       <button id="clearAltBtn" class="secondary" type="button">ยกเลิกท่าทดแทน</button>
     </div>
+    <div id="smartAlternativeSection" class="smart-alternative-section" hidden>
+      <div id="smartAlternativeList" class="smart-alternative-list"></div>
+    </div>
   </div>
 
   <div id="logPerformanceCard" class="card log-performance-card" hidden>
     <h3>Performance</h3>
     <div class="log-performance-grid">
       <div id="performancePrevious" class="log-performance-primary" hidden><span>Previous Workout</span><b id="performancePreviousValue">—</b><small id="performancePreviousMeta"></small><button id="usePreviousWorkoutBtn" type="button" aria-label="Use weight, reps, and RIR from previous workout">Use Previous Workout</button></div>
+      <div id="performanceSuggested" hidden><span>Suggested</span><b id="performanceSuggestedValue">—</b><small id="performanceSuggestedMeta"></small><button id="applyProgressionBtn" type="button" aria-label="Apply suggested weight and repetitions">Apply</button></div>
       <div id="performanceLast" hidden><span>Last Set</span><b id="performanceLastValue">—</b><small id="performanceLastMeta"></small></div>
       <div id="performanceBest" hidden><span>Best Volume Set</span><b id="performanceBestValue">—</b><small id="performanceBestMeta"></small></div>
     </div>
