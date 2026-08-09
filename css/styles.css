@@ -215,6 +215,7 @@ select option:disabled{color:#888;background:#111827}
 .log-compact-header progress::-webkit-progress-bar{background:#020617;border-radius:999px}
 .log-compact-header progress::-webkit-progress-value{background:#38bdf8;border-radius:999px}
 .log-compact-header progress::-moz-progress-bar{background:#38bdf8;border-radius:999px}
+.log-action-state{padding:8px 10px;margin-top:8px;border:1px solid currentColor;border-radius:10px;font-size:13px;line-height:1.35}
 .log-alternative-card .msg{margin:0 0 8px;padding:9px 10px}
 .log-alt-actions{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:8px}
 #log .log-alt-actions button,#log .log-alt-actions #clearAltBtn{width:100%!important;min-height:46px!important;margin:0!important;padding:10px 12px!important;border-radius:13px!important;font-size:14px!important}

@@ -95,6 +95,8 @@
     <label class="sr-only" for="exercise">ท่าที่จะเล่น</label>
     <select id="exercise"></select>
     <progress id="logSetProgress" value="0" max="4" aria-label="Exercise set progress"></progress>
+    <div id="logDayLockWarning" class="log-action-state warn" role="alert" hidden></div>
+    <div id="logEditBanner" class="log-action-state info" role="status" hidden></div>
   </div>
 
   <div class="card log-alternative-card">
@@ -153,7 +155,6 @@
       <label for="note">Note</label><textarea id="note"></textarea>
       <div class="row3"><button id="imageBtn" class="purple" type="button">ดูรูปท่าที่ถูก</button><button id="videoBtn" class="cyan" type="button">ดูวิดีโอท่านี้</button><button class="secondary" id="resetBtn" type="button">Reset</button></div>
       <div class="mediaPanel" id="mediaPanel"><div class="mediaTitle" id="mediaTitle">Media Reference</div><div class="mediaCue" id="mediaCue">เลือกท่าเพื่อดู cue / รูป / วิดีโอ</div></div>
-      <div id="v430ExerciseDbCard"><h3>Exercise Database</h3><div id="v430ExerciseDb" class="msg info">เลือกท่าเพื่อดูข้อมูล</div></div>
       <div><h3>Daily Performance</h3><div id="v5LogSummary" class="msg info">รอข้อมูลวันนี้</div></div>
     </div>
   </details>
@@ -177,6 +178,7 @@
       <div class="msg info" id="sfrBox">SFR / Machine Bias: รอข้อมูล</div>
       <div class="msg" id="saveDebug">พร้อมบันทึก</div>
       <div class="msg info" id="v430DraftStatus">Draft Save: พร้อมใช้งาน</div>
+      <div id="v430ExerciseDbCard"><h3>Exercise Database</h3><div id="v430ExerciseDb" class="msg info">เลือกท่าเพื่อดูข้อมูล</div></div>
     </div>
   </details>
 
