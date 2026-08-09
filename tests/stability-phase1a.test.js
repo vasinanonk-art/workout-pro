@@ -80,7 +80,7 @@ function loadApp(storageSeed={},storageUnavailable=false){
   context.window.document=document;
   context.window.Notification=context.Notification;
   context.globalThis=context;
-  const expose=`\n;globalThis.__app={state,bind,show,saveSet,subscribeLogs,renderExerciseSelect,resolveSelectedExercise,renderCalendar,renderRecent,renderSetup,renderPerformanceCard,usePreviousWorkout,progressionSuggestion,applyProgressionSuggestion,smartAlternativesForCurrentExercise,selectAlternative,lastSetForPlannedOnOrBefore,bestPerformanceForPlanned,updateFormDerived,updateTimerState,restorePersistentAlt,readPersistentAlt,writePersistentAlt,clearPersistentAlt,isValidDateKey,clearScopedWorkoutState,plannedOf,samePlanned,inferPlannedExerciseFromActual,plannedCandidatesForAlternative,logsOnDate,logsForPlanned,completedForExercise,latestSetForPlanned,previousSetForPlanned,previousWorkoutForPlanned,replaceWorkoutLogs,getDerivedLogIndex:()=>derivedLogIndex,getIndexRebuildCount:()=>derivedLogIndexRebuildCount,alternativeInventory:()=>[...PLANNED_BY_ALTERNATIVE.entries()],exerciseLibrary:()=>EXERCISE_LIBRARY,program:()=>PROGRAM,alternatives:()=>ALT,canonicalExercise,alternativeReasons:()=>ALTERNATIVE_REASONS,setRender(fn){renderAll=fn},setTimer(fn){startTimer=fn}};`;
+  const expose=`\n;globalThis.__app={state,bind,show,saveSet,subscribeLogs,renderExerciseSelect,resolveSelectedExercise,renderLogScheduleState,renderCalendar,renderRecent,renderSetup,renderPerformanceCard,usePreviousWorkout,progressionSuggestion,applyProgressionSuggestion,smartAlternativesForCurrentExercise,selectAlternative,lastSetForPlannedOnOrBefore,bestPerformanceForPlanned,updateFormDerived,updateTimerState,restorePersistentAlt,readPersistentAlt,writePersistentAlt,clearPersistentAlt,isValidDateKey,clearScopedWorkoutState,plannedOf,samePlanned,inferPlannedExerciseFromActual,plannedCandidatesForAlternative,logsOnDate,logsForPlanned,completedForExercise,latestSetForPlanned,previousSetForPlanned,previousWorkoutForPlanned,replaceWorkoutLogs,getDerivedLogIndex:()=>derivedLogIndex,getIndexRebuildCount:()=>derivedLogIndexRebuildCount,alternativeInventory:()=>[...PLANNED_BY_ALTERNATIVE.entries()],exerciseLibrary:()=>EXERCISE_LIBRARY,program:()=>PROGRAM,alternatives:()=>ALT,canonicalExercise,alternativeReasons:()=>ALTERNATIVE_REASONS,setRender(fn){renderAll=fn},setTimer(fn){startTimer=fn}};`;
   vm.runInNewContext(source+expose,context,{filename:"js/app.module.js"});
   context.__app.setRender(()=>{});
   context.__app.setTimer(()=>{});
@@ -98,6 +98,23 @@ function form(elements,values={}){
 
 function performanceElements(elements){
   for(const id of ["logPerformanceCard","performancePrevious","performancePreviousValue","performancePreviousMeta","performanceSuggested","performanceSuggestedValue","performanceSuggestedMeta","applyProgressionBtn","performanceLast","performanceLastValue","performanceLastMeta","performanceBest","performanceBestValue","performanceBestMeta","usePreviousWorkoutBtn"]){ elements[id]=element(); }
+}
+
+function completedProgramDay(api,day,date,start=1){
+  let createdMs=start;
+  return Array.from(api.program()).filter(row=>row[0]===day).flatMap(row=>Array.from({length:Number(row[3])},()=>({
+    id:`${day}-${date}-${createdMs}`,date,day,plannedExercise:row[2],exercise:row[2],weightKg:50,reps:8,createdMs:createdMs++
+  })));
+}
+function restDayLogs(api){
+  return [...completedProgramDay(api,"Day 1","2026-02-01"),...completedProgramDay(api,"Day 2","2026-02-02",100)];
+}
+function exerciseSelectElement(){
+  const select=element();
+  select.appendChild=function(option){ this.options.push(option); };
+  select.insertBefore=function(option){ this.options.unshift(option); };
+  Object.defineProperty(select,"innerHTML",{set(){ this.options=[]; },get(){ return ""; }});
+  return select;
 }
 
 test("malformed and wrong-schema startup storage falls back without crashing",()=>{
@@ -733,4 +750,78 @@ test("historical edit cannot apply Suggestion or Smart Replace",()=>{
   assert.equal(api.selectAlternative("Machine Chest Press"),false);
   assert.equal(api.state.selectedAlt,null);
   assert.equal(storage.size,0);
+});
+
+test("Rest Day clears a stale selected exercise and renders no scheduled option",()=>{
+  const {api,elements}=loadApp();
+  api.state.selectedDate="2026-02-02";
+  api.state.selectedExercise="Barbell Bench Press";
+  api.replaceWorkoutLogs(restDayLogs(api));
+  api.resolveSelectedExercise();
+  assert.equal(api.state.selectedExercise,"");
+  elements.exercise=exerciseSelectElement();
+  api.renderExerciseSelect();
+  assert.equal(elements.exercise.value,"");
+  assert.equal(elements.exercise.disabled,true);
+  assert.equal(elements.exercise.options[0].textContent,"No scheduled workout");
+});
+
+test("Rest Day hides workout assistance and entry sections",()=>{
+  const {api,elements}=loadApp();
+  api.state.selectedDate="2026-02-02";
+  api.state.selectedExercise="";
+  api.replaceWorkoutLogs(restDayLogs(api));
+  for(const id of ["logRestDayState","logWorkoutContext","exercise","logSetProgress","logAlternativeCard","logPerformanceCard","logInputCard","smartAlternativeSection","performanceSuggested","applyProgressionBtn","logDayLockWarning","logDayLabel"]){
+    elements[id]=element(); elements[id].hidden=false;
+  }
+  api.renderLogScheduleState();
+  assert.equal(elements.logRestDayState.hidden,false);
+  for(const id of ["logWorkoutContext","exercise","logSetProgress","logAlternativeCard","logPerformanceCard","logInputCard","smartAlternativeSection","performanceSuggested","applyProgressionBtn"]){
+    assert.equal(elements[id].hidden,true,id);
+  }
+  assert.equal(elements.logDayLockWarning.hidden,true);
+  assert.equal(elements.logDayLabel.textContent,"Rest Day");
+});
+
+test("Rest Day never falls back to the first Day 1 exercise",()=>{
+  const {api}=loadApp();
+  api.state.selectedDate="2026-02-02";
+  api.state.selectedExercise="";
+  api.replaceWorkoutLogs(restDayLogs(api));
+  api.resolveSelectedExercise();
+  assert.notEqual(api.state.selectedExercise,"Barbell Bench Press");
+  assert.equal(api.state.selectedExercise,"");
+});
+
+test("a valid training day resolves the first allowed incomplete exercise",()=>{
+  const {api}=loadApp();
+  api.state.selectedDate="2026-01-31";
+  api.state.selectedExercise="Lat Pulldown";
+  api.replaceWorkoutLogs([]);
+  api.resolveSelectedExercise();
+  assert.equal(api.state.selectedExercise,"Barbell Bench Press");
+});
+
+test("manual override resolves its allowed workout on an otherwise Rest Day",()=>{
+  const {api}=loadApp();
+  api.state.selectedDate="2026-02-02";
+  api.state.selectedExercise="Barbell Bench Press";
+  api.replaceWorkoutLogs(restDayLogs(api));
+  api.state.overrideKeys.add("2026-02-02|guest|Beer-Team|Day 1");
+  api.resolveSelectedExercise();
+  assert.equal(api.state.selectedExercise,"Barbell Bench Press");
+});
+
+test("historical edit on a Rest Day preserves its historical exercise",()=>{
+  const {api,elements}=loadApp();
+  api.state.selectedDate="2026-02-02";
+  api.state.selectedExercise="Lat Pulldown";
+  api.state.editingId="historical-day-2";
+  api.replaceWorkoutLogs(restDayLogs(api));
+  api.resolveSelectedExercise();
+  assert.equal(api.state.selectedExercise,"Lat Pulldown");
+  elements.exercise=exerciseSelectElement();
+  api.renderExerciseSelect();
+  assert.equal(elements.exercise.value,"Lat Pulldown");
+  assert.equal(elements.exercise.disabled,false);
 });

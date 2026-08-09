@@ -210,6 +210,10 @@ select option:disabled{color:#888;background:#111827}
 #log.log-entry-v2 .card{padding:12px;margin-bottom:9px;border-radius:16px}
 #log.log-entry-v2 h3{margin:0 0 9px;font-size:16px}
 .log-context-line{display:flex;align-items:center;gap:7px;margin-bottom:8px;font-size:15px}
+.log-rest-day-state{display:grid;gap:4px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#020617}
+.log-rest-day-state[hidden]{display:none}
+.log-rest-day-state b{font-size:18px}
+.log-rest-day-state span{color:var(--muted);font-size:13px}
 .log-compact-header select{font-size:17px;font-weight:800;padding:11px 12px}
 .log-compact-header progress{display:block;width:100%;height:10px;margin-top:9px;border:0;border-radius:999px;overflow:hidden;background:#020617;accent-color:#38bdf8}
 .log-compact-header progress::-webkit-progress-bar{background:#020617;border-radius:999px}

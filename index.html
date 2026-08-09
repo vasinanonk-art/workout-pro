@@ -91,7 +91,8 @@
 </section>
 <section id="log" class="page log-entry-v2">
   <div class="card log-compact-header">
-    <div class="log-context-line"><b id="logDayLabel">Day 1</b><span aria-hidden="true">•</span><b>Set <span id="setNo">1</span> / <span id="targetShow">4</span></b></div>
+    <div id="logWorkoutContext" class="log-context-line"><b id="logDayLabel">Day 1</b><span aria-hidden="true">•</span><b>Set <span id="setNo">1</span> / <span id="targetShow">4</span></b></div>
+    <div id="logRestDayState" class="log-rest-day-state" role="status" hidden><b>Rest Day</b><span>วันนี้ไม่มี Workout ตามรอบปัจจุบัน</span></div>
     <label class="sr-only" for="exercise">ท่าที่จะเล่น</label>
     <select id="exercise"></select>
     <progress id="logSetProgress" value="0" max="4" aria-label="Exercise set progress"></progress>
@@ -99,7 +100,7 @@
     <div id="logEditBanner" class="log-action-state info" role="status" hidden></div>
   </div>
 
-  <div class="card log-alternative-card">
+  <div id="logAlternativeCard" class="card log-alternative-card">
     <h3>Alternative Exercise</h3>
     <div class="msg" id="altStatus">ยังไม่ได้เลือกท่าทดแทน</div>
     <div class="log-alt-actions">
@@ -121,7 +122,7 @@
     </div>
   </div>
 
-  <div class="card log-input-card">
+  <div id="logInputCard" class="card log-input-card">
     <h3>Log This Set</h3>
     <label for="weight">Weight</label>
     <div class="log-weight-row"><input id="weight" type="number" step="0.5"><select id="unit" aria-label="Weight unit"><option value="kg">kg</option></select></div>

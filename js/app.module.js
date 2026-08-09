@@ -231,10 +231,11 @@ function resolveSelectedExercise(){
   const allowedDays=allowedTrainingDaysForDate(state.selectedDate);
   const rows=uniqueBy(PROGRAM,p=>p[2]);
   const oldRow=rows.find(p=>p[2]===old);
-  const oldAvailable=oldRow && completedForExercise(old,displayDateForExerciseProgress(oldRow[0],state.selectedDate))<Number(oldRow[3]);
+  const oldAvailable=oldRow && allowedDays.includes(oldRow[0]) && completedForExercise(old,displayDateForExerciseProgress(oldRow[0],state.selectedDate))<Number(oldRow[3]);
   const firstOpen=rows.find(p=>allowedDays.includes(p[0]) && completedForExercise(p[2],displayDateForExerciseProgress(p[0],state.selectedDate))<Number(p[3]));
   const chosen=oldAvailable ? old : firstOpen?.[2];
   if(chosen && chosen!==state.selectedExercise){ state.selectedExercise=chosen; state.selectedAlt=null; }
+  if(!chosen){ state.selectedExercise=""; state.selectedAlt=null; }
   if(chosen) restorePersistentAlt();
 }
 
@@ -383,7 +384,7 @@ function renderAll(){
 }
 
 function renderLog(){
-  renderDayLock(); renderExerciseSelect(); renderExerciseDatabase(); renderLogSummary(); renderRecent(); renderMedia(); renderTimer(); updateFormDerived(); renderSmartAlternatives(); renderPerformanceCard();
+  renderDayLock(); renderExerciseSelect(); renderExerciseDatabase(); renderLogSummary(); renderRecent(); renderMedia(); renderTimer(); updateFormDerived(); renderSmartAlternatives(); renderPerformanceCard(); renderLogScheduleState();
 }
 
 function notificationPermissionText(){
@@ -473,21 +474,33 @@ function renderExerciseSelect(){
     if(isOpen && !firstOpen) firstOpen=opt;
   });
 
-  const keepOld = oldOption && (state.editingId || !oldOption.disabled);
+  const keepOld = oldOption && (state.editingId || (allowedDays.includes(oldOption.dataset.day) && !oldOption.disabled));
   const chosen = keepOld ? oldOption : firstOpen;
   if(chosen){
     sel.value=chosen.value;
   }else{
     const placeholder=document.createElement("option");
     placeholder.value="";
-    placeholder.textContent = lock.status==="OPEN" ? "วันนี้ท่าที่อนุญาตเล่นครบแล้ว" : `ยังล็อกอยู่: ${lock.reason}`;
+    placeholder.textContent = !state.editingId && !allowedDays.length ? "No scheduled workout" : lock.status==="OPEN" ? "วันนี้ท่าที่อนุญาตเล่นครบแล้ว" : `ยังล็อกอยู่: ${lock.reason}`;
     placeholder.selected=true;
     placeholder.disabled=false;
     sel.insertBefore(placeholder, sel.firstChild);
     sel.value="";
   }
-  sel.disabled = false;
+  sel.disabled = !state.editingId && !allowedDays.length;
   renderExerciseProgressList();
+}
+
+function renderLogScheduleState(){
+  const restDay=!state.editingId && allowedTrainingDaysForDate(state.selectedDate).length===0;
+  const restState=$("logRestDayState"); if(restState) restState.hidden=!restDay;
+  for(const id of ["logWorkoutContext","exercise","logSetProgress"]){ const element=$(id); if(element) element.hidden=restDay; }
+  for(const id of ["logAlternativeCard","logPerformanceCard","logInputCard"]){ const element=$(id); if(element) element.hidden=restDay || (id==="logPerformanceCard" && element.hidden); }
+  if(restDay){
+    for(const id of ["smartAlternativeSection","performanceSuggested","applyProgressionBtn"]){ const element=$(id); if(element) element.hidden=true; }
+    setText("logDayLabel","Rest Day");
+    const warning=$("logDayLockWarning"); if(warning) warning.hidden=true;
+  }
 }
 
 function renderAfterExerciseChange(){
