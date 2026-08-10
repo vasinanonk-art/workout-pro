@@ -513,6 +513,8 @@ function renderSetup(){
   setText("authState", state.user ? `Signed In: ${state.user.displayName || state.user.email}` : "Signed In: No");
   setHtml("debug", `Version: <b>${VERSION}</b><br>User: ${escapeHtml(state.user?.email || "-")}<br>Team: ${escapeHtml(state.teamId || "-")}<br>Logs: ${state.logs.length}<br>Date: ${escapeHtml(state.selectedDate)} (${escapeHtml(dateLabelTH(state.selectedDate))})`);
   setHtml("teamSaveStatus", `Team ID: <b>${escapeHtml(state.teamId || "-")}</b>`);
+  renderBackup();
+  renderAdvancedSettings();
 }
 
 function selectedDateStatus(){
@@ -661,11 +663,22 @@ function renderExerciseProgressList(){
   }).join("") + `</div>`;
 }
 function selectOverrideDay(e){ state.selectedDayForOverride=e.target.value; status("เลือก Day ที่จะข้าม: "+e.target.value,"warn",1200); }
-function applyDayOverride(){
-  const d=$("overrideDaySelect")?.value || dayForExercise(state.selectedExercise);
+function applyDayOverride(day){
+  if(dayDiff(state.selectedDate,todayTH())>0){ status("ไม่อนุญาตให้ Override วันที่อนาคต","warn",2500); return; }
+  const d=typeof day==="string" ? day : $("overrideDaySelect")?.value || dayForExercise(state.selectedExercise);
   grantOverride(d);
   if(!state.editingId) state.selectedExercise=nextIncompleteExercise(d,state.selectedDate);
   scheduleRender();
+}
+function renderTodayOverrideAccess(lock,current,days){
+  const access=$("todayOverrideAccess"), controls=$("todayOverrideControls");
+  if(!access || !controls) return;
+  const visible=state.page==="log" && lock.status!=="OPEN" && lock.code!=="FUTURE_DATE" && !state.editingId;
+  access.hidden=!visible;
+  if(!visible) return;
+  controls.innerHTML=`<div class="msg warn">${escapeHtml(lock.reason)}</div><label for="todayOverrideDaySelect">Workout day</label><select id="todayOverrideDaySelect">${days}</select><button id="todayOverrideDayBtn" class="orange" type="button">Override for selected date</button><div class="select-hint">ใช้เฉพาะเมื่อต้องการข้าม Day Lock โดยตั้งใจ</div>`;
+  $("todayOverrideDaySelect")?.addEventListener("change",selectOverrideDay);
+  $("todayOverrideDayBtn")?.addEventListener("click",()=>applyDayOverride($("todayOverrideDaySelect")?.value || current));
 }
 function renderDayLock(){
   const lock=calcDayLock();
@@ -675,6 +688,7 @@ function renderDayLock(){
   const lockWarning=$("logDayLockWarning");
   if(lockWarning){ lockWarning.hidden=lock.status==="OPEN" || Boolean(state.editingId); if(!lockWarning.hidden) lockWarning.textContent=`Day Lock: ${lock.reason}`; }
   const days = DAY_ORDER.map(d=>`<option value="${d}" ${d===current?"selected":""}>${d}</option>`).join("");
+  renderTodayOverrideAccess(lock,current,days);
   box.className = `msg lock-panel ${lock.status==="OPEN"?"open":"locked"}`;
   box.innerHTML = `<h3>Day Lock Control</h3>
     <div>Status: <b>${lock.status}</b> <span class="pill">Runtime ${VERSION}</span></div>
@@ -686,6 +700,18 @@ function renderDayLock(){
   $("overrideDaySelect")?.addEventListener("change", selectOverrideDay);
   $("overrideDayBtn")?.addEventListener("click",applyDayOverride);
   setHtml("lockStatus", lock.status==="OPEN" ? `<span class="ok-text">พร้อมเล่น: ${dayForExercise(state.selectedExercise)}</span>` : `<span class="warn-text">ล็อกอยู่: ${lock.reason}</span>`);
+}
+function renderAdvancedSettings(){
+  setHtml("persistentSubStatus", state.selectedAlt ? `Current substitute: ${escapeHtml(state.selectedAlt.name)} → ${escapeHtml(state.selectedExercise)}` : "Persistent Alternative: ไม่มี");
+  setHtml("historyRemapBox", `History Remap: ใช้ plannedExercise เป็นตัวนับหลัก • Actual: ${escapeHtml(actualExerciseName())}`);
+  setHtml("calendarSyncStatus", `Calendar Sync: Today ${dateLabelTH(todayTH())} • Selected ${dateLabelTH(state.selectedDate)}`);
+  setHtml("cycleDebug", `Program Cycle: ${autoWeek()} • Allowed ${calcDayLock().allowedDays?.join(", ") || "-"}`);
+  const prog=currentExerciseProgress();
+  setHtml("setStatus", prog.done>=prog.target ? `<span class="ok-text">ท่านี้ครบแล้ว ${prog.done}/${prog.target}</span>` : `Current exercise: <b>${escapeHtml(actualExerciseName())}</b> • ${prog.done}/${prog.target} sets`);
+  renderDayLock();
+  renderExerciseProgressList();
+  renderExerciseDatabase();
+  renderPRAndSuggestion();
 }
 function updateFormDerived(){
   ensureLogDefaults();
@@ -1075,7 +1101,8 @@ function loadEdit(id){ const x=state.logs.find(l=>l.id===id); if(!x) return; sta
 async function deleteLog(id){ if(!confirm("ลบ Log นี้?")) return; try{ await deleteDoc(doc(db, collectionPath(), id)); status("ลบแล้ว","ok"); }catch(e){ status("ลบไม่สำเร็จ: "+e.message,"err",0); } }
 function resetForm(){ state.editingId=null; state.selectedAlt=null; ["weight","reps","note"].forEach(id=>setVal(id,"")); setVal("rir",2); setVal("tempo","2-0-1"); setVal("repQuality","good"); setVal("biasMode","auto"); setVal("restMode","auto"); setVal("sleepHours",7); setVal("soreness",2); setVal("stress",2); ensureLogDefaults(); scheduleRender(); status("Reset แล้ว","ok"); }
 
-function show(page){ document.querySelectorAll(".page").forEach(p=>p.classList.remove("active")); $(page)?.classList.add("active"); document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active", b.dataset.page===page)); state.page=page; status("เปิดหน้า "+page,"ok",900); scheduleRender(); }
+const LEGACY_PAGE_ROUTES=Object.freeze({coach:"dash",guide:"program",backup:"setup",donate:"setup"});
+function show(page){ const destination=LEGACY_PAGE_ROUTES[page]||page; document.querySelectorAll(".page").forEach(p=>p.classList.remove("active")); $(destination)?.classList.add("active"); document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active", b.dataset.page===destination)); state.page=destination; status("เปิดหน้า "+destination,"ok",900); scheduleRender(); }
 window.show=show;
 function bind(){
   document.querySelectorAll(".tab[data-page]").forEach(b=>b.addEventListener("click",()=>show(b.dataset.page)));

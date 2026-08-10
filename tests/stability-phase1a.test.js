@@ -80,7 +80,7 @@ function loadApp(storageSeed={},storageUnavailable=false){
   context.window.document=document;
   context.window.Notification=context.Notification;
   context.globalThis=context;
-  const expose=`\n;const __realStartTimer=startTimer;globalThis.__app={state,bind,show,saveSet,subscribeLogs,renderExerciseSelect,resolveSelectedExercise,renderLogScheduleState,renderWorkoutOverview,renderCalendar,renderRecent,renderSetup,renderPerformanceCard,renderPRAndSuggestion,usePreviousWorkout,useCurrentSessionLastSet,progressionSuggestion,applyProgressionSuggestion,smartAlternativesForCurrentExercise,selectAlternative,currentSessionLastSetForPlanned,lastSetForPlannedOnOrBefore,bestPerformanceForPlanned,workoutDayForDate,workoutProgressForDay,workoutCompletionForDate,nextWorkoutPreview,dayCompleteOnDate,currentCyclePlan,allowedTrainingDaysForDate,calcDayLock,updateFormDerived,updateTimerState,renderTimer,startRealTimer(){__realStartTimer()},useRealTimer(){startTimer=__realStartTimer},stopTimer,addRestTime,mediaSearchUrl,openExerciseMedia,restorePersistentAlt,readPersistentAlt,writePersistentAlt,clearPersistentAlt,rememberSessionExercise,clearSessionExercise,grantOverride,normalizeLog,isValidDateKey,clearScopedWorkoutState,plannedOf,samePlanned,inferPlannedExerciseFromActual,plannedCandidatesForAlternative,logsOnDate,logsForPlanned,completedForExercise,latestSetForPlanned,previousSetForPlanned,previousWorkoutForPlanned,replaceWorkoutLogs,getDerivedLogIndex:()=>derivedLogIndex,getIndexRebuildCount:()=>derivedLogIndexRebuildCount,alternativeInventory:()=>[...PLANNED_BY_ALTERNATIVE.entries()],exerciseLibrary:()=>EXERCISE_LIBRARY,program:()=>PROGRAM,alternatives:()=>ALT,canonicalExercise,alternativeReasons:()=>ALTERNATIVE_REASONS,setRender(fn){renderAll=fn},setTimer(fn){startTimer=fn}};`;
+  const expose=`\n;const __realStartTimer=startTimer;globalThis.__app={state,bind,show,saveSet,subscribeLogs,renderExerciseSelect,resolveSelectedExercise,renderLogScheduleState,renderWorkoutOverview,renderCalendar,renderRecent,renderSetup,renderPerformanceCard,renderPRAndSuggestion,usePreviousWorkout,useCurrentSessionLastSet,progressionSuggestion,applyProgressionSuggestion,smartAlternativesForCurrentExercise,selectAlternative,currentSessionLastSetForPlanned,lastSetForPlannedOnOrBefore,bestPerformanceForPlanned,workoutDayForDate,workoutProgressForDay,workoutCompletionForDate,nextWorkoutPreview,dayCompleteOnDate,currentCyclePlan,allowedTrainingDaysForDate,calcDayLock,updateFormDerived,updateTimerState,renderTimer,startRealTimer(){__realStartTimer()},useRealTimer(){startTimer=__realStartTimer},stopTimer,addRestTime,mediaSearchUrl,openExerciseMedia,restorePersistentAlt,readPersistentAlt,writePersistentAlt,clearPersistentAlt,rememberSessionExercise,clearSessionExercise,grantOverride,applyDayOverride,normalizeLog,isValidDateKey,clearScopedWorkoutState,plannedOf,samePlanned,inferPlannedExerciseFromActual,plannedCandidatesForAlternative,logsOnDate,logsForPlanned,completedForExercise,latestSetForPlanned,previousSetForPlanned,previousWorkoutForPlanned,replaceWorkoutLogs,getDerivedLogIndex:()=>derivedLogIndex,getIndexRebuildCount:()=>derivedLogIndexRebuildCount,alternativeInventory:()=>[...PLANNED_BY_ALTERNATIVE.entries()],exerciseLibrary:()=>EXERCISE_LIBRARY,program:()=>PROGRAM,alternatives:()=>ALT,canonicalExercise,alternativeReasons:()=>ALTERNATIVE_REASONS,setRender(fn){renderAll=fn},setTimer(fn){startTimer=fn}};`;
   vm.runInNewContext(source+expose,context,{filename:"js/app.module.js"});
   context.__app.setRender(()=>{});
   context.__app.setTimer(()=>{});
@@ -1184,6 +1184,28 @@ test("future-date lock remains authoritative and does not fabricate a preview",(
   assert.equal(elements.logCompletionState.hidden,true);
 });
 
+test("manual override entry point cannot bypass the future-date lock",()=>{
+  const {api}=loadApp();
+  api.state.selectedDate="2099-01-01";
+  api.state.selectedExercise="Barbell Bench Press";
+  const before=api.state.overrideKeys.size;
+  api.applyDayOverride("Day 1");
+  assert.equal(api.state.overrideKeys.size,before);
+  assert.equal(api.calcDayLock().code,"FUTURE_DATE");
+});
+
+test("legacy navigation redirects preserve selected date and active timer state",()=>{
+  const {api}=loadApp();
+  api.state.selectedDate="2026-08-01";
+  api.state.timerEndAt=123456789;
+  for(const [legacy,destination] of [["coach","dash"],["guide","program"],["backup","setup"],["donate","setup"]]){
+    api.show(legacy);
+    assert.equal(api.state.page,destination,legacy);
+    assert.equal(api.state.selectedDate,"2026-08-01",legacy);
+    assert.equal(api.state.timerEndAt,123456789,legacy);
+  }
+});
+
 test("hydration blocks progress while ready empty history resolves Day 1",()=>{
   const {api,elements}=loadApp();
   workoutOverviewElements(elements);
@@ -1479,7 +1501,8 @@ test("unavailable controls stay in the DOM but are hidden and Developer remains 
   for(const id of ["aiCoachBtn","copyAiPromptBtn","v430ApplyDeloadBtn","savePersistentAltBtn","clearPersistentAltBtn","copyBackupSummaryBtn"]){
     assert.match(html,new RegExp(`id="${id}" class="[^"]*hidden`),id);
   }
-  assert.match(html,/<details class="card log-disclosure log-developer-panel">/);
+  assert.match(html,/<details class="card log-disclosure settings-advanced-panel"><summary>Advanced<\/summary>/);
+  assert.match(html,/id="todayOverrideAccess"[^>]*hidden/);
   for(const id of ["dayDateLockDebug","orderStatus","nextWeekBox","v430ExerciseDb"]){ assert.match(html,new RegExp(`id="${id}"`),id); }
 });
 
@@ -1491,7 +1514,7 @@ test("release UI hides placeholders while keeping Developer utilities reachable"
   for(const id of ["dashboardWeeklyCard","dashboardExerciseCard","dashboardMuscleCard","dashboardPrCard","dashboardRecoveryCard","coachMuscleCard","coachPlateauCard","coachDailySummaryCard","logRecentCard","backupSummaryCard"]){
     assert.match(html,new RegExp(`id="${id}"[^>]*\\shidden(?:\\s|>)`),id);
   }
-  assert.match(html,/<details class="card log-disclosure log-developer-panel">\s*<summary>Developer<\/summary>/);
+  assert.match(html,/<details class="card log-disclosure settings-advanced-panel"><summary>Advanced<\/summary>/);
   for(const id of ["persistentSubStatus","historyRemapBox","calendarSyncStatus","cycleDebug","dayDateLockDebug","v430ExerciseDbCard"]){
     assert.match(html,new RegExp(`id="${id}"`),id);
   }

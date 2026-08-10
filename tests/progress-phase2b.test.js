@@ -6,7 +6,7 @@ const html = fs.readFileSync("index.html", "utf8");
 const app = fs.readFileSync("js/app.module.js", "utf8");
 const progress = html.match(/<section id="dash"[\s\S]*?<\/section>/)?.[0] || "";
 const coach = html.match(/<section id="coach"[\s\S]*?<\/section>/)?.[0] || "";
-const navigation = html.match(/<nav class="tabs">[\s\S]*?<\/nav>/)?.[0] || "";
+const navigation = html.match(/<nav class="tabs"[^>]*>[\s\S]*?<\/nav>/)?.[0] || "";
 
 function occurrences(source, text){ return source.split(text).length - 1; }
 
@@ -50,12 +50,12 @@ test("Progress renders each retained metric once and keeps only two charts", () 
 });
 
 test("Coach navigation and all legacy heuristic presentations remain hidden", () => {
-  assert.match(navigation,/class="tab hidden" data-page="coach">Coach<\/button>/);
+  assert.doesNotMatch(navigation,/data-page="coach"|>Coach<\/button>/);
   for(const id of ["coachHeuristicCard","coachExperimentalCard","coachAdviceCard","coachMuscleCard","coachPlateauCard"]){
     const tag=coach.match(new RegExp(`<[^>]*id="${id}"[^>]*>`))?.[0] || "";
     assert.match(tag,/(?:class="[^"]*hidden|\shidden(?:\s|>))/,id);
   }
-  assert.match(navigation,/data-page="dash">Progress<\/button>/);
+  assert.match(navigation,/data-page="dash"[^>]*>Progress<\/button>/);
 });
 
 test("selected-date summary and Today controls keep their existing contracts", () => {

@@ -40,15 +40,15 @@ button,.btn,.card,.msg{transition:none!important}
 
 
 /* ===== v5.2.3 Date Input Sanity Fix ===== */
-.tabs{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;gap:8px!important;padding:8px 10px calc(8px + env(safe-area-inset-bottom))!important;white-space:nowrap!important;-webkit-overflow-scrolling:touch!important}
-.tabs .tab{flex:0 0 auto!important;min-width:72px!important;border-radius:18px!important}
+.tabs{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;overflow:hidden!important;gap:4px!important;padding:8px 6px calc(8px + env(safe-area-inset-bottom))!important;white-space:nowrap!important}
+.tabs .tab{min-width:0!important;min-height:44px!important;border-radius:18px!important;padding:10px 4px!important}
 #v430ResumeBtn,#v430ApplyDeloadBtn,#v430CopySummaryBtn{width:100%;margin-top:8px}
 .v430Grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .v430Mini{background:rgba(2,6,23,.48);border:1px solid rgba(148,163,184,.18);border-radius:14px;padding:10px}
 .progress-hero h2{margin:0 0 14px}.progress-cycle{display:flex;justify-content:space-between;align-items:end;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--line)}.progress-cycle span,.progress-summary-grid span{font-size:12px;color:var(--muted)}.progress-cycle b{font-size:28px}.progress-summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}.progress-summary-grid div,.progress-value-list div{background:#020617;border:1px solid var(--line);border-radius:14px;padding:10px}.progress-summary-grid b,.progress-value-list b{display:block;margin-top:4px}.progress-value-list{display:grid;gap:8px}.progress-value-list div{display:flex;justify-content:space-between;gap:12px}.progress-value-list b{margin:0;text-align:right}
 .progress-selected-date{display:flex;justify-content:space-between;gap:12px;align-items:baseline}.progress-selected-date span{font-size:12px;color:var(--muted)}.progress-selected-date b{text-align:right}
 @media(max-width:560px){.progress-summary-grid{grid-template-columns:1fr}.progress-value-list div{align-items:start}}
-@media(max-width:560px){.v430Grid{grid-template-columns:1fr}.tabs .tab{min-width:68px}}
+@media(max-width:560px){.v430Grid{grid-template-columns:1fr}.tabs .tab{min-width:0!important}}
 
 
 
@@ -275,6 +275,7 @@ select option:disabled{color:#888;background:#111827}
   :root{--mobile-nav-clearance:70px}
   main{padding-left:10px;padding-right:10px}
   .tabs{min-height:var(--mobile-nav-clearance)}
+  .statusbar.show{bottom:calc(var(--mobile-nav-clearance) + env(safe-area-inset-bottom) + 4px)}
   #log.log-entry-v2 .card{padding:10px;margin-bottom:8px}
   .log-disclosure{padding:0!important}
   .log-disclosure-body{padding:10px}
