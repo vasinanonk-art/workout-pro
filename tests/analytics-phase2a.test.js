@@ -13,11 +13,14 @@ test("Dashboard labels describe the existing calculations precisely", () => {
   for (const accurate of ["All-time Logged Volume", "All-time Logged Sets", "Signed In", "Program Cycle", "Sets by Program Cycle", "All-time Logged Volume by Exercise", "Best Volume Set", "Sets by Date", "Logged Volume by Primary Muscle", "Not a muscle-balance score."]){
     assert.match(html, new RegExp(accurate.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
-  assert.match(app, /setText\("kVol", volumeForLogs\(state\.logs\)\.toFixed\(0\)\)/);
-  assert.match(app, /setText\("kUsers", state\.user\?"Yes":"No"\)/);
-  assert.match(app, /setText\("kWeek", `Cycle \$\{autoWeek\(\)\}`\)/);
+  assert.match(app, /setText\("kVol", `\$\{volumeForLogs\(state\.logs\)\.toFixed\(0\)\} kg`\)/);
+  assert.doesNotMatch(html.match(/<section id="dash"[\s\S]*?<\/section>/)?.[0] || "", /Signed In/);
+  assert.match(html.match(/<section id="setup"[\s\S]*?<\/section>/)?.[0] || "", /Signed In/);
+  assert.match(app, /const cycle=autoWeek\(\)/);
+  assert.match(app, /setText\("kWeek", `Cycle \$\{cycle\}`\)/);
   assert.match(app, /function autoWeek\(\)\{[\s\S]*dayCompleteOnDate\("Day 5",d\)[\s\S]*day5Dates\.length \+ 1;/);
-  assert.match(app, /drawSimpleChart\("weekChart", groupByWeek\(\)\)/);
+  assert.match(app, /const cycle=autoWeek\(\), setsByCycle=groupByWeek\(\)/);
+  assert.match(app, /drawSimpleChart\("weekChart", setsByCycle\)/);
   assert.match(app, /g\["Cycle "\+w\]/);
   assert.match(app, /drawSimpleChart\("v5RecoveryChart", groupByDateSets\(\)\)/);
 });
@@ -44,7 +47,7 @@ test("hidden legacy heuristics have no normal Coach render path", () => {
   }
   assert.match(app, /muscleCard\.hidden=true/);
   assert.match(app, /plateauCard\.hidden=true/);
-  assert.match(app, /dailySummaryCard\.hidden=!today\.length/);
+  assert.match(app, /card\.hidden=!today\.length/);
   assert.doesNotMatch(app, /(?:coachHeuristicCard|coachExperimentalCard|coachAdviceCard)[^\n]*\.hidden\s*=/);
 });
 

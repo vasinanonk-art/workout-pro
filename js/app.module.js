@@ -510,7 +510,7 @@ function renderNotificationControls(){
 function renderSetup(){
   renderNotificationControls();
   setVal("teamId", state.teamId);
-  setText("authState", state.user ? `Login: ${state.user.displayName || state.user.email}` : "ยังไม่ได้ login");
+  setText("authState", state.user ? `Signed In: ${state.user.displayName || state.user.email}` : "Signed In: No");
   setHtml("debug", `Version: <b>${VERSION}</b><br>User: ${escapeHtml(state.user?.email || "-")}<br>Team: ${escapeHtml(state.teamId || "-")}<br>Logs: ${state.logs.length}<br>Date: ${escapeHtml(state.selectedDate)} (${escapeHtml(dateLabelTH(state.selectedDate))})`);
   setHtml("teamSaveStatus", `Team ID: <b>${escapeHtml(state.teamId || "-")}</b>`);
 }
@@ -892,12 +892,15 @@ function renderExerciseDatabase(){
 
 function renderDashboard(){
   const hasLogs=state.logs.length>0;
-  for(const id of ["dashboardWeeklyCard","dashboardExerciseCard","dashboardMuscleCard","dashboardPrCard","dashboardRecoveryCard"]){ const card=$(id); if(card) card.hidden=!hasLogs; }
-  setText("kVol", volumeForLogs(state.logs).toFixed(0)); setText("kSets", state.logs.length); setText("kUsers", state.user?"Yes":"No"); setText("kWeek", `Cycle ${autoWeek()}`);
-  drawSimpleChart("weekChart", groupByWeek()); drawSimpleChart("exChart", groupByExercise()); drawSimpleChart("v5MuscleChart", groupByMuscle()); drawSimpleChart("v5RecoveryChart", groupByDateSets());
-  setHtml("v5MuscleInsight", muscleBalanceHtml()); setHtml("muscleStatus", muscleBalanceHtml());
+  for(const id of ["dashboardWeeklyCard","dashboardExerciseCard","dashboardMuscleCard","dashboardPrCard"]){ const card=$(id); if(card) card.hidden=!hasLogs; }
+  const cycle=autoWeek(), setsByCycle=groupByWeek();
+  setText("kVol", `${volumeForLogs(state.logs).toFixed(0)} kg`); setText("kSets", state.logs.length); setText("kWeek", `Cycle ${cycle}`); setText("progressCurrentCycleSets", `${setsByCycle[`Cycle ${cycle}`]||0} logged sets`);
+  drawSimpleChart("weekChart", setsByCycle); drawSimpleChart("v5RecoveryChart", groupByDateSets());
+  const valueList=data=>Object.entries(data).map(([label,value])=>`<div><span>${escapeHtml(label)}</span><b>${Number(value).toFixed(0)} kg</b></div>`).join("") || "No logged sets";
+  setHtml("progressExerciseVolumeList",valueList(groupByExercise())); setHtml("progressMuscleVolumeList",valueList(groupByMuscle()));
   const prs={}; state.logs.forEach(x=>{ const ex=plannedOf(x); const score=(x.weightKg||0)*(x.reps||0); if(!prs[ex] || score>prs[ex].score) prs[ex]={score,x}; });
   setHtml("v5PRBoard", Object.values(prs).slice(0,8).map(r=>`<span class="pill">${escapeHtml(plannedOf(r.x))}: ${r.x.weightKg}×${r.x.reps}</span>`).join(" ")||"No logged sets");
+  renderDailyWorkoutSummary();
 }
 function groupByWeek(){ const g={}; state.logs.forEach(x=>{ const w=x.week||1; g["Cycle "+w]=(g["Cycle "+w]||0)+1; }); return g; }
 function groupByExercise(){ const g={}; state.logs.forEach(x=>{ const k=plannedOf(x); g[k]=(g[k]||0)+(x.weightKg||0)*(x.reps||0); }); return g; }
@@ -910,7 +913,7 @@ function renderCoach(){
   const today=todayLogs(); const p=plateauForExercise(state.selectedExercise);
   const muscleCard=$("coachMuscleCard"); if(muscleCard) muscleCard.hidden=true;
   const plateauCard=$("coachPlateauCard"); if(plateauCard) plateauCard.hidden=true;
-  const dailySummaryCard=$("coachDailySummaryCard"); if(dailySummaryCard) dailySummaryCard.hidden=!today.length;
+  renderDailyWorkoutSummary();
   setText("coachRecovery", Math.round(recovery)); setText("coachFatigue", Math.round(fatigue)); setText("coachProgress", p.status==='Progress'?"UP":(latest?"OK":"-")); setText("coachDeload", fatigue>55?"WATCH":"NO");
   setText("coachRecoveryText", recovery>=65?"พร้อมฝึก":"ลด volume หรือใช้ machine stable"); setText("coachFatigueText", fatigue>55?"เสี่ยงล้า":"ปกติ"); setText("coachProgressText", p.detail); setText("coachDeloadText", fatigue>65?"พิจารณา deload":"ยังไม่จำเป็น");
   const muscleHtml = muscleBalanceHtml();
@@ -918,8 +921,16 @@ function renderCoach(){
   setHtml("plateauBox", `<b>${escapeHtml(p.status)}</b><br>${escapeHtml(p.detail)}<br><span class="small">Exercise: ${escapeHtml(canonicalExercise(state.selectedExercise))}</span>`);
   const effective=today.filter(x=>Number(x.rir)<=2).length;
   setText("effectiveRepsScore", effective); setText("sfrScore", recovery>=65?"Good":"Moderate"); setText("volumeZone", today.length<8?"Low":(today.length>22?"High":"OK"));
-  setHtml("v430AiSummary", aiDailySummary());
   setHtml("v430DeloadBox", fatigue>65 ? "Fatigue สูง แนะนำลด volume 20–30%" : "ยังไม่จำเป็นต้อง deload");
+}
+function renderDailyWorkoutSummary(){
+  const today=todayLogs(), card=$("coachDailySummaryCard");
+  if(card) card.hidden=!today.length;
+  if(today.length){
+    const prefix=state.selectedDate===todayTH()?"Today • ":"";
+    setText("progressSelectedDate",`${prefix}${dateLabelTH(state.selectedDate)} (${state.selectedDate})`);
+    setHtml("v430AiSummary",aiDailySummary());
+  }
 }
 function renderProgram(){ const host=$("programList"); if(host) host.innerHTML=DAY_ORDER.map(d=>`<h3>${d}</h3>`+dayExercises(d).map(p=>`<div class="exercise-progress-item">${p[2]} • ${p[3]} sets • ${p[4]}</div>`).join("")).join(""); }
 function renderGuide(){ const host=$("guideList"); if(host) host.innerHTML=PROGRAM.map(p=>`<div class="exercise-progress-item"><b>${p[2]}</b><br><span class="small">${p[0]} • ${p[4]} reps • RIR 1–2</span></div>`).join(""); }
