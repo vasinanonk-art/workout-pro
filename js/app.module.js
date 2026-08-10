@@ -73,6 +73,11 @@ function exerciseMediaHtml(name){
   const info=exInfo(name);
   return `<div class="media-actions"><a class="miniBtn purple" href="${mediaSearchUrl(name,'image')}" target="_blank" rel="noopener">รูป</a><a class="miniBtn cyan" href="${mediaSearchUrl(name,'video')}" target="_blank" rel="noopener">วิดีโอ</a></div><div class="small">${info.isAlternative?`ท่าทดแทนของ ${escapeHtml(info.planned)}`:`ท่าหลัก`} • Muscle: ${escapeHtml(info.primaryMuscle)} • Target: ${Number(info.target) || '-'} sets</div>`;
 }
+function openExerciseMedia(type){
+  const url=mediaSearchUrl(actualExerciseName(),type);
+  const opened=window.open(url,"_blank","noopener");
+  if(opened) opened.opener=null;
+}
 function localNowMs(){ return Date.now(); }
 function tempId(){ return `local_${localNowMs()}_${Math.random().toString(36).slice(2,8)}`; }
 
@@ -262,6 +267,10 @@ function previousWorkoutForPlanned(exercise,beforeDate=state.selectedDate){
   const previousDate=dates.sort().at(-1);
   return rows.filter(x=>x.date===previousDate).at(-1) || null;
 }
+function currentSessionLastSetForPlanned(exercise,date=state.selectedDate){
+  const rows=derivedLogIndex.byDateAndPlannedExercise.get(date)?.get(canonicalExercise(exercise)) || [];
+  return [...rows].sort(byCreated).at(-1) || null;
+}
 function currentExerciseProgress(ex=state.selectedExercise,date=state.selectedDate){ return {done:completedForExercise(ex,date), target:targetSets(ex)}; }
 function nextIncompleteExercise(day,date=state.selectedDate){ return PROGRAM.filter(p=>p[0]===day).find(p=>completedForExercise(p[2],date)<Number(p[3]))?.[2] || PROGRAM.find(p=>p[0]===day)?.[2] || PROGRAM[0][2]; }
 function dayForExercise(ex){ return metaByExercise(ex)[0]; }
@@ -405,7 +414,7 @@ const staticRenderValid={program:false,guide:false};
 function invalidateRender(page){ if(page in staticRenderValid) staticRenderValid[page]=false; }
 function renderStaticPage(page,renderer){ if(staticRenderValid[page]) return; renderer(); staticRenderValid[page]=true; }
 function scheduleRender(){ resolveSelectedExercise(); renderAll(); }
-function renderShared(){}
+function renderShared(){ renderTimer(); }
 function renderAll(){
   renderShared();
   if(state.page==="setup") renderSetup();
@@ -536,7 +545,7 @@ function renderLogScheduleState(){
   }
   const restState=$("logRestDayState"); if(restState) restState.hidden=!restDay;
   if(restState && hydrationBlocked) restState.hidden=true;
-  for(const id of ["logWorkoutContext","exercise","logSetProgress"]){ const element=$(id); if(element) element.hidden=restDay || hydrationBlocked; }
+  for(const id of ["logWorkoutContext","exercise","logMediaQuickActions","logSetProgress"]){ const element=$(id); if(element) element.hidden=restDay || hydrationBlocked; }
   for(const id of ["logAlternativeCard","logPerformanceCard","logInputCard"]){ const element=$(id); if(element) element.hidden=restDay || hydrationBlocked || (id==="logPerformanceCard" && element.hidden); }
   if(restDay || hydrationBlocked){
     for(const id of ["smartAlternativeSection","performanceSuggested","applyProgressionBtn"]){ const element=$(id); if(element) element.hidden=true; }
@@ -660,8 +669,9 @@ function progressionSuggestion(){
 function renderPerformanceCard(){
   const previous=previousWorkoutForPlanned(state.selectedExercise,state.selectedDate);
   const suggestion=progressionSuggestion();
-  const last=lastSetForPlannedOnOrBefore(state.selectedExercise,state.selectedDate);
+  const current=currentSessionLastSetForPlanned(state.selectedExercise,state.selectedDate);
   const best=bestPerformanceForPlanned(state.selectedExercise);
+  setPerformanceItem("performanceCurrent","performanceCurrentValue","performanceCurrentMeta",current,false);
   setPerformanceItem("performancePrevious","performancePreviousValue","performancePreviousMeta",previous);
   const suggested=$("performanceSuggested");
   if(suggested) suggested.hidden=!suggestion;
@@ -669,23 +679,31 @@ function renderPerformanceCard(){
     setText("performanceSuggestedValue",`${suggestion.suggestedWeight} kg × ${suggestion.suggestedReps}`);
     setText("performanceSuggestedMeta",suggestion.message);
   }
-  setPerformanceItem("performanceLast","performanceLastValue","performanceLastMeta",last);
+  setPerformanceItem("performanceLast","performanceLastValue","performanceLastMeta",null);
   setPerformanceItem("performanceBest","performanceBestValue","performanceBestMeta",best);
   const usePreviousBtn=$("usePreviousWorkoutBtn");
   if(usePreviousBtn) usePreviousBtn.hidden=!previous || Boolean(state.editingId);
+  const useLastBtn=$("useLastSetBtn");
+  if(useLastBtn) useLastBtn.hidden=!current || Boolean(state.editingId);
+  const previousItem=$("performancePrevious");
+  if(previousItem) previousItem.className=current ? "" : "log-performance-primary";
   const applyBtn=$("applyProgressionBtn");
   if(applyBtn) applyBtn.hidden=!suggestion || Boolean(state.editingId);
   const card=$("logPerformanceCard");
-  if(card) card.hidden=!previous && !suggestion && !last && !best;
+  if(card) card.hidden=!current && !previous && !suggestion && !best;
+}
+function reuseSetValues(log,label){
+  if(state.editingId || !log) return;
+  setVal("weight",log.weightKg);
+  setVal("reps",log.reps);
+  setVal("rir",log.rir ?? "");
+  status(`คัดลอก ${label}: ${log.weightKg} kg × ${log.reps}, RIR ${log.rir ?? "-"}`,"ok",2200);
 }
 function usePreviousWorkout(){
-  if(state.editingId) return;
-  const previous=previousWorkoutForPlanned(state.selectedExercise,state.selectedDate);
-  if(!previous) return;
-  setVal("weight",previous.weightKg);
-  setVal("reps",previous.reps);
-  setVal("rir",previous.rir ?? "");
-  status(`คัดลอก Previous Workout: ${previous.weightKg} kg × ${previous.reps}, RIR ${previous.rir ?? "-"}`,"ok",2200);
+  reuseSetValues(previousWorkoutForPlanned(state.selectedExercise,state.selectedDate),"Previous Workout");
+}
+function useCurrentSessionLastSet(){
+  reuseSetValues(currentSessionLastSetForPlanned(state.selectedExercise,state.selectedDate),"Current Session");
 }
 function applyProgressionSuggestion(){
   const suggestion=progressionSuggestion();
@@ -994,12 +1012,16 @@ function bind(){
   $("restMode")?.addEventListener("change",()=>{ ensureLogDefaults(); status("อัปเดตค่า Rest แล้ว","ok",900); });
   $("saveBtn")?.addEventListener("click",saveSet); $("resetBtn")?.addEventListener("click",resetForm);
   $("usePreviousWorkoutBtn")?.addEventListener("click",usePreviousWorkout);
+  $("useLastSetBtn")?.addEventListener("click",useCurrentSessionLastSet);
   $("applyProgressionBtn")?.addEventListener("click",applyProgressionSuggestion);
   $("altBtn")?.addEventListener("click",openAltModal); $("closeAlt")?.addEventListener("click",()=>{$("altModal")?.classList.remove("show"); document.body.classList.remove("modal-open");});
   $("clearAltBtn")?.addEventListener("click",()=>{ if(!state.editingId) clearPersistentAlt(state.selectedExercise); state.selectedAlt=null; scheduleRender(); });
-  $("imageBtn")?.addEventListener("click",()=>window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(actualExerciseName()+" proper form")}`,"_blank"));
-  $("videoBtn")?.addEventListener("click",()=>window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(actualExerciseName()+" proper form")}`,"_blank"));
+  $("imageBtn")?.addEventListener("click",()=>openExerciseMedia("image"));
+  $("videoBtn")?.addEventListener("click",()=>openExerciseMedia("video"));
+  $("quickImageBtn")?.addEventListener("click",()=>openExerciseMedia("image"));
+  $("quickVideoBtn")?.addEventListener("click",()=>openExerciseMedia("video"));
   $("startRest")?.addEventListener("click",startTimer); $("stopRest")?.addEventListener("click",stopTimer); $("add30")?.addEventListener("click",()=>{addRestTime(30);});
+  $("floatingStopRest")?.addEventListener("click",stopTimer); $("floatingAdd30")?.addEventListener("click",()=>{addRestTime(30);});
   document.addEventListener("visibilitychange", updateTimerState);
   window.addEventListener("focus", updateTimerState);
   $("v430CopySummaryBtn")?.addEventListener("click",()=>{ navigator.clipboard?.writeText($("v430AiSummary")?.innerText||""); status("Copy Summary แล้ว","ok"); });
@@ -1098,9 +1120,13 @@ function updateTimerState(){
   renderTimer();
 }
 function renderTimer(){
-  if(state.page!=="log") return;
   const m=String(Math.floor((state.timerLeft||0)/60)).padStart(2,"0"), ss=String((state.timerLeft||0)%60).padStart(2,"0");
   setText("timer",`${m}:${ss}`);
+  setText("floatingTimer",`${m}:${ss}`);
+  const floating=$("floatingRestTimer");
+  const visible=state.page==="log" && Boolean(state.timerEndAt && state.timerLeft>0);
+  if(floating) floating.hidden=!visible;
+  document.body.classList[visible?"add":"remove"]("rest-timer-active");
 }
 function exportJson(){ const data=JSON.stringify({version:VERSION, exportedAt:new Date().toISOString(), logs:state.logs},null,2); download("workout-pro-backup.json",data,"application/json"); status("Export JSON แล้ว","ok"); }
 function exportCsv(){ const cols=["date","week","day","plannedExercise","exercise","weightKg","reps","rir","note"]; const csv=[cols.join(","),...state.logs.map(x=>cols.map(c=>`"${String(x[c]??"").replaceAll('"','""')}"`).join(","))].join("\n"); download("workout-pro-log.csv",csv,"text/csv"); status("Export CSV แล้ว","ok"); }

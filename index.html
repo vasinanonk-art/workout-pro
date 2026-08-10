@@ -96,6 +96,10 @@
     <div id="logRestDayState" class="log-rest-day-state" role="status" hidden><b>Rest Day</b><span>วันนี้ไม่มี Workout ตามรอบปัจจุบัน</span></div>
     <label class="sr-only" for="exercise">ท่าที่จะเล่น</label>
     <select id="exercise"></select>
+    <div id="logMediaQuickActions" class="log-media-quick-actions" aria-label="Exercise media">
+      <button id="quickImageBtn" class="secondary" type="button">Image</button>
+      <button id="quickVideoBtn" class="secondary" type="button">Video</button>
+    </div>
     <progress id="logSetProgress" value="0" max="4" aria-label="Exercise set progress"></progress>
     <div id="logDayLockWarning" class="log-action-state warn" role="alert" hidden></div>
     <div id="logEditBanner" class="log-action-state info" role="status" hidden></div>
@@ -116,6 +120,7 @@
   <div id="logPerformanceCard" class="card log-performance-card" hidden>
     <h3>Performance</h3>
     <div class="log-performance-grid">
+      <div id="performanceCurrent" class="log-performance-primary" hidden><span>Current Session</span><b id="performanceCurrentValue">—</b><small id="performanceCurrentMeta"></small><button id="useLastSetBtn" type="button" aria-label="Use weight, reps, and RIR from the latest current-session set">Use Last Set</button></div>
       <div id="performancePrevious" class="log-performance-primary" hidden><span>Previous Workout</span><b id="performancePreviousValue">—</b><small id="performancePreviousMeta"></small><button id="usePreviousWorkoutBtn" type="button" aria-label="Use weight, reps, and RIR from previous workout">Use Previous Workout</button></div>
       <div id="performanceSuggested" hidden><span>Suggested</span><b id="performanceSuggestedValue">—</b><small id="performanceSuggestedMeta"></small><button id="applyProgressionBtn" type="button" aria-label="Apply suggested weight and repetitions">Apply</button></div>
       <div id="performanceLast" hidden><span>Last Set</span><b id="performanceLastValue">—</b><small id="performanceLastMeta"></small></div>
@@ -280,6 +285,11 @@
 
 </main>
 <div class="modal" id="altModal"><div class="modalBox"><h3>เลือกท่าทดแทน</h3><div class="small">เลือกตาม movement pattern เพื่อไม่ให้หลุดโปรแกรม</div><input id="altSearch" placeholder="ค้นหาท่า เช่น leg extension, curl, squat" style="margin:10px 0"><div id="altList"></div><button class="secondary modalCloseSticky" id="closeAlt">ปิด</button></div></div>
+<div id="floatingRestTimer" class="floating-rest-timer" role="timer" aria-live="off" hidden>
+  <div><span>Rest</span><b id="floatingTimer">00:00</b></div>
+  <button id="floatingAdd30" class="cyan" type="button">+30s</button>
+  <button id="floatingStopRest" class="secondary" type="button">Stop</button>
+</div>
 <div id="appStatusBar" class="statusbar" role="status" aria-live="polite">พร้อมใช้งาน</div>
 <nav class="tabs"><button class="tab active" data-page="setup">Setup</button><button class="tab" data-page="dash">Dash</button><button class="tab" data-page="coach">Coach</button><button class="tab" data-page="calendar">Calendar</button><button class="tab" data-page="log">Log</button><button class="tab" data-page="program">Program</button><button class="tab" data-page="guide">Guide</button><button class="tab" data-page="donate">Donate</button><button onclick="show('backup')" type="button">Backup</button></nav>
 

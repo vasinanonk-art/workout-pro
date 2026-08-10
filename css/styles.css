@@ -210,6 +210,8 @@ select option:disabled{color:#888;background:#111827}
 #log.log-entry-v2 .card{padding:12px;margin-bottom:9px;border-radius:16px}
 #log.log-entry-v2 h3{margin:0 0 9px;font-size:16px}
 .log-context-line{display:flex;align-items:center;gap:7px;margin-bottom:8px;font-size:15px}
+.log-media-quick-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.log-media-quick-actions button{min-height:42px;padding:8px 12px;font-size:13px}
 .log-rest-day-state{display:grid;gap:4px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#020617}
 .log-rest-day-state[hidden]{display:none}
 .log-rest-day-state b{font-size:18px}
@@ -234,7 +236,8 @@ select option:disabled{color:#888;background:#111827}
 .log-performance-grid span{display:block;color:var(--muted);font-size:12px;margin-bottom:5px}
 .log-performance-grid b{font-size:16px}
 .log-performance-grid small{display:block;color:var(--muted);margin-top:4px}
-#usePreviousWorkoutBtn,#applyProgressionBtn{width:100%;margin-top:9px;min-height:44px;font-size:13px}
+#usePreviousWorkoutBtn,#useLastSetBtn,#applyProgressionBtn{width:100%;margin-top:9px;min-height:44px;font-size:13px}
+.floating-rest-timer{display:none}
 .log-input-card label{margin-bottom:5px}
 .log-weight-row{display:grid;grid-template-columns:minmax(0,1fr) 72px;gap:7px}
 .log-reps-rir{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}
@@ -255,11 +258,21 @@ select option:disabled{color:#888;background:#111827}
   .log-input-card{max-width:620px;margin-left:auto;margin-right:auto}
 }
 @media(max-width:640px){
+  :root{--mobile-nav-clearance:70px}
   main{padding-left:10px;padding-right:10px}
+  .tabs{min-height:var(--mobile-nav-clearance)}
   #log.log-entry-v2 .card{padding:10px;margin-bottom:8px}
   .log-disclosure{padding:0!important}
   .log-disclosure-body{padding:10px}
   .log-alt-actions{grid-template-columns:1fr 1fr}
   .log-alt-actions button{white-space:normal}
   .log-performance-grid{grid-template-columns:1fr}
+  body.rest-timer-active main{padding-bottom:176px!important}
+  body.rest-timer-active .statusbar.show{bottom:calc(var(--mobile-nav-clearance) + 70px + env(safe-area-inset-bottom))}
+  .floating-rest-timer{position:fixed;left:10px;right:10px;bottom:calc(var(--mobile-nav-clearance) + env(safe-area-inset-bottom));z-index:9998;display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:8px;padding:8px 10px;border:1px solid #38bdf8;border-radius:14px;background:rgba(2,6,23,.97);box-shadow:0 8px 24px rgba(0,0,0,.35)}
+  .floating-rest-timer[hidden]{display:none!important}
+  .floating-rest-timer div{display:flex;align-items:baseline;gap:8px}
+  .floating-rest-timer span{font-size:12px;color:var(--muted);font-weight:800}
+  .floating-rest-timer b{font-size:24px}
+  .floating-rest-timer button{min-height:40px;padding:8px 11px;font-size:13px}
 }

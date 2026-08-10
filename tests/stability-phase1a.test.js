@@ -37,7 +37,7 @@ function snapshot(logs){ return {docs:logs.map(({id,...data})=>({id,data:()=>dat
 function loadApp(storageSeed={},storageUnavailable=false){
   const storage=new Map(Object.entries(storageSeed));
   const elements={};
-  const calls={adds:[],updates:[],snapshots:[],snapshotErrors:[],errors:[],warnings:[],authCallback:null,addDeferred:null,updateDeferred:null};
+  const calls={adds:[],updates:[],snapshots:[],snapshotErrors:[],errors:[],warnings:[],opens:[],intervals:[],clearedIntervals:[],authCallback:null,addDeferred:null,updateDeferred:null};
   let nextId=1;
   const document={
     getElementById:id=>elements[id]||null,
@@ -57,8 +57,8 @@ function loadApp(storageSeed={},storageUnavailable=false){
     URL,
     setTimeout:fn=>{ fn(); return 1; },
     clearTimeout(){},
-    setInterval:()=>1,
-    clearInterval(){},
+    setInterval:fn=>{ const id=calls.intervals.length+1; calls.intervals.push({id,fn}); return id; },
+    clearInterval:id=>{ calls.clearedIntervals.push(id); },
     document,
     navigator:{},
     Notification:{permission:"denied",requestPermission:()=>Promise.resolve("denied")},
@@ -67,7 +67,7 @@ function loadApp(storageSeed={},storageUnavailable=false){
       setItem:(key,value)=>{ if(storageUnavailable) throw new Error("blocked"); storage.set(key,String(value)); },
       removeItem:key=>{ if(storageUnavailable) throw new Error("blocked"); storage.delete(key); }
     },
-    window:{addEventListener(){},open(){},AudioContext:null},
+    window:{addEventListener(){},open:(...args)=>{ calls.opens.push(args); return {}; },AudioContext:null},
     initializeApp:()=>({}), getAuth:()=>({}), getFirestore:()=>({}), GoogleAuthProvider:function(){},
     signInWithPopup:()=>Promise.resolve(), signOut:()=>Promise.resolve(),
     onAuthStateChanged:(auth,fn)=>{ calls.authCallback=fn; },
@@ -80,7 +80,7 @@ function loadApp(storageSeed={},storageUnavailable=false){
   context.window.document=document;
   context.window.Notification=context.Notification;
   context.globalThis=context;
-  const expose=`\n;globalThis.__app={state,bind,show,saveSet,subscribeLogs,renderExerciseSelect,resolveSelectedExercise,renderLogScheduleState,renderCalendar,renderRecent,renderSetup,renderPerformanceCard,renderPRAndSuggestion,usePreviousWorkout,progressionSuggestion,applyProgressionSuggestion,smartAlternativesForCurrentExercise,selectAlternative,lastSetForPlannedOnOrBefore,bestPerformanceForPlanned,currentCyclePlan,allowedTrainingDaysForDate,calcDayLock,updateFormDerived,updateTimerState,restorePersistentAlt,readPersistentAlt,writePersistentAlt,clearPersistentAlt,rememberSessionExercise,clearSessionExercise,grantOverride,normalizeLog,isValidDateKey,clearScopedWorkoutState,plannedOf,samePlanned,inferPlannedExerciseFromActual,plannedCandidatesForAlternative,logsOnDate,logsForPlanned,completedForExercise,latestSetForPlanned,previousSetForPlanned,previousWorkoutForPlanned,replaceWorkoutLogs,getDerivedLogIndex:()=>derivedLogIndex,getIndexRebuildCount:()=>derivedLogIndexRebuildCount,alternativeInventory:()=>[...PLANNED_BY_ALTERNATIVE.entries()],exerciseLibrary:()=>EXERCISE_LIBRARY,program:()=>PROGRAM,alternatives:()=>ALT,canonicalExercise,alternativeReasons:()=>ALTERNATIVE_REASONS,setRender(fn){renderAll=fn},setTimer(fn){startTimer=fn}};`;
+  const expose=`\n;const __realStartTimer=startTimer;globalThis.__app={state,bind,show,saveSet,subscribeLogs,renderExerciseSelect,resolveSelectedExercise,renderLogScheduleState,renderCalendar,renderRecent,renderSetup,renderPerformanceCard,renderPRAndSuggestion,usePreviousWorkout,useCurrentSessionLastSet,progressionSuggestion,applyProgressionSuggestion,smartAlternativesForCurrentExercise,selectAlternative,currentSessionLastSetForPlanned,lastSetForPlannedOnOrBefore,bestPerformanceForPlanned,currentCyclePlan,allowedTrainingDaysForDate,calcDayLock,updateFormDerived,updateTimerState,renderTimer,startRealTimer(){__realStartTimer()},useRealTimer(){startTimer=__realStartTimer},stopTimer,addRestTime,mediaSearchUrl,openExerciseMedia,restorePersistentAlt,readPersistentAlt,writePersistentAlt,clearPersistentAlt,rememberSessionExercise,clearSessionExercise,grantOverride,normalizeLog,isValidDateKey,clearScopedWorkoutState,plannedOf,samePlanned,inferPlannedExerciseFromActual,plannedCandidatesForAlternative,logsOnDate,logsForPlanned,completedForExercise,latestSetForPlanned,previousSetForPlanned,previousWorkoutForPlanned,replaceWorkoutLogs,getDerivedLogIndex:()=>derivedLogIndex,getIndexRebuildCount:()=>derivedLogIndexRebuildCount,alternativeInventory:()=>[...PLANNED_BY_ALTERNATIVE.entries()],exerciseLibrary:()=>EXERCISE_LIBRARY,program:()=>PROGRAM,alternatives:()=>ALT,canonicalExercise,alternativeReasons:()=>ALTERNATIVE_REASONS,setRender(fn){renderAll=fn},setTimer(fn){startTimer=fn}};`;
   vm.runInNewContext(source+expose,context,{filename:"js/app.module.js"});
   context.__app.setRender(()=>{});
   context.__app.setTimer(()=>{});
@@ -97,7 +97,7 @@ function form(elements,values={}){
 }
 
 function performanceElements(elements){
-  for(const id of ["logPerformanceCard","performancePrevious","performancePreviousValue","performancePreviousMeta","performanceSuggested","performanceSuggestedValue","performanceSuggestedMeta","applyProgressionBtn","performanceLast","performanceLastValue","performanceLastMeta","performanceBest","performanceBestValue","performanceBestMeta","usePreviousWorkoutBtn"]){ elements[id]=element(); }
+  for(const id of ["logPerformanceCard","performanceCurrent","performanceCurrentValue","performanceCurrentMeta","performancePrevious","performancePreviousValue","performancePreviousMeta","performanceSuggested","performanceSuggestedValue","performanceSuggestedMeta","applyProgressionBtn","performanceLast","performanceLastValue","performanceLastMeta","performanceBest","performanceBestValue","performanceBestMeta","usePreviousWorkoutBtn","useLastSetBtn"]){ elements[id]=element(); }
 }
 
 function completedProgramDay(api,day,date,start=1){
@@ -603,6 +603,81 @@ test("Performance Previous Workout uses an earlier date, never a same-day set",(
   assert.match(elements.performancePreviousMeta.textContent,/3\/2\/69/);
 });
 
+test("Set 1 keeps Previous Workout as the primary reference",()=>{
+  const {api,elements}=loadApp();
+  performanceElements(elements);
+  form(elements);
+  api.state.selectedExercise="Barbell Bench Press";
+  api.state.selectedDate="2026-02-10";
+  api.replaceWorkoutLogs([{id:"prior",date:"2026-02-03",plannedExercise:"Barbell Bench Press",weightKg:50,reps:11,rir:2,createdMs:1}]);
+  api.renderPerformanceCard();
+  assert.equal(elements.performanceCurrent.hidden,true);
+  assert.equal(elements.performancePrevious.hidden,false);
+  assert.equal(elements.performancePrevious.className,"log-performance-primary");
+  assert.equal(elements.performancePreviousValue.textContent,"50 kg × 11");
+});
+
+test("Set 2 and Set 3 use the deterministic latest current-session set",()=>{
+  const {api,elements}=loadApp();
+  performanceElements(elements);
+  form(elements);
+  api.state.selectedExercise="Barbell Bench Press";
+  api.state.selectedDate="2026-02-10";
+  api.replaceWorkoutLogs([
+    {id:"today-2",date:"2026-02-10",plannedExercise:"Barbell Bench Press",weightKg:50,reps:12,rir:1,createdMs:30},
+    {id:"prior",date:"2026-02-03",plannedExercise:"Barbell Bench Press",weightKg:50,reps:11,rir:2,createdMs:1},
+    {id:"today-1",date:"2026-02-10",plannedExercise:"Barbell Bench Press",weightKg:50,reps:14,rir:2,createdMs:20}
+  ]);
+  assert.equal(api.currentSessionLastSetForPlanned("Barbell Bench Press").id,"today-2");
+  api.renderPerformanceCard();
+  assert.equal(elements.performanceCurrent.hidden,false);
+  assert.equal(elements.performanceCurrentValue.textContent,"50 kg × 12");
+  assert.equal(elements.performancePreviousValue.textContent,"50 kg × 11");
+  assert.equal(elements.performancePrevious.className,"");
+});
+
+test("same-day alternative is grouped under its planned exercise",()=>{
+  const {api}=loadApp();
+  api.state.selectedDate="2026-02-10";
+  api.replaceWorkoutLogs([{id:"alt",date:"2026-02-10",plannedExercise:"Barbell Bench Press",exercise:"Machine Chest Press",weightKg:55,reps:10,createdMs:1}]);
+  assert.equal(api.currentSessionLastSetForPlanned("Barbell Bench Press").id,"alt");
+  assert.equal(api.currentSessionLastSetForPlanned("Machine Chest Press").id,"alt");
+});
+
+test("Use Last Set copies inputs only and preserves workout identity",()=>{
+  const {api,elements,calls,storage}=loadApp();
+  form(elements,{weight:10,reps:3,rir:5,note:"keep",tempo:"3-1-1",repQuality:"strict",biasMode:"machine"});
+  const selectedAlt={name:"Machine Chest Press",original:"Barbell Bench Press"};
+  api.state.selectedExercise="Barbell Bench Press";
+  api.state.selectedAlt=selectedAlt;
+  api.state.selectedDate="2026-02-10";
+  api.replaceWorkoutLogs([{id:"today",date:"2026-02-10",plannedExercise:"Barbell Bench Press",exercise:"Machine Chest Press",weightKg:55,reps:10,rir:1,createdMs:1}]);
+  api.useCurrentSessionLastSet();
+  assert.deepEqual([elements.weight.value,elements.reps.value,elements.rir.value],[55,10,1]);
+  assert.deepEqual([elements.note.value,elements.tempo.value,elements.repQuality.value,elements.biasMode.value],["keep","3-1-1","strict","machine"]);
+  assert.equal(api.state.selectedExercise,"Barbell Bench Press");
+  assert.equal(api.state.selectedAlt,selectedAlt);
+  assert.equal(api.state.selectedDate,"2026-02-10");
+  assert.equal(calls.adds.length,0);
+  assert.equal(calls.updates.length,0);
+  assert.equal(calls.intervals.length,0);
+  assert.equal(storage.size,0);
+});
+
+test("historical edit cannot use Current Session Last Set",()=>{
+  const {api,elements}=loadApp();
+  form(elements,{weight:70,reps:6,rir:3});
+  performanceElements(elements);
+  api.state.selectedExercise="Barbell Bench Press";
+  api.state.selectedDate="2026-02-10";
+  api.state.editingId="historical";
+  api.replaceWorkoutLogs([{id:"today",date:"2026-02-10",plannedExercise:"Barbell Bench Press",weightKg:55,reps:10,rir:1,createdMs:1}]);
+  api.renderPerformanceCard();
+  assert.equal(elements.useLastSetBtn.hidden,true);
+  api.useCurrentSessionLastSet();
+  assert.deepEqual([elements.weight.value,elements.reps.value,elements.rir.value],["70","6","3"]);
+});
+
 test("Performance Last Set excludes future-date sets",()=>{
   const {api}=loadApp();
   api.replaceWorkoutLogs([
@@ -711,6 +786,137 @@ test("Apply Suggestion does not save or start the rest timer",()=>{
   assert.deepEqual([api.state.timerId,api.state.timerEndAt,api.state.timerLeft],timer);
 });
 
+test("one timer engine keeps settings and floating displays synchronized",()=>{
+  const {api,elements,calls}=loadApp();
+  form(elements,{restSec:75});
+  elements.timer=element();
+  elements.floatingTimer=element();
+  elements.floatingRestTimer=element();
+  api.state.page="log";
+  api.startRealTimer();
+  assert.equal(calls.intervals.length,1);
+  assert.equal(api.state.timerId,1);
+  assert.equal(elements.timer.textContent,elements.floatingTimer.textContent);
+  assert.equal(elements.floatingRestTimer.hidden,false);
+  const deadline=api.state.timerEndAt;
+  api.addRestTime(30);
+  assert.equal(api.state.timerEndAt,deadline+30000);
+  assert.equal(calls.intervals.length,1);
+  api.stopTimer();
+  assert.equal(api.state.timerId,null);
+  assert.equal(api.state.timerEndAt,0);
+  assert.equal(api.state.timerLeft,0);
+  assert.equal(elements.floatingRestTimer.hidden,true);
+});
+
+test("floating timer is scoped to Log while its single timer continues across pages",()=>{
+  const {api,elements,calls}=loadApp();
+  form(elements,{restSec:75});
+  elements.timer=element(); elements.floatingTimer=element(); elements.floatingRestTimer=element();
+  api.state.page="log";
+  api.startRealTimer();
+  const deadline=api.state.timerEndAt, intervalId=api.state.timerId;
+  assert.equal(elements.floatingRestTimer.hidden,false);
+  assert.equal(calls.intervals.length,1);
+
+  api.setRender(()=>api.renderTimer());
+  api.show("dash");
+  assert.equal(elements.floatingRestTimer.hidden,true);
+  assert.equal(api.state.timerEndAt,deadline);
+  assert.equal(api.state.timerId,intervalId);
+  calls.intervals[0].fn();
+  assert.equal(api.state.timerId,intervalId);
+  assert.equal(calls.intervals.length,1);
+
+  api.show("log");
+  assert.equal(elements.floatingRestTimer.hidden,false);
+  assert.equal(elements.floatingTimer.textContent,elements.timer.textContent);
+  assert.equal(api.state.timerEndAt,deadline);
+  assert.equal(calls.intervals.length,1);
+});
+
+test("timer completion on another page clears normally without showing floating UI",()=>{
+  const {api,elements,calls}=loadApp();
+  elements.timer=element(); elements.floatingTimer=element(); elements.floatingRestTimer=element();
+  api.state.page="dash";
+  api.state.timerId=7;
+  api.state.timerEndAt=Date.now()-1;
+  api.state.notifiedDone=false;
+  api.updateTimerState();
+  assert.equal(api.state.timerId,null);
+  assert.equal(api.state.timerEndAt,0);
+  assert.equal(api.state.notifiedDone,true);
+  assert.equal(elements.floatingRestTimer.hidden,true);
+  assert.deepEqual(calls.clearedIntervals,[7]);
+});
+
+test("timer completion hides floating display and notifies only once",()=>{
+  const {api,elements}=loadApp();
+  elements.timer=element();
+  elements.floatingTimer=element();
+  elements.floatingRestTimer=element();
+  api.state.timerId=7;
+  api.state.timerEndAt=Date.now()-1;
+  api.state.notifiedDone=false;
+  api.updateTimerState();
+  assert.equal(elements.floatingRestTimer.hidden,true);
+  assert.equal(api.state.notifiedDone,true);
+  api.updateTimerState();
+  assert.equal(api.state.notifiedDone,true);
+});
+
+test("successful new set starts one real timer and historical edit starts none",async()=>{
+  const fresh=loadApp();
+  form(fresh.elements,{restSec:75});
+  fresh.elements.timer=element(); fresh.elements.floatingTimer=element(); fresh.elements.floatingRestTimer=element();
+  fresh.api.state.user={uid:"user-1"};
+  fresh.api.state.selectedDate="2026-08-08";
+  fresh.api.useRealTimer();
+  await fresh.api.saveSet();
+  assert.equal(fresh.calls.intervals.length,1);
+
+  const edit=loadApp();
+  form(edit.elements,{restSec:75});
+  edit.elements.timer=element(); edit.elements.floatingTimer=element(); edit.elements.floatingRestTimer=element();
+  const original={id:"old",date:"2026-01-01",week:1,day:"Day 1",plannedExercise:"Barbell Bench Press",exercise:"Barbell Bench Press",weightKg:50,reps:8,rir:2,targetSets:4,createdMs:1};
+  edit.api.state.user={uid:"user-1"}; edit.api.state.editingId="old"; edit.api.state.selectedDate=original.date; edit.api.state.selectedExercise=original.plannedExercise; edit.api.replaceWorkoutLogs([original]);
+  edit.api.useRealTimer();
+  await edit.api.saveSet();
+  assert.equal(edit.calls.intervals.length,0);
+});
+
+test("planned and alternative media actions share safe encoded URL generation",()=>{
+  const {api,elements,calls}=loadApp();
+  for(const id of ["imageBtn","videoBtn","quickImageBtn","quickVideoBtn"]){ elements[id]=element(); }
+  api.state.selectedExercise="Barbell Bench Press";
+  api.bind();
+  elements.quickImageBtn.listeners.click();
+  elements.videoBtn.listeners.click();
+  assert.equal(calls.opens[0][0],api.mediaSearchUrl("Barbell Bench Press","image"));
+  assert.equal(calls.opens[1][0],api.mediaSearchUrl("Barbell Bench Press","video"));
+  assert.deepEqual(calls.opens.map(call=>call.slice(1)),[["_blank","noopener"],["_blank","noopener"]]);
+  assert.match(calls.opens[0][0],/Barbell%20Bench%20Press%20proper%20form%20exercise/);
+  api.state.selectedAlt={name:"Machine Chest Press",original:"Barbell Bench Press"};
+  elements.quickVideoBtn.listeners.click();
+  assert.equal(calls.opens[2][0],api.mediaSearchUrl("Machine Chest Press","video"));
+});
+
+test("Phase 1A DOM IDs are unique and mobile timer stacks below navigation z-index",()=>{
+  const html=fs.readFileSync("index.html","utf8"), css=fs.readFileSync("css/styles.css","utf8");
+  const ids=[...html.matchAll(/\sid="([^"]+)"/g)].map(match=>match[1]);
+  assert.equal(new Set(ids).size,ids.length);
+  for(const id of ["saveBtn","startRest","stopRest","add30","imageBtn","videoBtn","quickImageBtn","quickVideoBtn","floatingRestTimer","floatingAdd30","floatingStopRest"]){
+    assert.match(html,new RegExp(`id="${id}"`),id);
+  }
+  assert.match(css,/\.tabs,\.tabbar,nav\{[^}]*z-index:9999!important/);
+  assert.match(css,/\.floating-rest-timer\{[^}]*z-index:9998/);
+  assert.match(css,/:root\{--mobile-nav-clearance:70px\}/);
+  assert.match(css,/\.tabs\{min-height:var\(--mobile-nav-clearance\)\}/);
+  assert.match(css,/bottom:calc\(var\(--mobile-nav-clearance\) \+ env\(safe-area-inset-bottom\)\)/);
+  assert.match(css,/body\.rest-timer-active main\{padding-bottom:176px!important\}/);
+  assert.match(css,/body\.rest-timer-active \.statusbar\.show\{bottom:calc\(var\(--mobile-nav-clearance\) \+ 70px \+ env\(safe-area-inset-bottom\)\)\}/);
+});
+
 test("Smart Replace reuses persistent alternative selection",()=>{
   const {api,storage}=loadApp();
   api.state.selectedExercise="Barbell Bench Press";
@@ -778,7 +984,7 @@ test("Rest Day clears a stale selected exercise and renders no scheduled option"
 test("authenticated startup hides workout entry while the first snapshot is pending",()=>{
   const {api,elements,calls}=loadApp();
   form(elements);
-  for(const id of ["logHydrationState","logRestDayState","logWorkoutContext","exercise","logSetProgress","logAlternativeCard","logPerformanceCard","logInputCard","smartAlternativeSection","performanceSuggested","applyProgressionBtn","logDayLockWarning"]){
+  for(const id of ["logHydrationState","logRestDayState","logWorkoutContext","exercise","logMediaQuickActions","logSetProgress","logAlternativeCard","logPerformanceCard","logInputCard","smartAlternativeSection","performanceSuggested","applyProgressionBtn","logDayLockWarning"]){
     elements[id]=element(); elements[id].hidden=false;
   }
   calls.authCallback({uid:"user-1"});
@@ -788,7 +994,7 @@ test("authenticated startup hides workout entry while the first snapshot is pend
   assert.equal(api.state.selectedExercise,"");
   assert.equal(elements.logHydrationState.hidden,false);
   assert.equal(elements.logHydrationState.textContent,"Loading workout data...");
-  for(const id of ["logWorkoutContext","exercise","logSetProgress","logAlternativeCard","logPerformanceCard","logInputCard"]){ assert.equal(elements[id].hidden,true,id); }
+  for(const id of ["logWorkoutContext","exercise","logMediaQuickActions","logSetProgress","logAlternativeCard","logPerformanceCard","logInputCard"]){ assert.equal(elements[id].hidden,true,id); }
   assert.equal(elements.saveBtn.disabled,true);
 });
 
@@ -807,7 +1013,7 @@ test("successful history snapshot resolves Rest Day after hydration",()=>{
   api.state.selectedDate="2026-02-02";
   calls.authCallback({uid:"user-1"});
   calls.snapshots[0](snapshot(restDayLogs(api)));
-  for(const id of ["logHydrationState","logRestDayState","logWorkoutContext","exercise","logSetProgress","logAlternativeCard","logPerformanceCard","logInputCard","smartAlternativeSection","performanceSuggested","applyProgressionBtn","logDayLockWarning","logDayLabel"]){
+  for(const id of ["logHydrationState","logRestDayState","logWorkoutContext","exercise","logMediaQuickActions","logSetProgress","logAlternativeCard","logPerformanceCard","logInputCard","smartAlternativeSection","performanceSuggested","applyProgressionBtn","logDayLockWarning","logDayLabel"]){
     elements[id]=element(); elements[id].hidden=false;
   }
   api.renderLogScheduleState();
@@ -820,7 +1026,7 @@ test("successful history snapshot resolves Rest Day after hydration",()=>{
 test("snapshot failure shows a persistent error without Day 1 fallback",()=>{
   const {api,elements,calls}=loadApp();
   form(elements);
-  for(const id of ["logHydrationState","logRestDayState","logWorkoutContext","exercise","logSetProgress","logAlternativeCard","logPerformanceCard","logInputCard","smartAlternativeSection","performanceSuggested","applyProgressionBtn","logDayLockWarning"]){
+  for(const id of ["logHydrationState","logRestDayState","logWorkoutContext","exercise","logMediaQuickActions","logSetProgress","logAlternativeCard","logPerformanceCard","logInputCard","smartAlternativeSection","performanceSuggested","applyProgressionBtn","logDayLockWarning"]){
     elements[id]=element(); elements[id].hidden=false;
   }
   calls.authCallback({uid:"user-1"});
@@ -856,12 +1062,12 @@ test("Rest Day hides workout assistance and entry sections",()=>{
   api.state.selectedDate="2026-02-02";
   api.state.selectedExercise="";
   api.replaceWorkoutLogs(restDayLogs(api));
-  for(const id of ["logRestDayState","logWorkoutContext","exercise","logSetProgress","logAlternativeCard","logPerformanceCard","logInputCard","smartAlternativeSection","performanceSuggested","applyProgressionBtn","logDayLockWarning","logDayLabel"]){
+  for(const id of ["logRestDayState","logWorkoutContext","exercise","logMediaQuickActions","logSetProgress","logAlternativeCard","logPerformanceCard","logInputCard","smartAlternativeSection","performanceSuggested","applyProgressionBtn","logDayLockWarning","logDayLabel"]){
     elements[id]=element(); elements[id].hidden=false;
   }
   api.renderLogScheduleState();
   assert.equal(elements.logRestDayState.hidden,false);
-  for(const id of ["logWorkoutContext","exercise","logSetProgress","logAlternativeCard","logPerformanceCard","logInputCard","smartAlternativeSection","performanceSuggested","applyProgressionBtn"]){
+  for(const id of ["logWorkoutContext","exercise","logMediaQuickActions","logSetProgress","logAlternativeCard","logPerformanceCard","logInputCard","smartAlternativeSection","performanceSuggested","applyProgressionBtn"]){
     assert.equal(elements[id].hidden,true,id);
   }
   assert.equal(elements.logDayLockWarning.hidden,true);
