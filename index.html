@@ -91,9 +91,14 @@
 </section>
 <section id="log" class="page log-entry-v2">
   <div class="card log-compact-header">
-    <div id="logWorkoutContext" class="log-context-line"><b id="logDayLabel">Day 1</b><span aria-hidden="true">•</span><b>Set <span id="setNo">1</span> / <span id="targetShow">4</span></b></div>
+    <div id="logWorkoutContext" class="log-workout-context">
+      <b id="logDayLabel">Day 1</b>
+      <div class="log-workout-metrics"><span>Exercise <b id="logExercisePosition">1</b> / <b id="logExerciseTotal">5</b></span><span>Set <b id="setNo">1</b> / <b id="targetShow">4</b></span><span><b id="logDaySetsDone">0</b> / <b id="logDaySetsTarget">17</b> sets</span></div>
+      <progress id="logWorkoutProgress" value="0" max="17" aria-label="Whole workout progress"></progress>
+    </div>
     <div id="logHydrationState" class="log-action-state info" role="status" aria-live="polite" hidden>Loading workout data...</div>
-    <div id="logRestDayState" class="log-rest-day-state" role="status" hidden><b>Rest Day</b><span>วันนี้ไม่มี Workout ตามรอบปัจจุบัน</span></div>
+    <div id="logRestDayState" class="log-rest-day-state" role="status" hidden><b id="logRestDayTitle">Rest Day</b><span id="logRestDayReason">วันนี้ไม่มี Workout ตามรอบปัจจุบัน</span><div id="logNextWorkoutPreview" hidden><strong>Next Workout</strong><b id="logNextWorkoutDay">—</b><span id="logNextWorkoutEarliest">—</span><div id="logNextWorkoutExercises" class="log-next-workout-exercises"></div></div></div>
+    <div id="logCompletionState" class="log-completion-state" role="status" hidden><h2 id="logCompletionTitle">WORKOUT COMPLETED ✓</h2><div id="logCompletionMetrics"></div><div id="logCompletionNext"></div></div>
     <label class="sr-only" for="exercise">ท่าที่จะเล่น</label>
     <select id="exercise"></select>
     <div id="logMediaQuickActions" class="log-media-quick-actions" aria-label="Exercise media">

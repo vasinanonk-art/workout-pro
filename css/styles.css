@@ -210,6 +210,17 @@ select option:disabled{color:#888;background:#111827}
 #log.log-entry-v2 .card{padding:12px;margin-bottom:9px;border-radius:16px}
 #log.log-entry-v2 h3{margin:0 0 9px;font-size:16px}
 .log-context-line{display:flex;align-items:center;gap:7px;margin-bottom:8px;font-size:15px}
+.log-workout-context{display:grid;gap:8px;margin-bottom:8px}
+.log-workout-context>#logDayLabel{font-size:18px}
+.log-workout-metrics{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:13px}
+.log-workout-metrics b{color:var(--text)}
+.log-workout-context progress{display:block;width:100%;height:12px;border:0;border-radius:999px;overflow:hidden;background:#020617;accent-color:#22c55e}
+.log-completion-state{padding:14px;border:1px solid #22c55e;border-radius:14px;background:rgba(22,163,74,.12)}
+.log-completion-state[hidden]{display:none}
+.log-completion-state h2{margin:0 0 8px;font-size:20px;color:#86efac}
+.log-completion-state div{font-size:14px;line-height:1.6}
+.log-completion-state #logCompletionNext{margin-top:8px;font-weight:800}
+.log-next-workout-exercises{margin-top:8px;color:var(--muted);font-size:12px;line-height:1.5}
 .log-media-quick-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
 .log-media-quick-actions button{min-height:42px;padding:8px 12px;font-size:13px}
 .log-rest-day-state{display:grid;gap:4px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#020617}

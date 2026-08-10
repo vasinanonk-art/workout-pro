@@ -276,9 +276,39 @@ function nextIncompleteExercise(day,date=state.selectedDate){ return PROGRAM.fil
 function dayForExercise(ex){ return metaByExercise(ex)[0]; }
 function dayExercises(day){ return PROGRAM.filter(p=>p[0]===day); }
 function dayCompleteOnDate(day,date){ return dayExercises(day).every(p=>completedForExercise(p[2],date) >= Number(p[3])); }
+function workoutDayForDate(date=state.selectedDate){
+  if(state.selectedExercise){
+    const selectedDay=dayForExercise(state.selectedExercise);
+    if(state.editingId || allowedTrainingDaysForDate(date).includes(selectedDay) || logsOnDate(date).some(log=>dayForExercise(plannedOf(log))===selectedDay)) return selectedDay;
+  }
+  const latestDayLog=logsOnDate(date).filter(log=>PROGRAM.some(row=>row[2]===plannedOf(log))).sort(byCreated).at(-1);
+  if(latestDayLog) return dayForExercise(plannedOf(latestDayLog));
+  return allowedTrainingDaysForDate(date)[0] || null;
+}
+function workoutProgressForDay(day,date=state.selectedDate){
+  if(!day || !DAY_ORDER.includes(day)) return null;
+  const exercises=dayExercises(day);
+  const currentIndex=exercises.findIndex(row=>row[2]===state.selectedExercise);
+  const complete=dayCompleteOnDate(day,date);
+  const exerciseDone=exercises.filter(row=>completedForExercise(row[2],date)>=Number(row[3])).length;
+  const setsTarget=exercises.reduce((sum,row)=>sum+Number(row[3]),0);
+  const setsDone=exercises.reduce((sum,row)=>sum+Math.min(completedForExercise(row[2],date),Number(row[3])),0);
+  const currentRow=currentIndex>=0 ? exercises[currentIndex] : exercises.at(-1);
+  const currentDone=currentRow ? completedForExercise(currentRow[2],date) : 0;
+  const currentTarget=currentRow ? Number(currentRow[3]) : 0;
+  const dayNames=new Set(exercises.map(row=>row[2]));
+  const logs=logsOnDate(date).filter(log=>dayNames.has(plannedOf(log)));
+  return Object.freeze({day,date,exercisePosition:complete?exercises.length:Math.max(1,currentIndex+1),exerciseTotal:exercises.length,currentSet:complete?currentTarget:Math.min(currentDone+1,currentTarget),currentSetTarget:currentTarget,setsDone,setsTarget,exerciseDone,complete,volume:volumeForLogs(logs)});
+}
 function workoutDates(){ return [...new Set(state.logs.map(x=>x.date).filter(Boolean))].sort(); }
 function logsByDate(date){ return state.logs.filter(x=>x.date===date); }
 function completedDaysByDate(date){ return DAY_ORDER.filter(d=>dayCompleteOnDate(d,date)); }
+function workoutCompletionForDate(date=state.selectedDate){
+  const days=completedDaysByDate(date);
+  if(!days.length) return null;
+  const progress=days.map(day=>workoutProgressForDay(day,date));
+  return Object.freeze({days:Object.freeze(days),exerciseDone:progress.reduce((sum,item)=>sum+item.exerciseDone,0),exerciseTotal:progress.reduce((sum,item)=>sum+item.exerciseTotal,0),setsDone:progress.reduce((sum,item)=>sum+item.setsDone,0),setsTarget:progress.reduce((sum,item)=>sum+item.setsTarget,0),volume:progress.reduce((sum,item)=>sum+item.volume,0)});
+}
 function lastDateWithCompletedDay(day){ return workoutDates().filter(date=>dayCompleteOnDate(day,date)).pop() || null; }
 function latestCompletedDayDateBeforeOrOn(day,date=state.selectedDate){
   return workoutDates().filter(d=>dayDiff(d,date)<=0 && dayCompleteOnDate(day,d)).pop() || null;
@@ -323,6 +353,13 @@ function currentCyclePlan(date=state.selectedDate){
   if(!d5) return {allowedDays:["Day 5"], code:"OPEN", earliest:addDaysKey(d4,1), reason:"Day 4 จบแล้ว เริ่ม Day 5 ได้"};
   if(dayDiff(date,d5) < 3) return {allowedDays:[], code:"REST_LOCK", earliest:addDaysKey(d5,3), reason:`พักหลัง Day 5 ยังไม่ครบ เริ่มรอบใหม่ได้เร็วสุด ${addDaysKey(d5,3)}`};
   return {allowedDays:["Day 1"], code:"OPEN", earliest:addDaysKey(d5,3), reason:"พักครบแล้ว เริ่ม Day 1 รอบใหม่ได้"};
+}
+function nextWorkoutPreview(date=state.selectedDate){
+  const plan=currentCyclePlan(date);
+  const earliest=isValidDateKey(plan.earliest) ? plan.earliest : null;
+  const nextPlan=plan.allowedDays?.length ? plan : earliest ? currentCyclePlan(earliest) : null;
+  const day=nextPlan?.allowedDays?.[0] || null;
+  return {day,earliest,reason:plan.reason||"",code:plan.code||"",exercises:day?dayExercises(day).map(row=>row[2]):[]};
 }
 function calcDayLock(date=state.selectedDate){
   const today = todayTH();
@@ -428,7 +465,7 @@ function renderAll(){
 }
 
 function renderLog(){
-  renderDayLock(); renderExerciseSelect(); renderExerciseDatabase(); renderLogSummary(); renderRecent(); renderMedia(); renderTimer(); updateFormDerived(); renderSmartAlternatives(); renderPerformanceCard(); renderLogScheduleState();
+  renderDayLock(); renderExerciseSelect(); renderExerciseDatabase(); renderLogSummary(); renderRecent(); renderMedia(); renderTimer(); updateFormDerived(); renderSmartAlternatives(); renderPerformanceCard(); renderWorkoutOverview(); renderLogScheduleState();
 }
 
 function notificationPermissionText(){
@@ -537,7 +574,8 @@ function renderExerciseSelect(){
 
 function renderLogScheduleState(){
   const hydrationBlocked=Boolean(state.user) && state.logHydration.status!=="ready" && !state.editingId;
-  const restDay=!state.editingId && allowedTrainingDaysForDate(state.selectedDate).length===0;
+  const completed=completedDaysByDate(state.selectedDate).length>0;
+  const restDay=!state.editingId && !completed && allowedTrainingDaysForDate(state.selectedDate).length===0;
   const hydrationState=$("logHydrationState");
   if(hydrationState){
     hydrationState.hidden=!hydrationBlocked;
@@ -545,12 +583,61 @@ function renderLogScheduleState(){
   }
   const restState=$("logRestDayState"); if(restState) restState.hidden=!restDay;
   if(restState && hydrationBlocked) restState.hidden=true;
-  for(const id of ["logWorkoutContext","exercise","logMediaQuickActions","logSetProgress"]){ const element=$(id); if(element) element.hidden=restDay || hydrationBlocked; }
-  for(const id of ["logAlternativeCard","logPerformanceCard","logInputCard"]){ const element=$(id); if(element) element.hidden=restDay || hydrationBlocked || (id==="logPerformanceCard" && element.hidden); }
-  if(restDay || hydrationBlocked){
+  const entryUnavailable=restDay || (completed && !state.editingId);
+  const context=$("logWorkoutContext"); if(context) context.hidden=restDay || hydrationBlocked;
+  for(const id of ["exercise","logMediaQuickActions","logSetProgress"]){ const element=$(id); if(element) element.hidden=entryUnavailable || hydrationBlocked; }
+  for(const id of ["logAlternativeCard","logPerformanceCard","logInputCard"]){ const element=$(id); if(element) element.hidden=entryUnavailable || hydrationBlocked || (id==="logPerformanceCard" && element.hidden); }
+  if(entryUnavailable || hydrationBlocked){
     for(const id of ["smartAlternativeSection","performanceSuggested","applyProgressionBtn"]){ const element=$(id); if(element) element.hidden=true; }
     if(restDay && !hydrationBlocked) setText("logDayLabel","Rest Day");
     const warning=$("logDayLockWarning"); if(warning) warning.hidden=true;
+  }
+}
+
+function renderWorkoutOverview(){
+  const hydrationBlocked=Boolean(state.user) && state.logHydration.status!=="ready" && !state.editingId;
+  const completion=$("logCompletionState"), rest=$("logRestDayState");
+  if(hydrationBlocked){ if(completion) completion.hidden=true; if(rest) rest.hidden=true; return; }
+  const day=workoutDayForDate(state.selectedDate);
+  const progress=workoutProgressForDay(day,state.selectedDate);
+  const completed=workoutCompletionForDate(state.selectedDate);
+  if(progress){
+    setText("logDayLabel",progress.day);
+    setText("logExercisePosition",progress.exercisePosition); setText("logExerciseTotal",progress.exerciseTotal);
+    setText("setNo",progress.currentSet); setText("targetShow",progress.currentSetTarget);
+    setText("logDaySetsDone",progress.setsDone); setText("logDaySetsTarget",progress.setsTarget);
+    const bar=$("logWorkoutProgress"); if(bar){ bar.max=progress.setsTarget; bar.value=progress.setsDone; }
+  }
+  if(completion){
+    completion.hidden=!completed;
+    if(completed){
+      setText("logCompletionTitle",`${completed.days.map(day=>day.toUpperCase()).join(" + ")} COMPLETED ✓`);
+      setHtml("logCompletionMetrics",`${completed.exerciseDone} / ${completed.exerciseTotal} exercises<br>${completed.setsDone} / ${completed.setsTarget} sets<br>Total Volume: <b>${completed.volume.toFixed(0)} kg</b>`);
+      let nextText="Next: unavailable for multiple completed workout days on this date";
+      if(completed.days.length===1){
+        const next=nextWorkoutPreview(state.selectedDate);
+        nextText=next.code==="REST_LOCK" ? `Next: REST DAY${next.day?` • ${escapeHtml(next.day)} earliest ${escapeHtml(dateLabelTH(next.earliest))}`:""}` : next.day ? `Next: ${escapeHtml(next.day)}${next.earliest?` • earliest ${escapeHtml(dateLabelTH(next.earliest))}`:""}` : `Next: ${escapeHtml(next.reason)||"—"}`;
+      }
+      setHtml("logCompletionNext",nextText);
+    }
+  }
+  if(rest){
+    const lock=calcDayLock(state.selectedDate);
+    const showRest=!state.editingId && !completed && allowedTrainingDaysForDate(state.selectedDate).length===0;
+    rest.hidden=!showRest;
+    if(showRest){
+      const next=nextWorkoutPreview(state.selectedDate);
+      const future=lock.code==="FUTURE_DATE";
+      setText("logRestDayTitle",future?"Future Date Locked":"REST DAY");
+      setText("logRestDayReason",lock.reason || next.reason);
+      const preview=$("logNextWorkoutPreview"); if(preview) preview.hidden=future || !next.day;
+      if(!future && next.day){
+        setText("logNextWorkoutDay",next.day);
+        const tomorrow=state.selectedDate===todayTH() && next.earliest===addDaysKey(state.selectedDate,1);
+        setText("logNextWorkoutEarliest",`Earliest: ${tomorrow?"Tomorrow • ":""}${dateLabelTH(next.earliest)} (${next.earliest})`);
+        setHtml("logNextWorkoutExercises",next.exercises.map(escapeHtml).join(" • "));
+      }
+    }
   }
 }
 

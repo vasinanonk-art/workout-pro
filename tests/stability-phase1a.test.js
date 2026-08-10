@@ -80,7 +80,7 @@ function loadApp(storageSeed={},storageUnavailable=false){
   context.window.document=document;
   context.window.Notification=context.Notification;
   context.globalThis=context;
-  const expose=`\n;const __realStartTimer=startTimer;globalThis.__app={state,bind,show,saveSet,subscribeLogs,renderExerciseSelect,resolveSelectedExercise,renderLogScheduleState,renderCalendar,renderRecent,renderSetup,renderPerformanceCard,renderPRAndSuggestion,usePreviousWorkout,useCurrentSessionLastSet,progressionSuggestion,applyProgressionSuggestion,smartAlternativesForCurrentExercise,selectAlternative,currentSessionLastSetForPlanned,lastSetForPlannedOnOrBefore,bestPerformanceForPlanned,currentCyclePlan,allowedTrainingDaysForDate,calcDayLock,updateFormDerived,updateTimerState,renderTimer,startRealTimer(){__realStartTimer()},useRealTimer(){startTimer=__realStartTimer},stopTimer,addRestTime,mediaSearchUrl,openExerciseMedia,restorePersistentAlt,readPersistentAlt,writePersistentAlt,clearPersistentAlt,rememberSessionExercise,clearSessionExercise,grantOverride,normalizeLog,isValidDateKey,clearScopedWorkoutState,plannedOf,samePlanned,inferPlannedExerciseFromActual,plannedCandidatesForAlternative,logsOnDate,logsForPlanned,completedForExercise,latestSetForPlanned,previousSetForPlanned,previousWorkoutForPlanned,replaceWorkoutLogs,getDerivedLogIndex:()=>derivedLogIndex,getIndexRebuildCount:()=>derivedLogIndexRebuildCount,alternativeInventory:()=>[...PLANNED_BY_ALTERNATIVE.entries()],exerciseLibrary:()=>EXERCISE_LIBRARY,program:()=>PROGRAM,alternatives:()=>ALT,canonicalExercise,alternativeReasons:()=>ALTERNATIVE_REASONS,setRender(fn){renderAll=fn},setTimer(fn){startTimer=fn}};`;
+  const expose=`\n;const __realStartTimer=startTimer;globalThis.__app={state,bind,show,saveSet,subscribeLogs,renderExerciseSelect,resolveSelectedExercise,renderLogScheduleState,renderWorkoutOverview,renderCalendar,renderRecent,renderSetup,renderPerformanceCard,renderPRAndSuggestion,usePreviousWorkout,useCurrentSessionLastSet,progressionSuggestion,applyProgressionSuggestion,smartAlternativesForCurrentExercise,selectAlternative,currentSessionLastSetForPlanned,lastSetForPlannedOnOrBefore,bestPerformanceForPlanned,workoutDayForDate,workoutProgressForDay,workoutCompletionForDate,nextWorkoutPreview,dayCompleteOnDate,currentCyclePlan,allowedTrainingDaysForDate,calcDayLock,updateFormDerived,updateTimerState,renderTimer,startRealTimer(){__realStartTimer()},useRealTimer(){startTimer=__realStartTimer},stopTimer,addRestTime,mediaSearchUrl,openExerciseMedia,restorePersistentAlt,readPersistentAlt,writePersistentAlt,clearPersistentAlt,rememberSessionExercise,clearSessionExercise,grantOverride,normalizeLog,isValidDateKey,clearScopedWorkoutState,plannedOf,samePlanned,inferPlannedExerciseFromActual,plannedCandidatesForAlternative,logsOnDate,logsForPlanned,completedForExercise,latestSetForPlanned,previousSetForPlanned,previousWorkoutForPlanned,replaceWorkoutLogs,getDerivedLogIndex:()=>derivedLogIndex,getIndexRebuildCount:()=>derivedLogIndexRebuildCount,alternativeInventory:()=>[...PLANNED_BY_ALTERNATIVE.entries()],exerciseLibrary:()=>EXERCISE_LIBRARY,program:()=>PROGRAM,alternatives:()=>ALT,canonicalExercise,alternativeReasons:()=>ALTERNATIVE_REASONS,setRender(fn){renderAll=fn},setTimer(fn){startTimer=fn}};`;
   vm.runInNewContext(source+expose,context,{filename:"js/app.module.js"});
   context.__app.setRender(()=>{});
   context.__app.setTimer(()=>{});
@@ -108,6 +108,9 @@ function completedProgramDay(api,day,date,start=1){
 }
 function restDayLogs(api){
   return [...completedProgramDay(api,"Day 1","2026-02-01"),...completedProgramDay(api,"Day 2","2026-02-02",100)];
+}
+function workoutOverviewElements(elements){
+  for(const id of ["logWorkoutContext","logDayLabel","logExercisePosition","logExerciseTotal","setNo","targetShow","logDaySetsDone","logDaySetsTarget","logWorkoutProgress","logHydrationState","logRestDayState","logRestDayTitle","logRestDayReason","logNextWorkoutPreview","logNextWorkoutDay","logNextWorkoutEarliest","logNextWorkoutExercises","logCompletionState","logCompletionTitle","logCompletionMetrics","logCompletionNext"]){ elements[id]=element(); }
 }
 function exerciseSelectElement(){
   const select=element();
@@ -967,9 +970,242 @@ test("historical edit cannot apply Suggestion or Smart Replace",()=>{
   assert.equal(storage.size,0);
 });
 
+test("whole-workout progress covers first, middle, final, partial, and target totals",()=>{
+  const {api}=loadApp();
+  const day="Day 1", date="2026-02-01", rows=Array.from(api.program()).filter(row=>row[0]===day);
+  api.state.selectedDate=date;
+  api.state.selectedExercise=rows[0][2];
+  api.replaceWorkoutLogs([]);
+  const first=api.workoutProgressForDay(day,date);
+  assert.deepEqual([first.exercisePosition,first.exerciseTotal,first.currentSet,first.setsDone],[1,rows.length,1,0]);
+  assert.equal(first.setsTarget,rows.reduce((sum,row)=>sum+Number(row[3]),0));
+
+  const beforeMiddle=rows.slice(0,2).flatMap((row,index)=>Array.from({length:Number(row[3])},(_,set)=>({id:`before-${index}-${set}`,date,plannedExercise:row[2],exercise:row[2],weightKg:10,reps:10,createdMs:index*10+set})));
+  beforeMiddle.push({id:"middle-1",date,plannedExercise:rows[2][2],exercise:rows[2][2],weightKg:10,reps:10,createdMs:30});
+  api.replaceWorkoutLogs(beforeMiddle);
+  api.state.selectedExercise=rows[2][2];
+  const middle=api.workoutProgressForDay(day,date);
+  assert.deepEqual([middle.exercisePosition,middle.currentSet,middle.setsDone],[3,2,beforeMiddle.length]);
+
+  const beforeFinal=rows.slice(0,-1).flatMap((row,index)=>Array.from({length:Number(row[3])},(_,set)=>({id:`final-${index}-${set}`,date,plannedExercise:row[2],exercise:row[2],weightKg:10,reps:10,createdMs:index*10+set})));
+  api.replaceWorkoutLogs(beforeFinal);
+  api.state.selectedExercise=rows.at(-1)[2];
+  const final=api.workoutProgressForDay(day,date);
+  assert.equal(final.exercisePosition,rows.length);
+  assert.equal(final.currentSet,1);
+  assert.equal(final.complete,false);
+});
+
+test("whole-workout progress counts alternatives canonically and does not mutate completion state",()=>{
+  const {api}=loadApp();
+  const date="2026-02-01", before=JSON.stringify(api.state.logs);
+  api.state.selectedDate=date;
+  api.state.selectedExercise="Barbell Bench Press";
+  api.replaceWorkoutLogs([{id:"alt",date,plannedExercise:"Barbell Bench Press",exercise:"Machine Chest Press",weightKg:50,reps:10,createdMs:1}]);
+  const logsBefore=JSON.stringify(api.state.logs), progress=api.workoutProgressForDay("Day 1",date);
+  assert.equal(progress.setsDone,1);
+  assert.equal(progress.currentSet,2);
+  assert.equal(api.dayCompleteOnDate("Day 1",date),false);
+  assert.equal(JSON.stringify(api.state.logs),logsBefore);
+  assert.notEqual(logsBefore,before);
+});
+
+test("complete workout derives exercise, set, and volume summary without duration",()=>{
+  const {api,elements,calls}=loadApp();
+  workoutOverviewElements(elements);
+  const date="2026-02-04";
+  const logs=[...completedProgramDay(api,"Day 1","2026-02-01"),...completedProgramDay(api,"Day 2","2026-02-02",100),...completedProgramDay(api,"Day 4",date,200)];
+  api.state.selectedDate=date;
+  api.state.selectedExercise="Overhead Triceps Extension";
+  api.replaceWorkoutLogs(logs);
+  const progress=api.workoutProgressForDay("Day 4",date);
+  const dayRows=Array.from(api.program()).filter(row=>row[0]==="Day 4");
+  assert.equal(progress.complete,true);
+  assert.equal(progress.exerciseDone,dayRows.length);
+  assert.equal(progress.setsDone,dayRows.reduce((sum,row)=>sum+Number(row[3]),0));
+  assert.equal(progress.volume,progress.setsDone*50*8);
+  api.renderWorkoutOverview();
+  assert.equal(elements.logCompletionState.hidden,false);
+  assert.match(elements.logCompletionTitle.textContent,/DAY 4 COMPLETED/);
+  assert.match(elements.logCompletionMetrics.innerHTML,new RegExp(`${progress.exerciseDone} / ${progress.exerciseTotal} exercises`));
+  assert.match(elements.logCompletionMetrics.innerHTML,new RegExp(`${progress.setsDone} / ${progress.setsTarget} sets`));
+  assert.match(elements.logCompletionMetrics.innerHTML,new RegExp(`${progress.volume.toFixed(0)} kg`));
+  assert.doesNotMatch(elements.logCompletionMetrics.innerHTML,/duration|minute|hour/i);
+  assert.equal(calls.adds.length,0);
+  assert.equal(calls.updates.length,0);
+});
+
+test("saving the final valid set derives completion with one workout write and no completion payload",async()=>{
+  const {api,elements,calls}=loadApp();
+  form(elements,{weight:60,reps:10});
+  const date="2026-02-04", dayRows=Array.from(api.program()).filter(row=>row[0]==="Day 4"), last=dayRows.at(-1);
+  const prior=[...completedProgramDay(api,"Day 1","2026-02-01"),...completedProgramDay(api,"Day 2","2026-02-02",100)];
+  const partial=dayRows.flatMap((row,index)=>Array.from({length:Number(row[3])-(row===last?1:0)},(_,set)=>({id:`day4-${index}-${set}`,date,day:"Day 4",plannedExercise:row[2],exercise:row[2],weightKg:50,reps:8,rir:2,createdMs:200+index*10+set})));
+  api.state.user={uid:"user-1"}; api.state.selectedDate=date; api.state.selectedExercise=last[2]; api.replaceWorkoutLogs([...prior,...partial]);
+  await api.saveSet();
+  assert.equal(api.dayCompleteOnDate("Day 4",date),true);
+  assert.equal(api.workoutProgressForDay("Day 4",date).complete,true);
+  assert.equal(calls.adds.length,1);
+  assert.equal("completed" in calls.adds[0].payload,false);
+  assert.equal("duration" in calls.adds[0].payload,false);
+});
+
+test("historical completed workout renders as historical completion, not an upcoming workout",()=>{
+  const {api,elements}=loadApp();
+  workoutOverviewElements(elements);
+  const date="2025-12-01";
+  api.state.selectedDate=date;
+  api.state.selectedExercise="";
+  api.replaceWorkoutLogs(completedProgramDay(api,"Day 1",date));
+  api.renderWorkoutOverview();
+  assert.equal(elements.logCompletionState.hidden,false);
+  assert.match(elements.logCompletionTitle.textContent,/DAY 1 COMPLETED/);
+  assert.equal(elements.logRestDayState.hidden,true);
+  assert.doesNotMatch(elements.logCompletionMetrics.innerHTML,/duration/i);
+});
+
+test("incomplete workout does not show completion state",()=>{
+  const {api,elements}=loadApp();
+  workoutOverviewElements(elements);
+  api.state.selectedDate="2026-02-01";
+  api.state.selectedExercise="Barbell Bench Press";
+  api.replaceWorkoutLogs([{id:"one",date:"2026-02-01",plannedExercise:"Barbell Bench Press",exercise:"Barbell Bench Press",weightKg:50,reps:8,createdMs:1}]);
+  api.renderWorkoutOverview();
+  assert.equal(elements.logCompletionState.hidden,true);
+});
+
+test("Day 4 completion survives a later partial Day 5 log on the same date",()=>{
+  const {api,elements}=loadApp();
+  workoutOverviewElements(elements);
+  const date="2026-02-04";
+  const logs=completedProgramDay(api,"Day 4",date);
+  logs.push({id:"partial-day5",date,day:"Day 5",plannedExercise:"Back Squat",exercise:"Back Squat",weightKg:70,reps:5,createdMs:9999});
+  api.state.selectedDate=date;
+  api.state.selectedExercise="Back Squat";
+  api.replaceWorkoutLogs(logs);
+  assert.equal(api.workoutDayForDate(date),"Day 5");
+  assert.deepEqual(Array.from(api.workoutCompletionForDate(date).days),["Day 4"]);
+  api.renderWorkoutOverview();
+  assert.equal(elements.logCompletionTitle.textContent,"DAY 4 COMPLETED ✓");
+  assert.doesNotMatch(elements.logCompletionTitle.textContent,/DAY 5/);
+});
+
+test("multiple genuinely completed program days are shown truthfully in program order",()=>{
+  const {api,elements}=loadApp();
+  workoutOverviewElements(elements);
+  const date="2026-02-04";
+  api.state.selectedDate=date;
+  api.state.selectedExercise="Standing Calf Raise";
+  api.replaceWorkoutLogs([...completedProgramDay(api,"Day 5",date,500),...completedProgramDay(api,"Day 4",date,100)]);
+  const completed=api.workoutCompletionForDate(date);
+  assert.deepEqual(Array.from(completed.days),["Day 4","Day 5"]);
+  api.renderWorkoutOverview();
+  assert.equal(elements.logCompletionTitle.textContent,"DAY 4 + DAY 5 COMPLETED ✓");
+  assert.match(elements.logCompletionNext.innerHTML,/unavailable for multiple completed workout days/);
+  assert.doesNotMatch(elements.logCompletionNext.innerHTML,/earliest|REST DAY/);
+});
+
+test("latest partial workout log cannot create a completion identity",()=>{
+  const {api,elements}=loadApp();
+  workoutOverviewElements(elements);
+  const date="2026-02-04";
+  api.state.selectedDate=date;
+  api.state.selectedExercise="Back Squat";
+  api.replaceWorkoutLogs([{id:"latest-partial",date,day:"Day 5",plannedExercise:"Back Squat",exercise:"Back Squat",weightKg:70,reps:5,createdMs:9999}]);
+  assert.equal(api.workoutDayForDate(date),"Day 5");
+  assert.equal(api.workoutCompletionForDate(date),null);
+  api.renderWorkoutOverview();
+  assert.equal(elements.logCompletionState.hidden,true);
+});
+
+test("alternative actual exercise still completes its canonical planned day",()=>{
+  const {api}=loadApp();
+  const date="2026-02-04", logs=completedProgramDay(api,"Day 4",date);
+  const press=logs.find(log=>log.plannedExercise==="Incline Machine Press");
+  press.exercise="Incline Dumbbell Press";
+  api.state.selectedDate=date;
+  api.state.selectedExercise="Incline Machine Press";
+  api.replaceWorkoutLogs(logs);
+  assert.equal(api.dayCompleteOnDate("Day 4",date),true);
+  assert.deepEqual(Array.from(api.workoutCompletionForDate(date).days),["Day 4"]);
+});
+
+test("Rest Day preview derives next day and exact earliest date from currentCyclePlan",()=>{
+  const {api,elements}=loadApp();
+  workoutOverviewElements(elements);
+  api.state.selectedDate="2026-02-03";
+  api.state.selectedExercise="";
+  api.replaceWorkoutLogs(restDayLogs(api));
+  const preview=api.nextWorkoutPreview();
+  assert.deepEqual([preview.day,preview.earliest],["Day 4","2026-02-04"]);
+  api.renderWorkoutOverview();
+  assert.equal(elements.logRestDayState.hidden,false);
+  assert.equal(elements.logNextWorkoutPreview.hidden,false);
+  assert.equal(elements.logNextWorkoutDay.textContent,"Day 4");
+  assert.match(elements.logNextWorkoutEarliest.textContent,/2026-02-04/);
+  assert.doesNotMatch(elements.logNextWorkoutEarliest.textContent,/Tomorrow/);
+  assert.match(elements.logNextWorkoutExercises.innerHTML,/Incline Machine Press/);
+});
+
+test("post-Day-5 preview preserves two Rest Days and points to Day 1",()=>{
+  const {api}=loadApp();
+  api.replaceWorkoutLogs(completedProgramDay(api,"Day 5","2026-08-07"));
+  for(const date of ["2026-08-08","2026-08-09"]){
+    api.state.selectedDate=date;
+    const preview=api.nextWorkoutPreview();
+    assert.deepEqual([preview.day,preview.earliest],["Day 1","2026-08-10"]);
+    assert.equal(api.currentCyclePlan(date).code,"REST_LOCK");
+  }
+});
+
+test("manual override replaces Rest Day presentation with normal workout progress",()=>{
+  const {api,elements}=loadApp();
+  workoutOverviewElements(elements);
+  api.state.selectedDate="2026-08-09";
+  api.state.selectedExercise="Barbell Bench Press";
+  api.replaceWorkoutLogs(completedProgramDay(api,"Day 5","2026-08-07"));
+  api.grantOverride("Day 1");
+  api.renderWorkoutOverview();
+  assert.equal(elements.logRestDayState.hidden,true);
+  assert.equal(elements.logDayLabel.textContent,"Day 1");
+  assert.equal(elements.logDaySetsDone.textContent,0);
+});
+
+test("future-date lock remains authoritative and does not fabricate a preview",()=>{
+  const {api,elements}=loadApp();
+  workoutOverviewElements(elements);
+  api.state.selectedDate="2099-01-01";
+  api.state.selectedExercise="";
+  api.replaceWorkoutLogs([]);
+  api.renderWorkoutOverview();
+  assert.equal(api.calcDayLock().code,"FUTURE_DATE");
+  assert.equal(elements.logRestDayTitle.textContent,"Future Date Locked");
+  assert.equal(elements.logNextWorkoutPreview.hidden,true);
+  assert.equal(elements.logCompletionState.hidden,true);
+});
+
+test("hydration blocks progress while ready empty history resolves Day 1",()=>{
+  const {api,elements}=loadApp();
+  workoutOverviewElements(elements);
+  api.state.user={uid:"user-1"}; api.state.selectedDate="2026-02-01"; api.state.selectedExercise="";
+  for(const statusValue of ["loading","error"]){
+    api.state.logHydration={scope:"user-1|Beer-Team",status:statusValue,error:statusValue==="error"?"denied":""};
+    api.renderWorkoutOverview();
+    assert.equal(elements.logCompletionState.hidden,true);
+    assert.equal(elements.logRestDayState.hidden,true);
+  }
+  api.state.logHydration={scope:"user-1|Beer-Team",status:"ready",error:""};
+  api.resolveSelectedExercise();
+  api.renderWorkoutOverview();
+  assert.equal(elements.logDayLabel.textContent,"Day 1");
+  assert.equal(elements.logExercisePosition.textContent,1);
+  assert.equal(elements.logDaySetsDone.textContent,0);
+  assert.equal(elements.logCompletionState.hidden,true);
+});
+
 test("Rest Day clears a stale selected exercise and renders no scheduled option",()=>{
   const {api,elements}=loadApp();
-  api.state.selectedDate="2026-02-02";
+  api.state.selectedDate="2026-02-03";
   api.state.selectedExercise="Barbell Bench Press";
   api.replaceWorkoutLogs(restDayLogs(api));
   api.resolveSelectedExercise();
@@ -1010,7 +1246,7 @@ test("first successful empty snapshot readies a genuine new account for Day 1",(
 
 test("successful history snapshot resolves Rest Day after hydration",()=>{
   const {api,elements,calls}=loadApp();
-  api.state.selectedDate="2026-02-02";
+  api.state.selectedDate="2026-02-03";
   calls.authCallback({uid:"user-1"});
   calls.snapshots[0](snapshot(restDayLogs(api)));
   for(const id of ["logHydrationState","logRestDayState","logWorkoutContext","exercise","logMediaQuickActions","logSetProgress","logAlternativeCard","logPerformanceCard","logInputCard","smartAlternativeSection","performanceSuggested","applyProgressionBtn","logDayLockWarning","logDayLabel"]){
@@ -1059,7 +1295,7 @@ test("scope switch returns to loading and ignores the stale old snapshot",()=>{
 
 test("Rest Day hides workout assistance and entry sections",()=>{
   const {api,elements}=loadApp();
-  api.state.selectedDate="2026-02-02";
+  api.state.selectedDate="2026-02-03";
   api.state.selectedExercise="";
   api.replaceWorkoutLogs(restDayLogs(api));
   for(const id of ["logRestDayState","logWorkoutContext","exercise","logMediaQuickActions","logSetProgress","logAlternativeCard","logPerformanceCard","logInputCard","smartAlternativeSection","performanceSuggested","applyProgressionBtn","logDayLockWarning","logDayLabel"]){
