@@ -48,6 +48,16 @@ test("five-tab mobile layout has fixed columns and shared timer clearance", () =
   assert.match(css,/\.statusbar\.show\{bottom:calc\(var\(--mobile-nav-clearance\) \+ env\(safe-area-inset-bottom\) \+ 4px\)\}/);
 });
 
+test("active floating timer presentation is viewport independent and hidden stays authoritative", () => {
+  const baseRule=css.match(/\.floating-rest-timer\{[^}]*\}/)?.[0] || "";
+  assert.match(baseRule,/position:fixed/);
+  assert.match(baseRule,/display:grid/);
+  assert.doesNotMatch(baseRule,/display:none/);
+  assert.match(css,/\.floating-rest-timer\[hidden\]\{display:none!important\}/);
+  const mobileRule=css.match(/@media\(max-width:640px\)\{[\s\S]*?\n\}/)?.[0] || "";
+  assert.doesNotMatch(mobileRule,/\.floating-rest-timer\{[^}]*display:/);
+});
+
 test("Settings contains account notifications backup about and advanced access", () => {
   for(const label of ["Account","Team ID","Notifications","Data &amp; Backup","About","Advanced"]){ assert.match(settings,new RegExp(label),label); }
   for(const id of ["loginBtn","logoutBtn","teamId","saveTeamBtn","notificationCard","exportJsonBtn","exportCsvBtn","backupStatus","persistentSubStatus","dayDateLockDebug","v430ExerciseDb"]){

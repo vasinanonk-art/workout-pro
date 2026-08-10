@@ -503,7 +503,8 @@ test("visible and runtime versions are consistent",()=>{
   const runtime=fs.readFileSync("js/runtime.js","utf8"), app=fs.readFileSync("js/app.module.js","utf8"), html=fs.readFileSync("index.html","utf8");
   assert.match(runtime,/VERSION='v5\.6\.0'/);
   assert.match(app,/const VERSION = "v5\.6\.0"/);
-  for(const asset of ["runtime.js","styles.css","app.module.js"]) assert.match(html,new RegExp(`${asset.replace(".","\\.")}\\?v=560`));
+  for(const asset of ["runtime.js","styles.css","app.module.js"]) assert.match(html,new RegExp(`${asset.replace(".","\\.")}\\?v=561`));
+  assert.doesNotMatch(html,/(?:runtime\.js|styles\.css|app\.module\.js)\?v=560(?:["'])/);
   assert.doesNotMatch(`${runtime}\n${app}\n${html}`,/\?v=557|v5\.5\.7/);
 });
 
@@ -913,7 +914,7 @@ test("Phase 1A DOM IDs are unique and mobile timer stacks below navigation z-ind
   }
   assert.match(css,/\.tabs,\.tabbar,nav\{[^}]*z-index:9999!important/);
   assert.match(css,/\.floating-rest-timer\{[^}]*z-index:9998/);
-  assert.match(css,/:root\{--mobile-nav-clearance:70px\}/);
+  assert.match(css,/:root\{[^}]*--mobile-nav-clearance:70px/);
   assert.match(css,/\.tabs\{min-height:var\(--mobile-nav-clearance\)\}/);
   assert.match(css,/bottom:calc\(var\(--mobile-nav-clearance\) \+ env\(safe-area-inset-bottom\)\)/);
   assert.match(css,/body\.rest-timer-active main\{padding-bottom:176px!important\}/);
