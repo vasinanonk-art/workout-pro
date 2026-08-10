@@ -17,36 +17,36 @@
   <div id="legacyMigrationBox" class="msg info">ตรวจสอบ Log เก่าจาก Firestore เดิม แล้ว migrate เข้า User Account ปัจจุบัน</div>
   <button id="legacyMigrationBtn" class="orange hidden" type="button">ตรวจสอบ Log เก่า</button>
   <div class="migration-clean-note">ระบบจะ copy ข้อมูลจาก path เก่าไป path ใหม่ ไม่ลบข้อมูลเดิม</div>
-</div></div><div class="card hidden"><h3>Status / Debug</h3><div class="msg" id="debug">รอ login</div><div class="msg ok">v2 Clean Build รวมฟังก์ชันหลักครบ: Video / Alternative / PR / Weekly / Dashboard / Calendar / Auto Week / Rest Rule</div></div></section>
+</div></div><div class="card hidden"><h3>Status / Debug</h3><div class="msg" id="debug">รอ login</div><div class="msg ok">v2 Clean Build รวมฟังก์ชันหลักครบ: Video / Alternative / PR / Weekly / Dashboard / Calendar / Program Cycle / Rest Rule</div></div></section>
 <section id="dash" class="page">
   <div class="card v5-hero">
     <h3>Executive Dashboard</h3>
     <div class="v5-kpi-grid">
-      <div class="v5-kpi"><span>Total Volume</span><b id="kVol">0</b></div>
-      <div class="v5-kpi"><span>Total Sets</span><b id="kSets">0</b></div>
-      <div class="v5-kpi"><span>Active Users</span><b id="kUsers">0</b></div>
-      <div class="v5-kpi"><span>Auto Week</span><b id="kWeek">1</b></div>
+      <div class="v5-kpi"><span>All-time Logged Volume</span><b id="kVol">0</b></div>
+      <div class="v5-kpi"><span>All-time Logged Sets</span><b id="kSets">0</b></div>
+      <div class="v5-kpi"><span>Signed In</span><b id="kUsers">No</b></div>
+      <div class="v5-kpi"><span>Program Cycle</span><b id="kWeek">Cycle 1</b></div>
     </div>
   </div>
-  <div class="card" id="dashboardWeeklyCard" hidden><h3>Weekly Progress</h3><canvas id="weekChart" width="760" height="260"></canvas><div class="small hidden" id="chartStatus">Dashboard ready</div></div>
-  <div class="card" id="dashboardExerciseCard" hidden><h3>Top Exercise Volume</h3><canvas id="exChart" width="760" height="260"></canvas></div>
-  <div class="card" id="dashboardMuscleCard" hidden><h3>Muscle Balance</h3><canvas id="v5MuscleChart" width="760" height="260"></canvas><div id="v5MuscleInsight" class="msg info">รอข้อมูล Muscle Balance</div></div>
-  <div class="card" id="dashboardPrCard" hidden><h3>PR Board</h3><div id="v5PRBoard" class="v5-board">รอข้อมูล PR</div></div>
-  <div class="card" id="dashboardRecoveryCard" hidden><h3>Recovery / Fatigue Trend</h3><canvas id="v5RecoveryChart" width="760" height="260"></canvas><div id="v5RecoveryInsight" class="msg info hidden">รอข้อมูล Recovery</div></div>
+  <div class="card" id="dashboardWeeklyCard" hidden><h3>Sets by Program Cycle</h3><canvas id="weekChart" width="760" height="260"></canvas><div class="small hidden" id="chartStatus">Dashboard ready</div></div>
+  <div class="card" id="dashboardExerciseCard" hidden><h3>All-time Logged Volume by Exercise</h3><canvas id="exChart" width="760" height="260"></canvas></div>
+  <div class="card" id="dashboardMuscleCard" hidden><h3>Logged Volume by Primary Muscle</h3><canvas id="v5MuscleChart" width="760" height="260"></canvas><div id="v5MuscleInsight" class="msg info">Not a muscle-balance score.</div></div>
+  <div class="card" id="dashboardPrCard" hidden><h3>Best Volume Set</h3><div id="v5PRBoard" class="v5-board">No logged sets</div></div>
+  <div class="card" id="dashboardRecoveryCard" hidden><h3>Sets by Date</h3><canvas id="v5RecoveryChart" width="760" height="260"></canvas><div id="v5RecoveryInsight" class="msg info hidden">Training set count by logged date</div></div>
   <div class="card"><h3>Export & Backup</h3><div class="v5-action-grid"><button id="v5ExportJsonBtn" class="cyan">Export JSON</button><button id="v5ExportCsvBtn" class="purple">Export CSV</button><button id="v5BackupLocalBtn" class="secondary hidden">Backup Local</button><button id="v5RestoreLocalBtn" class="orange hidden">Restore Local</button></div><textarea id="v5BackupText" class="hidden" placeholder="Backup / Restore payload"></textarea></div>
 </section>
 
 <section id="coach" class="page">
-  <div class="card">
-    <h3>Coach Intelligence</h3>
+  <div class="card hidden" id="coachHeuristicCard">
+    <h3>Readiness Diagnostics</h3>
     <div class="coachGrid">
-      <div class="coachCard"><div class="small">Recovery Score</div><div class="score" id="coachRecovery">-</div><div class="small" id="coachRecoveryText">รอข้อมูล</div></div>
-      <div class="coachCard"><div class="small">Fatigue Risk</div><div class="score" id="coachFatigue">-</div><div class="small" id="coachFatigueText">รอข้อมูล</div></div>
-      <div class="coachCard"><div class="small">Progression</div><div class="score" id="coachProgress">-</div><div class="small" id="coachProgressText">รอข้อมูล</div></div>
-      <div class="coachCard"><div class="small">Deload Signal</div><div class="score" id="coachDeload">-</div><div class="small" id="coachDeloadText">รอข้อมูล</div></div>
+      <div class="coachCard"><div class="small">Readiness Heuristic</div><div class="score" id="coachRecovery">-</div><div class="small" id="coachRecoveryText">รอข้อมูล</div></div>
+      <div class="coachCard"><div class="small">Inverse Readiness</div><div class="score" id="coachFatigue">-</div><div class="small" id="coachFatigueText">รอข้อมูล</div></div>
+      <div class="coachCard"><div class="small">Recent Set-Volume Trend</div><div class="score" id="coachProgress">-</div><div class="small" id="coachProgressText">รอข้อมูล</div></div>
+      <div class="coachCard"><div class="small">Readiness Flag</div><div class="score" id="coachDeload">-</div><div class="small" id="coachDeloadText">รอข้อมูล</div></div>
     </div>
   </div>
-  <div class="card"><h3>Plateau Engine Fix</h3><div class="intelGrid"><div class="intelCard"><b id="effectiveRepsScore">-</b><span>Effective Reps 7d</span></div><div class="intelCard"><b id="sfrScore">-</b><span>SFR Score</span></div><div class="intelCard"><b id="volumeZone">-</b><span>Volume Zone</span></div></div></div>
+  <div class="card hidden" id="coachExperimentalCard"><h3>Experimental Diagnostics</h3><div class="intelGrid"><div class="intelCard"><b id="effectiveRepsScore">-</b><span>Hard Sets Today (RIR ≤ 2)</span></div><div class="intelCard"><b id="sfrScore">-</b><span>Readiness Band</span></div><div class="intelCard"><b id="volumeZone">-</b><span>Sets Today Band</span></div></div></div>
   
 <div class="card hidden">
 <h3>Plateau Engine Fix</h3>
@@ -58,17 +58,17 @@
 <textarea id="aiCoachPrompt" style="min-height:220px;margin-top:10px"></textarea>
 </div>
 
-<div class="card">
+<div class="card hidden" id="coachAdviceCard">
     <h3>Coach Recommendations</h3>
     <div id="coachAdvice" class="msg info">ยังไม่มีข้อมูล</div>
   </div>
   <div class="card" id="coachMuscleCard" hidden>
-    <h3>Muscle Volume Balance</h3>
+    <h3>Logged Volume by Primary Muscle</h3>
     <canvas id="muscleChart" width="760" height="260"></canvas>
     <div class="small" id="muscleStatus">รอข้อมูล</div>
   </div>
   <div class="card" id="coachPlateauCard" hidden>
-    <h3>Plateau Detection v2</h3>
+    <h3>Recent Set-Volume Heuristic</h3>
     <div id="plateauBox" class="msg">รอข้อมูล</div>
   </div>
 
@@ -81,9 +81,7 @@
     <h3>Calendar</h3>
     <div class="calendar-legend">
       <span class="leg completed">Completed</span>
-      <span class="leg rest">Rest</span>
-      <span class="leg skip">Skip</span>
-      <span class="leg miss">Miss</span>
+      <span class="leg partial">Partial</span>
     </div>
   </div>
   <div class="card"><div class="calTop"><button class="secondary" id="prevM">‹</button><div class="month" id="monthTitle">Month</div><button class="secondary" id="nextM">›</button></div><div class="calGrid" id="calGrid"></div></div>
@@ -149,7 +147,7 @@
     <div class="log-disclosure-body">
       <div class="row">
         <div><label for="date">วันที่</label><input id="date" type="date"><div id="dateStatus" class="msg ok">วันนี้</div></div>
-        <div><label for="week">Auto Week</label><input id="week" type="number" readonly value="1"><div class="small">ระบบคำนวณให้อัตโนมัติ</div></div>
+        <div><label for="week">Program Cycle</label><input id="week" type="number" readonly value="1"><div class="small">คำนวณจากจำนวน Day 5 ที่จบแล้ว</div></div>
       </div>
       <div class="row3">
         <div><label for="targetSets">Target Sets</label><input id="targetSets" type="number" placeholder="Auto from program"></div>
@@ -203,7 +201,7 @@
 <section id="program" class="page">
   <div class="card program-hero">
     <h3>Program Overview</h3>
-    <div class="msg ok">4 Training Days / 3 Recovery Days • Auto Week • Rest Rule</div>
+    <div class="msg ok">4 Training Days / 3 Recovery Days • Program Cycle • Rest Rule</div>
     <div class="program-timeline">
       <div class="program-day train"><b>Day 1</b><span>Push</span><small>Chest / Shoulder / Triceps</small></div>
       <div class="program-day train"><b>Day 2</b><span>Pull</span><small>Back / Rear Delt / Biceps</small></div>

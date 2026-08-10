@@ -712,7 +712,7 @@ function updateFormDerived(){
   const saveBtn=$("saveBtn"); if(saveBtn) saveBtn.disabled = state.saving || (!state.editingId && (state.logHydration.status!=="ready" || lock.status!=="OPEN" || prog.done>=prog.target));
   setHtml("setStatus", prog.done>=prog.target ? `<span class="ok-text">ท่านี้ครบแล้ว ${prog.done}/${prog.target}</span>` : `พร้อมบันทึก: <b>${escapeHtml(actualExerciseName())}</b> Set ${prog.done+1}/${prog.target}`);
   setHtml("calendarSyncStatus", `Calendar Sync: Today ${dateLabelTH(todayTH())} • Selected ${dateLabelTH(state.selectedDate)}`);
-  setHtml("cycleDebug", `Cycle: Week ${autoWeek()} • Allowed ${calcDayLock().allowedDays?.join(", ") || "-"}`);
+  setHtml("cycleDebug", `Program Cycle: ${autoWeek()} • Allowed ${calcDayLock().allowedDays?.join(", ") || "-"}`);
   renderPRAndSuggestion();
 }
 function actualExerciseName(){ return state.selectedAlt?.name || state.selectedExercise; }
@@ -858,7 +858,7 @@ function bestPerformanceForPlanned(exercise){
 function todayLogs(){ return logsOnDate(state.selectedDate); }
 function muscleBalanceHtml(){
   const g=groupByMuscle(); const entries=Object.entries(g).sort((a,b)=>b[1]-a[1]);
-  if(!entries.length) return "ยังไม่มีข้อมูล Muscle Volume";
+  if(!entries.length) return "ยังไม่มีข้อมูล logged volume by primary muscle";
   const total=entries.reduce((s,e)=>s+e[1],0)||1;
   return entries.map(([m,v])=>`<span class="pill">${m}: ${v.toFixed(0)} kg (${Math.round(v/total*100)}%)</span>`).join(" ");
 }
@@ -877,8 +877,7 @@ function aiDailySummary(){
   const vol=volumeForLogs(arr).toFixed(0);
   const exs=[...new Set(arr.map(plannedOf))];
   const completed=completedDaysByDate(state.selectedDate);
-  const p=plateauForExercise(state.selectedExercise);
-  return `วันที่ ${escapeHtml(dateLabelTH(state.selectedDate))} • ${arr.length} sets • Volume ${vol} kg<br>ท่าที่เล่น: ${exs.map(escapeHtml).join(", ")}<br>Completed: ${completed.map(escapeHtml).join(", ")||"-"}<br>Plateau: ${escapeHtml(p.status)} — ${escapeHtml(p.detail)}`;
+  return `วันที่ ${escapeHtml(dateLabelTH(state.selectedDate))} • ${arr.length} sets • Volume ${vol} kg<br>ท่าที่เล่น: ${exs.map(escapeHtml).join(", ")}<br>Completed: ${completed.map(escapeHtml).join(", ")||"-"}`;
 }
 function renderExerciseDatabase(){
   const host=$("v430ExerciseDb"); if(!host) return;
@@ -894,13 +893,13 @@ function renderExerciseDatabase(){
 function renderDashboard(){
   const hasLogs=state.logs.length>0;
   for(const id of ["dashboardWeeklyCard","dashboardExerciseCard","dashboardMuscleCard","dashboardPrCard","dashboardRecoveryCard"]){ const card=$(id); if(card) card.hidden=!hasLogs; }
-  setText("kVol", volumeForLogs(state.logs).toFixed(0)); setText("kSets", state.logs.length); setText("kUsers", state.user?1:0); setText("kWeek", autoWeek());
+  setText("kVol", volumeForLogs(state.logs).toFixed(0)); setText("kSets", state.logs.length); setText("kUsers", state.user?"Yes":"No"); setText("kWeek", `Cycle ${autoWeek()}`);
   drawSimpleChart("weekChart", groupByWeek()); drawSimpleChart("exChart", groupByExercise()); drawSimpleChart("v5MuscleChart", groupByMuscle()); drawSimpleChart("v5RecoveryChart", groupByDateSets());
   setHtml("v5MuscleInsight", muscleBalanceHtml()); setHtml("muscleStatus", muscleBalanceHtml());
   const prs={}; state.logs.forEach(x=>{ const ex=plannedOf(x); const score=(x.weightKg||0)*(x.reps||0); if(!prs[ex] || score>prs[ex].score) prs[ex]={score,x}; });
-  setHtml("v5PRBoard", Object.values(prs).slice(0,8).map(r=>`<span class="pill">${escapeHtml(plannedOf(r.x))}: ${r.x.weightKg}×${r.x.reps}</span>`).join(" ")||"รอข้อมูล PR");
+  setHtml("v5PRBoard", Object.values(prs).slice(0,8).map(r=>`<span class="pill">${escapeHtml(plannedOf(r.x))}: ${r.x.weightKg}×${r.x.reps}</span>`).join(" ")||"No logged sets");
 }
-function groupByWeek(){ const g={}; state.logs.forEach(x=>{ const w=x.week||1; g["W"+w]=(g["W"+w]||0)+1; }); return g; }
+function groupByWeek(){ const g={}; state.logs.forEach(x=>{ const w=x.week||1; g["Cycle "+w]=(g["Cycle "+w]||0)+1; }); return g; }
 function groupByExercise(){ const g={}; state.logs.forEach(x=>{ const k=plannedOf(x); g[k]=(g[k]||0)+(x.weightKg||0)*(x.reps||0); }); return g; }
 function groupByMuscle(){ const g={}; state.logs.forEach(x=>{ const m=exInfo(plannedOf(x)).primaryMuscle || "Other"; g[m]=(g[m]||0)+(Number(x.weightKg)||0)*(Number(x.reps)||0); }); return g; }
 function groupByDateSets(){ const g={}; state.logs.forEach(x=>{ g[x.date]=(g[x.date]||0)+1; }); return g; }
@@ -909,13 +908,13 @@ function renderCoach(){
   const latest=state.logs[state.logs.length-1]; const sleep=Number($("sleepHours")?.value||7), soreness=Number($("soreness")?.value||2), stress=Number($("stress")?.value||2);
   const recovery=Math.max(0,Math.min(100,70+(sleep-7)*8-(soreness-2)*8-(stress-2)*8)); const fatigue=100-recovery;
   const today=todayLogs(); const p=plateauForExercise(state.selectedExercise);
-  const muscleCard=$("coachMuscleCard"); if(muscleCard) muscleCard.hidden=!state.logs.length;
-  const plateauCard=$("coachPlateauCard"); if(plateauCard) plateauCard.hidden=logsForPlanned(state.selectedExercise).length<3;
+  const muscleCard=$("coachMuscleCard"); if(muscleCard) muscleCard.hidden=true;
+  const plateauCard=$("coachPlateauCard"); if(plateauCard) plateauCard.hidden=true;
   const dailySummaryCard=$("coachDailySummaryCard"); if(dailySummaryCard) dailySummaryCard.hidden=!today.length;
   setText("coachRecovery", Math.round(recovery)); setText("coachFatigue", Math.round(fatigue)); setText("coachProgress", p.status==='Progress'?"UP":(latest?"OK":"-")); setText("coachDeload", fatigue>55?"WATCH":"NO");
   setText("coachRecoveryText", recovery>=65?"พร้อมฝึก":"ลด volume หรือใช้ machine stable"); setText("coachFatigueText", fatigue>55?"เสี่ยงล้า":"ปกติ"); setText("coachProgressText", p.detail); setText("coachDeloadText", fatigue>65?"พิจารณา deload":"ยังไม่จำเป็น");
   const muscleHtml = muscleBalanceHtml();
-  setHtml("coachAdvice", `Recovery ${Math.round(recovery)} / Fatigue ${Math.round(fatigue)}<br>${today.length?`วันนี้มี ${today.length} sets • Volume ${volumeForLogs(today).toFixed(0)} kg`:"ยังไม่มี log วันนี้"}<br>${escapeHtml(p.status)}: ${escapeHtml(p.detail)}<br><span class="small">Muscle Balance: ${muscleHtml}</span>`);
+  setHtml("coachAdvice", `Readiness heuristic ${Math.round(recovery)} / inverse ${Math.round(fatigue)}<br>${today.length?`วันนี้มี ${today.length} sets • Volume ${volumeForLogs(today).toFixed(0)} kg`:"ยังไม่มี log วันนี้"}<br>Recent set-volume heuristic: ${escapeHtml(p.status)} — ${escapeHtml(p.detail)}<br><span class="small">Logged volume by primary muscle (not a balance score): ${muscleHtml}</span>`);
   setHtml("plateauBox", `<b>${escapeHtml(p.status)}</b><br>${escapeHtml(p.detail)}<br><span class="small">Exercise: ${escapeHtml(canonicalExercise(state.selectedExercise))}</span>`);
   const effective=today.filter(x=>Number(x.rir)<=2).length;
   setText("effectiveRepsScore", effective); setText("sfrScore", recovery>=65?"Good":"Moderate"); setText("volumeZone", today.length<8?"Low":(today.length>22?"High":"OK"));
