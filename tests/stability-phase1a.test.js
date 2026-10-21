@@ -32,12 +32,12 @@ function deferred(){
   const promise=new Promise((res,rej)=>{ resolve=res; reject=rej; });
   return {promise,resolve,reject};
 }
-function snapshot(logs){ return {docs:logs.map(({id,...data})=>({id,data:()=>data}))}; }
+function snapshot(logs,metadata={fromCache:false,hasPendingWrites:false}){ return {docs:logs.map(({id,...data})=>({id,data:()=>data})),metadata}; }
 
 function loadApp(storageSeed={},storageUnavailable=false){
   const storage=new Map(Object.entries(storageSeed));
   const elements={};
-  const calls={adds:[],updates:[],snapshots:[],snapshotErrors:[],errors:[],warnings:[],opens:[],intervals:[],clearedIntervals:[],authCallback:null,addDeferred:null,updateDeferred:null};
+  const calls={adds:[],updates:[],snapshots:[],snapshotErrors:[],snapshotOptions:[],authProviderParams:[],signIns:[],errors:[],warnings:[],opens:[],intervals:[],clearedIntervals:[],authCallback:null,addDeferred:null,updateDeferred:null};
   let nextId=1;
   const document={
     getElementById:id=>elements[id]||null,
@@ -68,14 +68,20 @@ function loadApp(storageSeed={},storageUnavailable=false){
       removeItem:key=>{ if(storageUnavailable) throw new Error("blocked"); storage.delete(key); }
     },
     window:{addEventListener(){},open:(...args)=>{ calls.opens.push(args); return {}; },AudioContext:null},
-    initializeApp:()=>({}), getAuth:()=>({}), getFirestore:()=>({}), GoogleAuthProvider:function(){},
-    signInWithPopup:()=>Promise.resolve(), signOut:()=>Promise.resolve(),
+    initializeApp:()=>({}), getAuth:()=>({}), getFirestore:()=>({}), GoogleAuthProvider:function(){ this.setCustomParameters=params=>calls.authProviderParams.push(params); },
+    signInWithPopup:(auth,provider)=>{ calls.signIns.push({auth,provider}); return Promise.resolve(); }, signOut:()=>Promise.resolve(),
     onAuthStateChanged:(auth,fn)=>{ calls.authCallback=fn; },
     collection:(...args)=>args, query:(...args)=>args, orderBy:(...args)=>args,
     doc:(...args)=>args.length===1?{id:`auto-${nextId++}`}:{id:String(args.at(-1))}, serverTimestamp:()=>({server:true}),
     setDoc:async(ref,payload)=>{ calls.adds.push({ref,payload}); if(calls.addDeferred) return calls.addDeferred.promise; },
     updateDoc:async(ref,payload)=>{ calls.updates.push({ref,payload}); if(calls.updateDeferred) return calls.updateDeferred.promise; }, deleteDoc:async()=>{},
-    onSnapshot:(q,next,error)=>{ calls.snapshots.push(next); calls.snapshotErrors.push(error); return ()=>{}; }
+    onSnapshot:(q,optionsOrNext,nextOrError,error)=>{
+      const hasOptions=typeof optionsOrNext!=="function";
+      calls.snapshotOptions.push(hasOptions?optionsOrNext:null);
+      calls.snapshots.push(hasOptions?nextOrError:optionsOrNext);
+      calls.snapshotErrors.push(hasOptions?error:nextOrError);
+      return ()=>{};
+    }
   };
   context.window.document=document;
   context.window.Notification=context.Notification;
@@ -305,6 +311,29 @@ test("exercise dropdown change does not replace historical exercise context",()=
   assert.equal(elements.exercise.value,"Lat Pulldown");
 });
 
+test("Google login forces explicit account selection",()=>{
+  const {api,elements,calls}=loadApp();
+  elements.loginBtn=element();
+  api.bind();
+  elements.loginBtn.listeners.click();
+  assert.equal(calls.authProviderParams.length,1);
+  assert.equal(calls.authProviderParams[0].prompt,"select_account");
+  assert.equal(calls.signIns.length,1);
+});
+
+test("Settings identifies the signed-in account and Firestore source without exposing the full UID",()=>{
+  const {api,elements}=loadApp();
+  for(const id of ["notificationCard","teamId","authState","authDetail","syncStatus","debug","teamSaveStatus"]){ elements[id]=element(); }
+  api.state.user={uid:"abcdef123456wxyz",displayName:"Krit Vasinanon",email:"krit@example.com"};
+  api.state.logs=[{id:"one"}];
+  api.state.logSyncSource="server";
+  api.renderSetup();
+  assert.equal(elements.authState.textContent,"Signed In: Krit Vasinanon");
+  assert.equal(elements.authDetail.textContent,"Email: krit@example.com • UID: abcdef…wxyz");
+  assert.equal(elements.authDetail.textContent.includes("abcdef123456wxyz"),false);
+  assert.equal(elements.syncStatus.textContent,"Sync: Server • Logs: 1");
+});
+
 test("logout clears account-scoped logs and pending writes",()=>{
   const {api,calls}=loadApp();
   api.state.user={uid:"user-1"};
@@ -501,10 +530,10 @@ test("persistent alternative contract and edit isolation remain intact",()=>{
 
 test("visible and runtime versions are consistent",()=>{
   const runtime=fs.readFileSync("js/runtime.js","utf8"), app=fs.readFileSync("js/app.module.js","utf8"), html=fs.readFileSync("index.html","utf8");
-  assert.match(runtime,/VERSION='v5\.6\.0'/);
-  assert.match(app,/const VERSION = "v5\.6\.0"/);
-  for(const asset of ["runtime.js","styles.css","app.module.js"]) assert.match(html,new RegExp(`${asset.replace(".","\\.")}\\?v=561`));
-  assert.doesNotMatch(html,/(?:runtime\.js|styles\.css|app\.module\.js)\?v=560(?:["'])/);
+  assert.match(runtime,/VERSION='v5\.6\.1'/);
+  assert.match(app,/const VERSION = "v5\.6\.1"/);
+  for(const asset of ["runtime.js","styles.css","app.module.js"]) assert.match(html,new RegExp(`${asset.replace(".","\\.")}\\?v=562`));
+  assert.doesNotMatch(html,/(?:runtime\.js|styles\.css|app\.module\.js)\?v=561(?:["'])/);
   assert.doesNotMatch(`${runtime}\n${app}\n${html}`,/\?v=557|v5\.5\.7/);
 });
 
@@ -1255,6 +1284,16 @@ test("authenticated startup hides workout entry while the first snapshot is pend
   assert.equal(elements.logHydrationState.textContent,"Loading workout data...");
   for(const id of ["logWorkoutContext","exercise","logMediaQuickActions","logSetProgress","logAlternativeCard","logPerformanceCard","logInputCard"]){ assert.equal(elements[id].hidden,true,id); }
   assert.equal(elements.saveBtn.disabled,true);
+});
+
+test("empty cache snapshot stays pending until the server answers",()=>{
+  const {api,calls}=loadApp();
+  calls.authCallback({uid:"user-1"});
+  assert.equal(calls.snapshotOptions[0].includeMetadataChanges,true);
+  calls.snapshots[0](snapshot([],{fromCache:true,hasPendingWrites:false}));
+  assert.equal(api.state.logHydration.status,"loading");
+  assert.equal(api.state.selectedExercise,"");
+  assert.deepEqual(Array.from(api.state.logs),[]);
 });
 
 test("first successful empty snapshot readies a genuine new account for Day 1",()=>{

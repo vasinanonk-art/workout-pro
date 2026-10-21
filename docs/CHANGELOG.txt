@@ -1,3 +1,9 @@
+v5.6.1 iOS Home Screen Sync Diagnostics
+- Google sign-in now forces explicit account selection.
+- Empty Firestore cache snapshots remain pending until the server answers.
+- Settings shows the signed-in email, masked Firebase UID, sync source, and loaded log count.
+- Firestore schema and workout records are unchanged.
+
 v5.6.0 Planned Exercise Completion Fix
 - Fixed day completion when an alternative exercise is logged for a planned exercise.
 - Kept workout logic, Firestore, schema, engines, and cycle rules unchanged.

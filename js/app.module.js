@@ -1,4 +1,4 @@
-// Workout PRO v5.6.0 PLANNED EXERCISE COMPLETION FIX
+// Workout PRO v5.6.1 IOS HOME SCREEN SYNC DIAGNOSTICS
 // Single state engine. No legacy render patches. No duplicate Day Lock / Dropdown renderers.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -7,7 +7,7 @@ import { PROGRAM, ALT, PLANNED_BY_ALTERNATIVE, ALTERNATIVE_REASONS, EXERCISE_LIB
 import { evaluateProgression } from "./progression-engine.js";
 import { findAlternatives } from "./smart-alternative.js";
 
-const VERSION = "v5.6.0";
+const VERSION = "v5.6.1";
 const $ = (id) => document.getElementById(id);
 const firebaseConfig = {"apiKey":"AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI","authDomain":"workout-program-9eea7.firebaseapp.com","projectId":"workout-program-9eea7","storageBucket":"workout-program-9eea7.firebasestorage.app","messagingSenderId":"315102427876","appId":"1:315102427876:web:d2d5d4c89eb78fae960af1","measurementId":"G-JHEKDYEY8B"};
 const DAY_ORDER = ["Day 1","Day 2","Day 4","Day 5"];
@@ -92,6 +92,7 @@ let state = {
   quarantinedLogs:[],
   pendingWrites:new Map(),
   lastSnapshotAt:0,
+  logSyncSource:"none",
   subscriptionScope:null,
   subscriptionGeneration:0,
   logHydration:{scope:null,status:"ready",error:""},
@@ -125,6 +126,12 @@ function parseKey(key){ const [y,m,d]=String(key||todayTH()).split("-").map(Numb
 function addDaysKey(key,n){ const d=parseKey(key); d.setDate(d.getDate()+n); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
 function dayDiff(a,b){ return Math.round((parseKey(a)-parseKey(b))/86400000); }
 function safe(v){ return String(v||"default").trim().replace(/[^\w\-@.]/g,"_").slice(0,80) || "default"; }
+function maskedUid(uid){
+  const value=String(uid||"");
+  if(!value) return "-";
+  if(value.length<=8) return `${value.slice(0,3)}…${value.slice(-2)}`;
+  return `${value.slice(0,6)}…${value.slice(-4)}`;
+}
 function collectionPath(){ const team=safe(state.teamId); const user=state.user?.uid ? "user_"+safe(state.user.uid) : "guest_"+team; return `teams/${team}/users/${user}/workouts`; }
 function metaByExercise(ex=state.selectedExercise){ const planned=canonicalExercise(ex); return PROGRAM.find(p=>p[2]===planned) || PROGRAM[0]; }
 function targetSets(ex=state.selectedExercise){ return Number(metaByExercise(ex)[3]) || 1; }
@@ -409,6 +416,7 @@ function clearScopedWorkoutState(){
   state.quarantinedLogs=[];
   state.pendingWrites.clear();
   state.lastSnapshotAt=0;
+  state.logSyncSource="none";
   state.editingId=null;
   state.selectedAlt=null;
   state.saving=false;
@@ -420,11 +428,12 @@ function subscribeLogs(){
   const generation=++state.subscriptionGeneration;
   const scope=workoutScope();
   state.subscriptionScope=scope;
-  if(!scope){ state.logHydration={scope:null,status:"ready",error:""}; scheduleRender(); return; }
+  if(!scope){ state.logHydration={scope:null,status:"ready",error:""}; state.logSyncSource="none"; scheduleRender(); return; }
   state.logHydration={scope,status:"loading",error:""};
+  state.logSyncSource="waiting";
   status("กำลังโหลด Log...","warn",0);
   const q=query(collection(db, collectionPath()), orderBy("date","asc"));
-  state.unsub=onSnapshot(q,(snap)=>{
+  state.unsub=onSnapshot(q,{includeMetadataChanges:true},(snap)=>{
     if(state.subscriptionGeneration!==generation || state.subscriptionScope!==scope || state.logHydration.scope!==scope) return;
     const normalized=snap.docs.map(d=>normalizeLog(d.data(), d.id));
     state.quarantinedLogs=normalized.filter(x=>x.__invalidDate);
@@ -433,13 +442,22 @@ function subscribeLogs(){
     const nextLogs=remote.map(x=>state.pendingWrites.get(x.id)?.optimistic || x);
     state.pendingWrites.forEach((pending,id)=>{ if(!remoteIds.has(id)) nextLogs.push(pending.optimistic); });
     replaceWorkoutLogs(nextLogs);
-    state.logHydration={scope,status:"ready",error:""};
+    const fromCache=snap.metadata?.fromCache===true;
+    state.logSyncSource=fromCache?"cache":"server";
     state.lastSnapshotAt=Date.now();
-    status("โหลดข้อมูลสำเร็จ","ok");
+    if(fromCache){
+      state.logHydration={scope,status:"loading",error:""};
+      status("พบข้อมูล Cache • กำลังยืนยันกับ Server...","warn",0);
+      scheduleRender();
+      return;
+    }
+    state.logHydration={scope,status:"ready",error:""};
+    status("โหลดข้อมูลจาก Server สำเร็จ","ok");
     scheduleRender();
   },(err)=>{
     if(state.subscriptionGeneration!==generation || state.subscriptionScope!==scope || state.logHydration.scope!==scope) return;
     console.error(err);
+    state.logSyncSource="error";
     state.logHydration={scope,status:"error",error:err?.message||"Unknown error"};
     if(!state.editingId){ state.selectedExercise=""; state.selectedAlt=null; }
     status("โหลด Log ไม่สำเร็จ: "+state.logHydration.error,"err",0);
@@ -511,6 +529,9 @@ function renderSetup(){
   renderNotificationControls();
   setVal("teamId", state.teamId);
   setText("authState", state.user ? `Signed In: ${state.user.displayName || state.user.email}` : "Signed In: No");
+  setText("authDetail", state.user ? `Email: ${state.user.email || "-"} • UID: ${maskedUid(state.user.uid)}` : "Email: - • UID: -");
+  const syncLabel={none:"รอ Login",waiting:"กำลังเชื่อมต่อ Server",cache:"Cache • รอ Server",server:"Server",error:"Error"}[state.logSyncSource] || "Unknown";
+  setText("syncStatus", `Sync: ${syncLabel} • Logs: ${state.logs.length}`);
   setHtml("debug", `Version: <b>${VERSION}</b><br>User: ${escapeHtml(state.user?.email || "-")}<br>Team: ${escapeHtml(state.teamId || "-")}<br>Logs: ${state.logs.length}<br>Date: ${escapeHtml(state.selectedDate)} (${escapeHtml(dateLabelTH(state.selectedDate))})`);
   setHtml("teamSaveStatus", `Team ID: <b>${escapeHtml(state.teamId || "-")}</b>`);
   renderBackup();
@@ -1106,7 +1127,11 @@ function show(page){ const destination=LEGACY_PAGE_ROUTES[page]||page; document.
 window.show=show;
 function bind(){
   document.querySelectorAll(".tab[data-page]").forEach(b=>b.addEventListener("click",()=>show(b.dataset.page)));
-  $("loginBtn")?.addEventListener("click",()=>signInWithPopup(auth,new GoogleAuthProvider()).catch(e=>status(e.message,"err",0)));
+  $("loginBtn")?.addEventListener("click",()=>{
+    const provider=new GoogleAuthProvider();
+    provider.setCustomParameters({prompt:"select_account"});
+    signInWithPopup(auth,provider).catch(e=>status(e.message,"err",0));
+  });
   $("logoutBtn")?.addEventListener("click",()=>signOut(auth));
   $("saveTeamBtn")?.addEventListener("click",()=>{ const teamId=$("teamId")?.value.trim()||"Beer-Team"; if(teamId!==state.teamId){ clearScopedWorkoutState(); state.teamId=teamId; scheduleRender(); } else state.teamId=teamId; try{ localStorage.setItem("teamId",state.teamId); }catch(e){} subscribeLogs(); status("บันทึก Team ID แล้ว","ok"); });
   $("date")?.addEventListener("change",e=>{
@@ -1259,5 +1284,5 @@ function download(name,text,type){ const a=document.createElement("a"); a.href=U
 onAuthStateChanged(auth,u=>{ if((state.user?.uid||null)!==(u?.uid||null)) clearScopedWorkoutState(); state.user=u; if(u && !state.teamId) state.teamId="Beer-Team"; subscribeLogs(); scheduleRender(); });
 
 window.addEventListener("DOMContentLoaded",()=>{
-  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); ensureLogDefaults(); scheduleRender(); qaExerciseCoverage(); status("Workout PRO v5.6.0 พร้อมใช้งาน","ok",2500);
+  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); ensureLogDefaults(); scheduleRender(); qaExerciseCoverage(); status("Workout PRO v5.6.1 พร้อมใช้งาน","ok",2500);
 });
