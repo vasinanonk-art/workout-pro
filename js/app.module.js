@@ -1,4 +1,4 @@
-// Workout PRO v5.6.1 IOS HOME SCREEN SYNC DIAGNOSTICS
+// Workout PRO v5.6.2 IOS REST TIMER RESUME FIX
 // Single state engine. No legacy render patches. No duplicate Day Lock / Dropdown renderers.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -7,11 +7,12 @@ import { PROGRAM, ALT, PLANNED_BY_ALTERNATIVE, ALTERNATIVE_REASONS, EXERCISE_LIB
 import { evaluateProgression } from "./progression-engine.js";
 import { findAlternatives } from "./smart-alternative.js";
 
-const VERSION = "v5.6.1";
+const VERSION = "v5.6.2";
 const $ = (id) => document.getElementById(id);
 const firebaseConfig = {"apiKey":"AIzaSyAcnErrLVmmBKJRLHm_ZOySkZKauGqcgfI","authDomain":"workout-program-9eea7.firebaseapp.com","projectId":"workout-program-9eea7","storageBucket":"workout-program-9eea7.firebasestorage.app","messagingSenderId":"315102427876","appId":"1:315102427876:web:d2d5d4c89eb78fae960af1","measurementId":"G-JHEKDYEY8B"};
 const DAY_ORDER = ["Day 1","Day 2","Day 4","Day 5"];
 const REST_SECONDS = { quick:45, standard:75, heavy:105 };
+const REST_TIMER_STORAGE_KEY = "restTimerV562";
 
 function storageText(key,fallback=""){
   try{ const value=localStorage.getItem(key); return typeof value==="string" ? value : fallback; }catch(e){ return fallback; }
@@ -21,6 +22,9 @@ function storageJson(key,fallback,validate){
 }
 function storageSet(key,value){
   try{ localStorage.setItem(key,value); return true; }catch(e){ console.warn(`Unable to save local setting: ${key}`,e); return false; }
+}
+function storageRemove(key){
+  try{ localStorage.removeItem(key); return true; }catch(e){ console.warn(`Unable to clear local setting: ${key}`,e); return false; }
 }
 function escapeHtml(value){ return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
@@ -517,7 +521,7 @@ function renderNotificationControls(){
   }
   const perm = ("Notification" in window) ? Notification.permission : "unsupported";
   card.innerHTML = `<h3>Rest Notification</h3>
-    <div class="msg info" id="notifyStatus">${notificationPermissionText()}<br><span class="small">ใช้สำหรับแจ้งเตือนเหลือ 10 วิ และหมดเวลาพัก</span></div>
+    <div class="msg info" id="notifyStatus">${notificationPermissionText()}<br><span class="small">แจ้งเมื่อ Shortcut ยังทำงานอยู่ หรือทันทีที่เปิดกลับมา; การแจ้งตรงเวลาขณะ iOS พักแอปต้องใช้ Web Push</span></div>
     <div class="row3"><button id="enableNotifyBtn" class="cyan" type="button">🔔 Enable Notifications</button><button id="testNotifyBtn" class="secondary" type="button">Test</button><button id="toggleNotifyBtn" class="secondary" type="button">${state.notificationsEnabled?"ปิด Notify":"เปิด Notify"}</button></div>
     <div class="small">Permission: ${perm} • 10s: ${state.notify10Enabled?"ON":"OFF"} • Sound: ${state.soundEnabled?"ON":"OFF"} • Vibrate: ${state.vibrateEnabled?"ON":"OFF"}</div>`;
   $("enableNotifyBtn")?.addEventListener("click", enableNotifications);
@@ -1224,7 +1228,7 @@ function notifyRest(title, body, kind="done"){
   if(state.notificationsEnabled && "Notification" in window && Notification.permission === "granted"){
     try{ new Notification(title,{body, tag:"workout-rest-timer", renotify:true}); }catch(e){}
   } else if(state.notificationsEnabled && "Notification" in window && Notification.permission === "default"){
-    status(title+" • กด Enable Notifications ในหน้า Setup เพื่อให้เด้งนอกเว็บ", "warn", 4000);
+    status(title+" • กด Enable Notifications ในหน้า Settings", "warn", 4000);
   }
 }
 function startTimer(){
@@ -1233,6 +1237,7 @@ function startTimer(){
   state.timerDuration=sec;
   state.timerEndAt=Date.now() + sec*1000;
   state.notified10=false; state.notifiedDone=false;
+  persistTimerState();
   requestNotifyPermission();
   updateTimerState();
   state.timerId=setInterval(updateTimerState,1000);
@@ -1240,27 +1245,58 @@ function startTimer(){
 function stopTimer(clearEnd=true){
   if(state.timerId) clearInterval(state.timerId);
   state.timerId=null;
-  if(clearEnd){ state.timerEndAt=0; state.timerLeft=0; }
+  if(clearEnd){ state.timerEndAt=0; state.timerLeft=0; clearPersistedTimer(); }
   renderTimer();
 }
 function addRestTime(sec=30){
   const now=Date.now();
   if(state.timerEndAt && state.timerEndAt>now){ state.timerEndAt += sec*1000; }
   else { state.timerEndAt = now + sec*1000; }
+  state.timerDuration=Math.max(1,state.timerDuration+sec);
+  state.notifiedDone=false;
+  persistTimerState();
   updateTimerState();
   if(!state.timerId) state.timerId=setInterval(updateTimerState,1000);
+}
+function persistedTimerState(){
+  return storageJson(REST_TIMER_STORAGE_KEY,null,value=>value &&
+    Number.isFinite(value.endAt) && value.endAt>0 &&
+    Number.isFinite(value.duration) && value.duration>=1 && value.duration<=86400 &&
+    typeof value.notified10==="boolean" && typeof value.notifiedDone==="boolean");
+}
+function persistTimerState(){
+  if(!state.timerEndAt) return;
+  storageSet(REST_TIMER_STORAGE_KEY,JSON.stringify({
+    endAt:state.timerEndAt,
+    duration:state.timerDuration,
+    notified10:state.notified10,
+    notifiedDone:state.notifiedDone
+  }));
+}
+function clearPersistedTimer(){ storageRemove(REST_TIMER_STORAGE_KEY); }
+function restoreTimer(){
+  const saved=persistedTimerState();
+  if(!saved) return;
+  state.timerEndAt=saved.endAt;
+  state.timerDuration=saved.duration;
+  state.notified10=saved.notified10;
+  state.notifiedDone=saved.notifiedDone;
+  updateTimerState();
+  if(state.timerEndAt && !state.timerId) state.timerId=setInterval(updateTimerState,1000);
 }
 function updateTimerState(){
   if(state.timerEndAt){
     state.timerLeft=Math.max(0, Math.ceil((state.timerEndAt-Date.now())/1000));
     if(state.notify10Enabled && !state.notified10 && state.timerLeft>0 && state.timerLeft<=10){
       state.notified10=true;
+      persistTimerState();
       notifyRest("⏳ เหลือ 10 วินาที", "เตรียมเล่นเซตถัดไป", "warn");
     }
     if(state.timerLeft<=0){
       if(state.timerId) clearInterval(state.timerId);
       state.timerId=null;
       state.timerEndAt=0;
+      clearPersistedTimer();
       renderTimer();
       if(!state.notifiedDone){ state.notifiedDone=true; notifyRest("🔔 Rest Complete", "พร้อมเล่นเซตถัดไปแล้ว", "done"); }
       return;
@@ -1284,5 +1320,5 @@ function download(name,text,type){ const a=document.createElement("a"); a.href=U
 onAuthStateChanged(auth,u=>{ if((state.user?.uid||null)!==(u?.uid||null)) clearScopedWorkoutState(); state.user=u; if(u && !state.teamId) state.teamId="Beer-Team"; subscribeLogs(); scheduleRender(); });
 
 window.addEventListener("DOMContentLoaded",()=>{
-  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); ensureLogDefaults(); scheduleRender(); qaExerciseCoverage(); status("Workout PRO v5.6.1 พร้อมใช้งาน","ok",2500);
+  bind(); setVal("teamId",state.teamId); setVal("date",state.selectedDate); ensureLogDefaults(); restoreTimer(); scheduleRender(); qaExerciseCoverage(); status("Workout PRO v5.6.2 พร้อมใช้งาน","ok",2500);
 });

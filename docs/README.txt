@@ -1,1 +1,1 @@
-Workout PRO v5.6.1 iOS Home Screen Sync QA package.
+Workout PRO v5.6.2 iOS Rest Timer Resume QA package.

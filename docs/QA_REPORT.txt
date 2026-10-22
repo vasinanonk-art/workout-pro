@@ -1,9 +1,11 @@
-Workout PRO v5.6.1 QA Report
+Workout PRO v5.6.2 QA Report
 - Syntax check: PASS
 - Alternative mapping: all PROGRAM exercises have alternatives.
 - Tier A/B/C: enabled in alternative modal.
 - Database/schema reset: NOT USED
 - Firestore payload: unchanged
+
+v5.6.2 QA: Added deterministic timer suspension/reload coverage. Timer state is device-local and contains no account or workout data. No schema or workout-record change.
 
 v5.6.1 QA: Added explicit Google account selection and Firestore source diagnostics. Empty cache snapshots no longer resolve as a genuine empty account. No schema or workout-record change.
 

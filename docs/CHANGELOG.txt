@@ -1,3 +1,9 @@
+v5.6.2 iOS Rest Timer Resume Fix
+- Active rest timer deadline survives Home Screen app suspension or reload.
+- Resume recalculates remaining time from the absolute deadline and completes once.
+- Stopping or completing the timer clears its persisted local state.
+- Firestore schema and workout records are unchanged.
+
 v5.6.1 iOS Home Screen Sync Diagnostics
 - Google sign-in now forces explicit account selection.
 - Empty Firestore cache snapshots remain pending until the server answers.

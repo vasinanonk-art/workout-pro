@@ -86,7 +86,7 @@ function loadApp(storageSeed={},storageUnavailable=false){
   context.window.document=document;
   context.window.Notification=context.Notification;
   context.globalThis=context;
-  const expose=`\n;const __realStartTimer=startTimer;globalThis.__app={state,bind,show,saveSet,subscribeLogs,renderExerciseSelect,resolveSelectedExercise,renderLogScheduleState,renderWorkoutOverview,renderCalendar,renderRecent,renderSetup,renderPerformanceCard,renderPRAndSuggestion,usePreviousWorkout,useCurrentSessionLastSet,progressionSuggestion,applyProgressionSuggestion,smartAlternativesForCurrentExercise,selectAlternative,currentSessionLastSetForPlanned,lastSetForPlannedOnOrBefore,bestPerformanceForPlanned,workoutDayForDate,workoutProgressForDay,workoutCompletionForDate,nextWorkoutPreview,dayCompleteOnDate,currentCyclePlan,allowedTrainingDaysForDate,calcDayLock,updateFormDerived,updateTimerState,renderTimer,startRealTimer(){__realStartTimer()},useRealTimer(){startTimer=__realStartTimer},stopTimer,addRestTime,mediaSearchUrl,openExerciseMedia,restorePersistentAlt,readPersistentAlt,writePersistentAlt,clearPersistentAlt,rememberSessionExercise,clearSessionExercise,grantOverride,applyDayOverride,normalizeLog,isValidDateKey,clearScopedWorkoutState,plannedOf,samePlanned,inferPlannedExerciseFromActual,plannedCandidatesForAlternative,logsOnDate,logsForPlanned,completedForExercise,latestSetForPlanned,previousSetForPlanned,previousWorkoutForPlanned,replaceWorkoutLogs,getDerivedLogIndex:()=>derivedLogIndex,getIndexRebuildCount:()=>derivedLogIndexRebuildCount,alternativeInventory:()=>[...PLANNED_BY_ALTERNATIVE.entries()],exerciseLibrary:()=>EXERCISE_LIBRARY,program:()=>PROGRAM,alternatives:()=>ALT,canonicalExercise,alternativeReasons:()=>ALTERNATIVE_REASONS,setRender(fn){renderAll=fn},setTimer(fn){startTimer=fn}};`;
+  const expose=`\n;const __realStartTimer=startTimer;globalThis.__app={state,bind,show,saveSet,subscribeLogs,renderExerciseSelect,resolveSelectedExercise,renderLogScheduleState,renderWorkoutOverview,renderCalendar,renderRecent,renderSetup,renderPerformanceCard,renderPRAndSuggestion,usePreviousWorkout,useCurrentSessionLastSet,progressionSuggestion,applyProgressionSuggestion,smartAlternativesForCurrentExercise,selectAlternative,currentSessionLastSetForPlanned,lastSetForPlannedOnOrBefore,bestPerformanceForPlanned,workoutDayForDate,workoutProgressForDay,workoutCompletionForDate,nextWorkoutPreview,dayCompleteOnDate,currentCyclePlan,allowedTrainingDaysForDate,calcDayLock,updateFormDerived,updateTimerState,renderTimer,startRealTimer(){__realStartTimer()},useRealTimer(){startTimer=__realStartTimer},stopTimer,addRestTime,restoreTimer,mediaSearchUrl,openExerciseMedia,restorePersistentAlt,readPersistentAlt,writePersistentAlt,clearPersistentAlt,rememberSessionExercise,clearSessionExercise,grantOverride,applyDayOverride,normalizeLog,isValidDateKey,clearScopedWorkoutState,plannedOf,samePlanned,inferPlannedExerciseFromActual,plannedCandidatesForAlternative,logsOnDate,logsForPlanned,completedForExercise,latestSetForPlanned,previousSetForPlanned,previousWorkoutForPlanned,replaceWorkoutLogs,getDerivedLogIndex:()=>derivedLogIndex,getIndexRebuildCount:()=>derivedLogIndexRebuildCount,alternativeInventory:()=>[...PLANNED_BY_ALTERNATIVE.entries()],exerciseLibrary:()=>EXERCISE_LIBRARY,program:()=>PROGRAM,alternatives:()=>ALT,canonicalExercise,alternativeReasons:()=>ALTERNATIVE_REASONS,setRender(fn){renderAll=fn},setTimer(fn){startTimer=fn}};`;
   vm.runInNewContext(source+expose,context,{filename:"js/app.module.js"});
   context.__app.setRender(()=>{});
   context.__app.setTimer(()=>{});
@@ -530,10 +530,10 @@ test("persistent alternative contract and edit isolation remain intact",()=>{
 
 test("visible and runtime versions are consistent",()=>{
   const runtime=fs.readFileSync("js/runtime.js","utf8"), app=fs.readFileSync("js/app.module.js","utf8"), html=fs.readFileSync("index.html","utf8");
-  assert.match(runtime,/VERSION='v5\.6\.1'/);
-  assert.match(app,/const VERSION = "v5\.6\.1"/);
-  for(const asset of ["runtime.js","styles.css","app.module.js"]) assert.match(html,new RegExp(`${asset.replace(".","\\.")}\\?v=562`));
-  assert.doesNotMatch(html,/(?:runtime\.js|styles\.css|app\.module\.js)\?v=561(?:["'])/);
+  assert.match(runtime,/VERSION='v5\.6\.2'/);
+  assert.match(app,/const VERSION = "v5\.6\.2"/);
+  for(const asset of ["runtime.js","styles.css","app.module.js"]) assert.match(html,new RegExp(`${asset.replace(".","\\.")}\\?v=563`));
+  assert.doesNotMatch(html,/(?:runtime\.js|styles\.css|app\.module\.js)\?v=562(?:["'])/);
   assert.doesNotMatch(`${runtime}\n${app}\n${html}`,/\?v=557|v5\.5\.7/);
 });
 
@@ -840,6 +840,47 @@ test("one timer engine keeps settings and floating displays synchronized",()=>{
   assert.equal(api.state.timerEndAt,0);
   assert.equal(api.state.timerLeft,0);
   assert.equal(elements.floatingRestTimer.hidden,true);
+});
+
+test("active rest timer survives an iPhone Home Screen app suspension or reload",()=>{
+  const {api,elements,storage}=loadApp();
+  form(elements,{restSec:75});
+  elements.timer=element(); elements.floatingTimer=element(); elements.floatingRestTimer=element();
+  api.state.page="log";
+  api.startRealTimer();
+
+  const saved=JSON.parse(storage.get("restTimerV562"));
+  assert.equal(saved.endAt,api.state.timerEndAt);
+  assert.equal(saved.duration,75);
+  assert.equal(saved.notified10,false);
+  assert.equal(saved.notifiedDone,false);
+
+  const resumed=loadApp(Object.fromEntries(storage));
+  resumed.elements.timer=element(); resumed.elements.floatingTimer=element(); resumed.elements.floatingRestTimer=element();
+  resumed.api.state.page="log";
+  resumed.api.restoreTimer();
+  assert.equal(resumed.api.state.timerEndAt,saved.endAt);
+  assert.ok(resumed.api.state.timerLeft>=74 && resumed.api.state.timerLeft<=75);
+  assert.equal(resumed.calls.intervals.length,1);
+
+  resumed.api.stopTimer();
+  assert.equal(resumed.storage.has("restTimerV562"),false);
+});
+
+test("expired persisted rest timer completes once on return and clears its snapshot",()=>{
+  const saved=JSON.stringify({endAt:Date.now()-1000,duration:75,notified10:false,notifiedDone:false});
+  const {api,elements,storage,calls}=loadApp({restTimerV562:saved});
+  elements.timer=element(); elements.floatingTimer=element(); elements.floatingRestTimer=element();
+
+  api.restoreTimer();
+
+  assert.equal(api.state.timerEndAt,0);
+  assert.equal(api.state.timerLeft,0);
+  assert.equal(api.state.notifiedDone,true);
+  assert.equal(storage.has("restTimerV562"),false);
+  assert.equal(calls.intervals.length,0);
+  api.restoreTimer();
+  assert.equal(calls.intervals.length,0);
 });
 
 test("floating timer is scoped to Log while its single timer continues across pages",()=>{
